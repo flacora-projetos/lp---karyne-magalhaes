@@ -6,14 +6,14 @@ export const DraKaryne = () => {
         <div className="order-2 md:order-1 flex gap-6 relative">
           <div className="w-1/2 flex flex-col justify-end">
             <img 
-              src="/images/formacao_conteudo.jpeg" 
+              src="https://lh3.googleusercontent.com/d/1voNMbzEWjLDbnt6e4O8cC9pI8G9gH6Ba" 
               alt="Dra. Karyne em formação e conteúdo" 
               className="w-full h-auto aspect-[3/4] object-cover rounded-2xl shadow-sm border border-border-gray/50 mb-8"
             />
           </div>
           <div className="w-1/2 flex flex-col justify-start">
             <img 
-              src="/images/karyne_autoridade.jpeg" 
+              src="https://lh3.googleusercontent.com/d/1kv65riwY8jFAEZ9DYFslI8P7Q2ZIJNVD" 
               alt="Dra. Karyne Magalhães - Especialista" 
               className="w-full h-auto aspect-[3/4] object-cover rounded-2xl shadow-sm border border-border-gray/50 mt-12"
             />

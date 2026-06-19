@@ -1,3 +1,5 @@
+import { Instagram } from "lucide-react";
+
 export const Footer = () => {
   return (
     <footer className="bg-primary-brown text-primary-beige py-16 border-t border-accent-copper/20">
@@ -22,8 +24,15 @@ export const Footer = () => {
 
         <div className="flex flex-col md:items-end justify-between gap-8">
           <div className="flex gap-6">
-            <a href="#" className="text-primary-beige/80 hover:text-primary-white transition-colors text-sm underline decoration-accent-copper/40 underline-offset-4">
-              [Placeholder - Instagram]
+            <a 
+              href="https://www.instagram.com/dra.karynemagalhaes/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-primary-beige/80 hover:text-primary-white transition-colors flex items-center gap-2 group"
+              aria-label="Instagram da Dra. Karyne Magalhães"
+            >
+              <Instagram strokeWidth={1.5} className="w-5 h-5 group-hover:-translate-y-1 transition-transform" />
+              <span className="text-sm">@dra.karynemagalhaes</span>
             </a>
           </div>
           

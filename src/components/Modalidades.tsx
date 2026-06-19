@@ -37,13 +37,13 @@ export const Modalidades = () => {
 
           <div className="relative">
             <img 
-              src="/images/equipamentos_tech.jpeg" 
+              src="https://lh3.googleusercontent.com/d/1b6IbsEI5w80L_DtstqeBQ28ZIZSh-IIb" 
               alt="Máquina de Cromatografia OralChroma" 
               className="w-full h-auto object-cover rounded-2xl shadow-sm border border-border-gray"
             />
             <div className="absolute -bottom-8 -left-8 hidden md:block w-48 h-48 border-[6px] border-primary-white rounded-2xl overflow-hidden shadow-sm">
               <img 
-                src="/images/detalhe_equipamento.jpeg" 
+                src="https://lh3.googleusercontent.com/d/1HIpB6a4K4NEXF0j2CvdvYAHrm1Uwiqzx" 
                 alt="Detalhe do OralChroma" 
                 className="w-full h-full object-cover bg-primary-white"
               />
