@@ -6,7 +6,7 @@ export const DraKaryne = () => {
         <div className="order-2 md:order-1 flex gap-6 relative">
           <div className="w-1/2 flex flex-col justify-end">
             <img 
-              src="/images/formação_conteúdo.jpeg" 
+              src="/images/formacao_conteudo.jpeg" 
               alt="Dra. Karyne em formação e conteúdo" 
               className="w-full h-auto aspect-[3/4] object-cover rounded-2xl shadow-sm border border-border-gray/50 mb-8"
             />

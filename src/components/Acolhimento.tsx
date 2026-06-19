@@ -5,7 +5,7 @@ export const Acolhimento = () => {
         <div className="order-2 md:order-1 relative">
           <div className="absolute -inset-4 bg-primary-beige rounded-3xl -z-10 transform -rotate-2"></div>
           <img 
-            src="/images/atendimento_confiança.jpeg" 
+            src="/images/atendimento_confianca.jpeg" 
             alt="Atendimento de confiança e reservado" 
             className="w-full h-auto aspect-[4/5] object-cover rounded-2xl shadow-sm border border-border-gray/50"
           />
