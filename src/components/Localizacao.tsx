@@ -1,6 +1,6 @@
 export const Localizacao = () => {
   return (
-    <section id="localizacao" className="py-24 bg-primary-white">
+    <section id="localizacao" className="py-16 md:py-20 lg:py-24 bg-primary-white">
       <div className="max-w-7xl mx-auto px-6 grid md:grid-cols-2 gap-16 items-center">
         
         <div className="flex flex-col">
@@ -21,7 +21,7 @@ export const Localizacao = () => {
 
           <div>
             <button 
-              onClick={() => window.open('https://maps.google.com/?q=Rua+Terezina,40,Alto+da+Gloria,Goiania', '_blank')}
+              onClick={() => window.open('https://www.google.com/maps/search/?api=1&query=Rua%20Terezina%2C%2040%2C%20Ed.%20Essenciale%20Premier%2C%20Sala%20701%2C%20Alto%20da%20Gl%C3%B3ria%2C%20Goi%C3%A2nia%20-%20GO%2C%2074815-715', '_blank')}
               className="border border-primary-brown text-primary-brown hover:bg-primary-brown hover:text-primary-white px-8 py-4 rounded-full text-base font-medium transition-colors w-full sm:w-auto"
             >
               Abrir no Google Maps
@@ -29,11 +29,15 @@ export const Localizacao = () => {
           </div>
         </div>
 
-        <div className="relative w-full h-[400px] md:h-full min-h-[400px] bg-border-gray rounded-2xl overflow-hidden shadow-sm flex items-center justify-center border border-border-gray/50">
-          <div className="text-soft-green text-center p-6">
-            <p className="text-lg">[Placeholder do Mapa Integrado]</p>
-            <p className="text-sm mt-2">Ponto a ser configurado futuramente com a API do Google Maps ou iframe dinâmico.</p>
-          </div>
+        <div className="relative w-full h-[320px] md:h-[420px] bg-border-gray rounded-2xl overflow-hidden shadow-sm border border-border-gray/50">
+          <iframe
+            src="https://www.google.com/maps?q=Rua%20Terezina%2C%2040%2C%20Ed.%20Essenciale%20Premier%2C%20Sala%20701%2C%20Alto%20da%20Gl%C3%B3ria%2C%20Goi%C3%A2nia%20-%20GO%2C%2074815-715&output=embed"
+            className="absolute inset-0 w-full h-full"
+            style={{ border: 0 }}
+            loading="lazy"
+            referrerPolicy="no-referrer-when-downgrade"
+            title="Localização da clínica da Dra. Karyne Magalhães"
+          ></iframe>
         </div>
 
       </div>

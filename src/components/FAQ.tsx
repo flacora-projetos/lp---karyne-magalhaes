@@ -4,7 +4,7 @@ import { ChevronDown, ChevronUp } from 'lucide-react';
 const itens = [
   {
     q: "Qual é a diferença entre as duas avaliações?",
-    a: "Existem duas modalidades de avaliação. Clique em “Comparar opções e valores” para conhecer as diferenças e indicar qual delas parece mais adequada ao seu caso."
+    a: "Existem duas modalidades de avaliação. As diferenças detalhadas entre elas serão apresentadas durante a avaliação inicial, antes do encaminhamento para o WhatsApp."
   },
   {
     q: "A consulta já inclui o tratamento?",
@@ -24,11 +24,11 @@ const itens = [
   },
   {
     q: "Como conheço os valores?",
-    a: "Existem duas modalidades de avaliação. Clique em “Comparar opções e valores” para conhecer as diferenças e indicar qual delas parece mais adequada ao seu caso."
+    a: "Existem duas modalidades de avaliação. Os valores e as diferenças entre elas serão apresentados durante a avaliação inicial, antes do encaminhamento para o WhatsApp."
   },
   {
     q: "Como funciona o pagamento?",
-    a: "O acolhimento financeiro, opções de parcelamento e regras para confirmação da agenda serão explicados pela nossa equipe de atendimento assim que você avançar para o entendimento de valores através dos nossos botões de ação."
+    a: "O acolhimento financeiro, opções de parcelamento e regras para confirmação da agenda serão explicados pela nossa equipe de atendimento após a avaliação inicial, no contato via WhatsApp."
   }
 ];
 
@@ -40,7 +40,7 @@ export const FAQ = () => {
   };
 
   return (
-    <section id="duvidas" className="py-24 bg-primary-beige">
+    <section id="duvidas" className="py-16 md:py-20 bg-primary-beige">
       <div className="max-w-4xl mx-auto px-6">
         <h2 className="text-3xl md:text-5xl font-medium leading-tight text-primary-brown mb-16 text-center font-serif">
           Perguntas Frequentes

@@ -1,6 +1,6 @@
 export const CTAFinal = () => {
   return (
-    <section className="relative w-full py-32 bg-primary-green flex items-center overflow-hidden">
+    <section className="relative w-full py-20 md:py-24 bg-primary-green flex items-center overflow-hidden">
       <div className="absolute inset-0 z-0">
         {/* Right sided image with gradient into green */}
         <div className="absolute inset-0 bg-primary-green mix-blend-multiply opacity-30 z-10"></div>

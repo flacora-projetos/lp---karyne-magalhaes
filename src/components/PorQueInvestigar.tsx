@@ -20,7 +20,7 @@ export const PorQueInvestigar = () => {
   ];
 
   return (
-    <section className="py-24 bg-primary-beige">
+    <section className="py-16 md:py-20 bg-primary-beige">
       <div className="max-w-7xl mx-auto px-6">
         <div className="text-center max-w-2xl mx-auto mb-16">
           <h2 className="text-3xl md:text-4xl font-medium leading-tight text-primary-brown">

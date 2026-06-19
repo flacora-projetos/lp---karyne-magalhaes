@@ -2,7 +2,7 @@ import { AlertCircle, MapPin } from 'lucide-react';
 
 export const PreparacaoEOutrasCidades = () => {
   return (
-    <section className="py-16 bg-primary-beige">
+    <section className="py-12 md:py-16 bg-primary-beige">
       <div className="max-w-7xl mx-auto px-6 grid md:grid-cols-2 gap-8">
         
         <div className="bg-primary-white p-10 rounded-2xl shadow-sm border border-border-gray flex flex-col gap-6">

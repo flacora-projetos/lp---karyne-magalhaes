@@ -1,6 +1,6 @@
 export const Acolhimento = () => {
   return (
-    <section id="consulta" className="py-24 bg-primary-white">
+    <section id="consulta" className="py-16 md:py-20 bg-primary-white">
       <div className="max-w-7xl mx-auto px-6 grid md:grid-cols-2 gap-16 items-center">
         <div className="order-2 md:order-1 relative">
           <div className="absolute -inset-4 bg-primary-beige rounded-3xl -z-10 transform -rotate-2"></div>

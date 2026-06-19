@@ -12,7 +12,7 @@ export const OQueEstaIncluido = () => {
   ];
 
   return (
-    <section className="py-24 bg-primary-green text-primary-beige">
+    <section className="py-16 md:py-20 bg-primary-green text-primary-beige">
       <div className="max-w-7xl mx-auto px-6 grid md:grid-cols-2 gap-16">
         <div>
           <h2 className="text-3xl md:text-5xl font-medium leading-tight mb-8 text-primary-white">
