@@ -1,15 +1,24 @@
 export const CTAFinal = () => {
   return (
     <section className="relative w-full py-20 md:py-24 bg-primary-green flex items-center overflow-hidden">
-      <div className="absolute inset-0 z-0">
-        {/* Right sided image with gradient into green */}
-        <div className="absolute inset-0 bg-primary-green mix-blend-multiply opacity-30 z-10"></div>
-        <div className="absolute inset-0 bg-gradient-to-r from-primary-green via-primary-green/90 to-transparent z-10 md:w-3/4"></div>
-        <img 
-          src="https://lh3.googleusercontent.com/d/1-1M-IWgJPfDvGOJX0nVmdnpa9joM3UVA" 
-          alt="Dra. Karyne Magalhães" 
-          className="w-full h-full object-cover object-[center_10%] md:object-[right_10%]"
-        />
+      <div className="absolute inset-0 z-0 bg-primary-green">
+        <div className="absolute inset-0 md:left-auto md:right-0 md:w-[62%] lg:w-[58%] xl:w-[55%] h-full">
+          {/* Mobile original styling preserved */}
+          <div className="absolute inset-0 bg-primary-green mix-blend-multiply opacity-30 z-10 md:hidden"></div>
+          <div className="absolute inset-0 bg-gradient-to-r from-primary-green via-primary-green/90 to-transparent z-10 md:hidden"></div>
+          
+          {/* Desktop gradient: smooth transition avoiding direct opacity on the face */}
+          <div 
+            className="hidden md:block absolute inset-0 z-10 pointer-events-none"
+            style={{ background: 'linear-gradient(90deg, #222D19 0%, rgba(34, 45, 25, 0.9) 15%, rgba(34, 45, 25, 0) 45%)' }}
+          ></div>
+
+          <img 
+            src="https://lh3.googleusercontent.com/d/1-1M-IWgJPfDvGOJX0nVmdnpa9joM3UVA" 
+            alt="Dra. Karyne Magalhães" 
+            className="w-full h-full object-cover object-[center_10%] md:object-[center_25%]"
+          />
+        </div>
       </div>
 
       <div className="relative z-20 max-w-7xl mx-auto px-6 w-full text-center md:text-left flex flex-col md:items-start justify-center">

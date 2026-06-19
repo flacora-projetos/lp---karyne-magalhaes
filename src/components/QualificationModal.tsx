@@ -1,0 +1,477 @@
+import React, { useState, useEffect } from 'react';
+import { X, ArrowLeft, Check, ChevronDown } from 'lucide-react';
+
+interface QualificationModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+}
+
+const UF_LIST = [
+  'AC', 'AL', 'AP', 'AM', 'BA', 'CE', 'DF', 'ES', 'GO', 'MA', 'MT', 'MS', 'MG', 'PA', 'PB', 'PR', 'PE', 'PI', 'RJ', 'RN', 'RS', 'RO', 'RR', 'SC', 'SP', 'SE', 'TO'
+];
+
+type AntibioticStatus = 'Não' | 'Sim' | 'Não tenho certeza';
+type PeriodOption = 'Manhã' | 'Tarde' | 'Posso me adaptar';
+
+interface LeadData {
+  nome: string;
+  whatsapp: string;
+  email: string;
+  cidade: string;
+  estado: string;
+  comportamentoHalito: string;
+  modalidade: string;
+  antibioticos: AntibioticStatus | '';
+  periodo: PeriodOption | '';
+  datasOpcional: string;
+}
+
+const savePartialLead = () => {};
+const updateLeadProgress = () => {};
+const completeLead = () => {};
+
+export const QualificationModal: React.FC<QualificationModalProps> = ({ isOpen, onClose }) => {
+  const [step, setStep] = useState(1);
+  const [data, setData] = useState<LeadData>({
+    nome: '',
+    whatsapp: '',
+    email: '',
+    cidade: '',
+    estado: '',
+    comportamentoHalito: '',
+    modalidade: '',
+    antibioticos: '',
+    periodo: '',
+    datasOpcional: ''
+  });
+
+  // Handle escape key
+  useEffect(() => {
+    const handleEsc = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    if (isOpen) {
+      window.addEventListener('keydown', handleEsc);
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = 'unset';
+    }
+    return () => {
+      window.removeEventListener('keydown', handleEsc);
+      document.body.style.overflow = 'unset';
+    };
+  }, [isOpen, onClose]);
+
+  if (!isOpen) return null;
+
+  const nextStep = () => {
+    updateLeadProgress();
+    setStep((s) => Math.min(s + 1, 6));
+    window.scrollTo({ top: 0, behavior: 'auto' });
+  };
+  const prevStep = () => setStep((s) => Math.max(s - 1, 1));
+
+  const handleChange = (field: keyof LeadData, value: string) => {
+    setData((prev) => ({ ...prev, [field]: value }));
+  };
+
+  const handleWhatsApp = () => {
+    completeLead();
+    const phone = '5562981340675';
+    const text = `Olá! Vim pela página da consulta de Halitose e respondi à avaliação inicial.
+
+Nome: ${data.nome}
+WhatsApp: ${data.whatsapp}
+Melhor e-mail: ${data.email}
+Cidade/UF: ${data.cidade}/${data.estado}
+Situação informada: ${data.comportamentoHalito}
+Opção de interesse: ${data.modalidade}
+Uso de antibióticos nos últimos 21 dias: ${data.antibioticos}
+Período preferido: ${data.periodo}
+Datas ou horários informados: ${data.datasOpcional || 'Não informado'}
+
+Gostaria de receber orientação e verificar os horários disponíveis para a consulta com a Dra. Karyne Magalhães.`;
+
+    const encodedText = encodeURIComponent(text);
+    window.open(`https://wa.me/${phone}?text=${encodedText}`, '_blank');
+  };
+
+  const isStep1Valid = !!data.nome && !!data.whatsapp && !!data.email && !!data.cidade && !!data.estado;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-0 md:p-6 bg-black/40 backdrop-blur-sm transition-opacity">
+      <div 
+        className="bg-[#F6F0E9] w-full h-full md:h-auto md:max-h-[90vh] md:max-w-2xl md:rounded-3xl shadow-2xl flex flex-col overflow-hidden relative font-sans text-[#2B1B0A]"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Header */}
+        <div className="flex-none flex items-center justify-between p-6 border-b border-[#E4DFD9] bg-[#F6F0E9] z-10">
+          <div className="flex items-center gap-3">
+            {step > 1 && (
+              <button onClick={prevStep} className="p-2 -ml-2 rounded-full hover:bg-black/5 transition-colors text-[#2B1B0A]">
+                <ArrowLeft size={20} />
+              </button>
+            )}
+            <div className="text-sm font-medium text-[#A95B21]">Etapa {step} de 6</div>
+          </div>
+          <button onClick={onClose} className="p-2 -mr-2 rounded-full hover:bg-black/5 transition-colors text-[#2B1B0A]">
+            <X size={20} />
+          </button>
+        </div>
+
+        {/* Progress bar */}
+        <div className="h-1 bg-[#E4DFD9] w-full">
+          <div 
+            className="h-full bg-[#A95B21] transition-all duration-300 ease-out"
+            style={{ width: `${(step / 6) * 100}%` }}
+          />
+        </div>
+
+        {/* Content */}
+        <div className="flex-1 overflow-y-auto p-6 md:p-8">
+          
+          {step === 1 && (
+            <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+              <h2 className="text-2xl md:text-3xl font-medium font-serif leading-tight mb-3">Para começar, como podemos falar com você?</h2>
+              <p className="text-[#2B1B0A]/70 text-sm mb-8">Seus dados serão usados pela equipe da clínica para orientar o atendimento e o agendamento.</p>
+              
+              <div className="space-y-5">
+                <div>
+                  <label className="block text-sm font-medium mb-1.5 pl-1">Nome completo</label>
+                  <input 
+                    type="text" 
+                    value={data.nome}
+                    onChange={e => handleChange('nome', e.target.value)}
+                    className="w-full bg-[#FEFEFE] border border-[#E4DFD9] rounded-xl px-4 py-3.5 focus:outline-none focus:ring-2 focus:ring-[#A95B21]/40 focus:border-[#A95B21] transition-all"
+                    placeholder="Seu nome completo"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1.5 pl-1">WhatsApp</label>
+                  <input 
+                    type="tel" 
+                    value={data.whatsapp}
+                    onChange={e => handleChange('whatsapp', e.target.value)}
+                    className="w-full bg-[#FEFEFE] border border-[#E4DFD9] rounded-xl px-4 py-3.5 focus:outline-none focus:ring-2 focus:ring-[#A95B21]/40 focus:border-[#A95B21] transition-all"
+                    placeholder="(00) 00000-0000"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1.5 pl-1">Melhor e-mail</label>
+                  <input 
+                    type="email" 
+                    value={data.email}
+                    onChange={e => handleChange('email', e.target.value)}
+                    className="w-full bg-[#FEFEFE] border border-[#E4DFD9] rounded-xl px-4 py-3.5 focus:outline-none focus:ring-2 focus:ring-[#A95B21]/40 focus:border-[#A95B21] transition-all"
+                    placeholder="voce@exemplo.com.br"
+                  />
+                </div>
+                <div className="grid grid-cols-3 gap-4">
+                  <div className="col-span-2">
+                    <label className="block text-sm font-medium mb-1.5 pl-1">Cidade</label>
+                    <input 
+                      type="text" 
+                      value={data.cidade}
+                      onChange={e => handleChange('cidade', e.target.value)}
+                      className="w-full bg-[#FEFEFE] border border-[#E4DFD9] rounded-xl px-4 py-3.5 focus:outline-none focus:ring-2 focus:ring-[#A95B21]/40 focus:border-[#A95B21] transition-all"
+                      placeholder="Sua cidade"
+                    />
+                  </div>
+                  <div className="col-span-1">
+                    <label className="block text-sm font-medium mb-1.5 pl-1">Estado</label>
+                    <div className="relative">
+                      <select 
+                        value={data.estado}
+                        onChange={e => handleChange('estado', e.target.value)}
+                        className="w-full appearance-none bg-[#FEFEFE] border border-[#E4DFD9] rounded-xl px-4 py-3.5 pr-10 focus:outline-none focus:ring-2 focus:ring-[#A95B21]/40 focus:border-[#A95B21] transition-all"
+                      >
+                        <option value="">UF</option>
+                        {UF_LIST.map(uf => (
+                          <option key={uf} value={uf}>{uf}</option>
+                        ))}
+                      </select>
+                      <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-[#2B1B0A]/50" size={18} />
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div className="mt-10">
+                <button 
+                  onClick={() => {
+                    savePartialLead();
+                    nextStep();
+                  }}
+                  disabled={!isStep1Valid}
+                  className="w-full bg-[#222D19] hover:bg-[#222D19]/90 disabled:bg-[#E4DFD9] disabled:text-[#2B1B0A]/40 transition-colors text-white py-4 rounded-xl font-medium text-[15px]"
+                >
+                  Continuar
+                </button>
+              </div>
+            </div>
+          )}
+
+          {step === 2 && (
+            <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+              <h2 className="text-2xl md:text-3xl font-medium font-serif leading-tight mb-8">Qual situação mais se aproxima do seu caso?</h2>
+              
+              <div className="space-y-3">
+                {[
+                  'O odor costuma estar presente com frequência',
+                  'O odor aparece e desaparece',
+                  'Fui alertado por alguém, mas não consigo perceber',
+                  'Tenho dúvida se realmente existe alteração',
+                  'Quero realizar uma avaliação preventiva',
+                  'Prefiro explicar diretamente à equipe'
+                ].map((opcao) => (
+                  <button
+                    key={opcao}
+                    onClick={() => {
+                      handleChange('comportamentoHalito', opcao);
+                      setTimeout(nextStep, 200);
+                    }}
+                    className={`w-full text-left p-4 md:p-5 rounded-xl border transition-all flex items-center justify-between group ${
+                      data.comportamentoHalito === opcao 
+                        ? 'bg-[#FEFEFE] border-[#A95B21] !shadow-[0_4px_12px_rgba(169,91,33,0.1)] ring-1 ring-[#A95B21]' 
+                        : 'bg-[#FEFEFE] border-[#E4DFD9] hover:border-[#A95B21]/40 hover:shadow-sm'
+                    }`}
+                  >
+                    <span className="text-[15px] pr-4">{opcao}</span>
+                    <div className={`w-5 h-5 rounded-full flex-shrink-0 border flex items-center justify-center transition-colors ${
+                      data.comportamentoHalito === opcao ? 'border-[#A95B21] bg-[#A95B21]' : 'border-[#E4DFD9] group-hover:border-[#A95B21]/40'
+                    }`}>
+                      {data.comportamentoHalito === opcao && <Check size={12} className="text-white" />}
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {step === 3 && (
+            <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+              <h2 className="text-2xl md:text-3xl font-medium font-serif leading-tight mb-2">Conheça as opções de avaliação</h2>
+              <p className="text-[#2B1B0A]/70 text-sm mb-6">A escolha poderá ser orientada e confirmada pela equipe antes do agendamento.</p>
+              
+              <div className="space-y-4 mb-8">
+                {/* Opção 1 */}
+                <div className="bg-[#FEFEFE] border border-[#E4DFD9] rounded-2xl p-5 md:p-6">
+                  <div className="flex flex-col md:flex-row md:justify-between md:items-start gap-2 mb-3">
+                    <h3 className="text-lg font-medium font-serif text-[#222D19]">OralChroma</h3>
+                    <div className="text-base font-semibold text-[#A95B21] md:text-right">R$ 770,00</div>
+                  </div>
+                  <p className="text-sm text-[#2B1B0A]/80 leading-relaxed mb-4">
+                    Mede separadamente os gases presentes no hálito no momento da consulta.
+                  </p>
+                  <div className="text-[13px] text-[#2B1B0A]/60 flex items-center gap-1.5">
+                    <span className="w-1.5 h-1.5 rounded-full bg-[#A95B21]"></span>
+                    Cerca de 1 hora
+                  </div>
+                </div>
+
+                {/* Opção 2 */}
+                <div className="bg-[#FEFEFE] border border-[#E4DFD9] rounded-2xl p-5 md:p-6">
+                  <div className="flex flex-col md:flex-row md:justify-between md:items-start gap-2 mb-3">
+                    <h3 className="text-lg font-medium font-serif text-[#222D19]">OralChroma + Desafio da Cisteína</h3>
+                    <div className="text-base font-semibold text-[#A95B21] md:text-right">R$ 1.090,00</div>
+                  </div>
+                  <p className="text-sm text-[#2B1B0A]/80 leading-relaxed mb-4">
+                    Também avalia o potencial máximo de produção dos gases, sendo útil quando o odor oscila ou pode estar fraco no dia da consulta.
+                  </p>
+                  <div className="text-[13px] text-[#2B1B0A]/60 flex items-center gap-1.5">
+                    <span className="w-1.5 h-1.5 rounded-full bg-[#A95B21]"></span>
+                    Até 1 hora e 30 minutos
+                  </div>
+                </div>
+              </div>
+
+              <h4 className="font-medium text-base mb-4">Como você prefere prosseguir?</h4>
+              
+              <div className="space-y-3">
+                {[
+                  'Tenho interesse no OralChroma',
+                  'Tenho interesse no OralChroma + Desafio da Cisteína',
+                  'Ainda não sei qual escolher',
+                  'Quero orientação da equipe antes de decidir'
+                ].map((opcao) => (
+                  <button
+                    key={opcao}
+                    onClick={() => {
+                      handleChange('modalidade', opcao);
+                      setTimeout(nextStep, 200);
+                    }}
+                    className={`w-full text-left p-4 rounded-xl border transition-all flex items-center justify-between group ${
+                      data.modalidade === opcao 
+                        ? 'bg-[#FEFEFE] border-[#A95B21] !shadow-[0_4px_12px_rgba(169,91,33,0.1)] ring-1 ring-[#A95B21]' 
+                        : 'bg-[#FEFEFE] border-[#E4DFD9] hover:border-[#A95B21]/40 hover:shadow-sm'
+                    }`}
+                  >
+                    <span className="text-[15px] pr-4">{opcao}</span>
+                    <div className={`w-5 h-5 rounded-full flex-shrink-0 border flex items-center justify-center transition-colors ${
+                      data.modalidade === opcao ? 'border-[#A95B21] bg-[#A95B21]' : 'border-[#E4DFD9] group-hover:border-[#A95B21]/40'
+                    }`}>
+                      {data.modalidade === opcao && <Check size={12} className="text-white" />}
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {step === 4 && (
+            <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+              <h2 className="text-2xl md:text-3xl font-medium font-serif leading-tight mb-8">Você utilizou antibióticos nos últimos 21 dias?</h2>
+              
+              <div className="space-y-3">
+                {([ 'Não', 'Sim', 'Não tenho certeza' ] as AntibioticStatus[]).map((opcao) => (
+                  <button
+                    key={opcao}
+                    onClick={() => {
+                      handleChange('antibioticos', opcao);
+                    }}
+                    className={`w-full text-left p-4 md:p-5 rounded-xl border transition-all flex items-center justify-between group ${
+                      data.antibioticos === opcao 
+                        ? 'bg-[#FEFEFE] border-[#A95B21] !shadow-[0_4px_12px_rgba(169,91,33,0.1)] ring-1 ring-[#A95B21]' 
+                        : 'bg-[#FEFEFE] border-[#E4DFD9] hover:border-[#A95B21]/40 hover:shadow-sm'
+                    }`}
+                  >
+                    <span className="text-[15px] pr-4">{opcao}</span>
+                    <div className={`w-5 h-5 rounded-full flex-shrink-0 border flex items-center justify-center transition-colors ${
+                      data.antibioticos === opcao ? 'border-[#A95B21] bg-[#A95B21]' : 'border-[#E4DFD9] group-hover:border-[#A95B21]/40'
+                    }`}>
+                      {data.antibioticos === opcao && <Check size={12} className="text-white" />}
+                    </div>
+                  </button>
+                ))}
+              </div>
+
+              {(data.antibioticos === 'Sim' || data.antibioticos === 'Não tenho certeza') && (
+                <div className="mt-6 p-4 bg-[#A95B21]/10 rounded-xl border border-[#A95B21]/20 animate-in fade-in duration-300">
+                  <p className="text-[14px] text-[#A95B21] leading-relaxed">
+                    O uso recente pode interferir nos resultados. A equipe poderá orientar a melhor data para a consulta.
+                  </p>
+                </div>
+              )}
+
+              <div className="mt-10">
+                <button 
+                  onClick={nextStep}
+                  disabled={!data.antibioticos}
+                  className="w-full bg-[#222D19] hover:bg-[#222D19]/90 disabled:bg-[#E4DFD9] disabled:text-[#2B1B0A]/40 transition-colors text-white py-4 rounded-xl font-medium text-[15px]"
+                >
+                  Continuar
+                </button>
+              </div>
+            </div>
+          )}
+
+          {step === 5 && (
+            <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+              <h2 className="text-2xl md:text-3xl font-medium font-serif leading-tight mb-8">Qual período costuma ser melhor para você?</h2>
+              
+              <div className="space-y-3 mb-8">
+                {([ 'Manhã', 'Tarde', 'Posso me adaptar' ] as PeriodOption[]).map((opcao) => (
+                  <button
+                    key={opcao}
+                    onClick={() => {
+                      handleChange('periodo', opcao);
+                    }}
+                    className={`w-full text-left p-4 md:p-5 rounded-xl border transition-all flex items-center justify-between group ${
+                      data.periodo === opcao 
+                        ? 'bg-[#FEFEFE] border-[#A95B21] !shadow-[0_4px_12px_rgba(169,91,33,0.1)] ring-1 ring-[#A95B21]' 
+                        : 'bg-[#FEFEFE] border-[#E4DFD9] hover:border-[#A95B21]/40 hover:shadow-sm'
+                    }`}
+                  >
+                    <span className="text-[15px] pr-4">{opcao}</span>
+                    <div className={`w-5 h-5 rounded-full flex-shrink-0 border flex items-center justify-center transition-colors ${
+                      data.periodo === opcao ? 'border-[#A95B21] bg-[#A95B21]' : 'border-[#E4DFD9] group-hover:border-[#A95B21]/40'
+                    }`}>
+                      {data.periodo === opcao && <Check size={12} className="text-white" />}
+                    </div>
+                  </button>
+                ))}
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium mb-1.5 pl-1">Datas, dias da semana ou horários de preferência <span className="text-[#2B1B0A]/40 font-normal">(opcional)</span></label>
+                <textarea 
+                  value={data.datasOpcional}
+                  onChange={e => handleChange('datasOpcional', e.target.value)}
+                  className="w-full bg-[#FEFEFE] border border-[#E4DFD9] rounded-xl px-4 py-3.5 focus:outline-none focus:ring-2 focus:ring-[#A95B21]/40 focus:border-[#A95B21] transition-all min-h-[100px] resize-y"
+                  placeholder="Ex: Prefiro segundas à tarde, ou somente após as 16h..."
+                ></textarea>
+              </div>
+
+              <div className="mt-10">
+                <button 
+                  onClick={nextStep}
+                  disabled={!data.periodo}
+                  className="w-full bg-[#222D19] hover:bg-[#222D19]/90 disabled:bg-[#E4DFD9] disabled:text-[#2B1B0A]/40 transition-colors text-white py-4 rounded-xl font-medium text-[15px]"
+                >
+                  Continuar
+                </button>
+              </div>
+            </div>
+          )}
+
+          {step === 6 && (
+            <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+              <h2 className="text-2xl md:text-3xl font-medium font-serif leading-tight mb-8">Revise suas informações</h2>
+              
+              <div className="bg-[#FEFEFE] border border-[#E4DFD9] rounded-2xl p-5 md:p-6 space-y-5 mb-8">
+                
+                <div>
+                  <div className="text-[12px] text-[#2B1B0A]/50 uppercase tracking-wider font-medium mb-1">Identificação</div>
+                  <div className="text-[15px] font-medium">{data.nome}</div>
+                  <div className="text-[14px] text-[#2B1B0A]/70">{data.whatsapp} • {data.email}</div>
+                  <div className="text-[14px] text-[#2B1B0A]/70">{data.cidade} / {data.estado}</div>
+                </div>
+
+                <div className="h-px bg-[#E4DFD9] w-full"></div>
+
+                <div>
+                  <div className="text-[12px] text-[#2B1B0A]/50 uppercase tracking-wider font-medium mb-1">Situação informada</div>
+                  <div className="text-[14px] text-[#2B1B0A]">{data.comportamentoHalito}</div>
+                </div>
+
+                <div>
+                  <div className="text-[12px] text-[#2B1B0A]/50 uppercase tracking-wider font-medium mb-1">Opção selecionada</div>
+                  <div className="text-[14px] text-[#2B1B0A]">{data.modalidade}</div>
+                </div>
+
+                <div className="h-px bg-[#E4DFD9] w-full"></div>
+
+                <div>
+                  <div className="text-[12px] text-[#2B1B0A]/50 uppercase tracking-wider font-medium mb-1">Uso de antibióticos (21 dias)</div>
+                  <div className="text-[14px] text-[#2B1B0A]">{data.antibioticos}</div>
+                </div>
+
+                <div>
+                  <div className="text-[12px] text-[#2B1B0A]/50 uppercase tracking-wider font-medium mb-1">Disponibilidade</div>
+                  <div className="text-[14px] text-[#2B1B0A]">{data.periodo}</div>
+                  {data.datasOpcional && (
+                    <div className="text-[14px] text-[#2B1B0A]/70 mt-1 italic">"{data.datasOpcional}"</div>
+                  )}
+                </div>
+
+              </div>
+
+              <div className="text-center mb-6">
+                <p className="text-[13px] text-[#2B1B0A]/70">
+                  Ao continuar, o WhatsApp será aberto com suas respostas organizadas para facilitar o atendimento.
+                </p>
+              </div>
+
+              <button 
+                onClick={handleWhatsApp}
+                className="w-full bg-[#128C7E] hover:bg-[#128C7E]/90 transition-colors text-white py-4 rounded-xl font-medium text-[15px] flex justify-center items-center gap-2"
+              >
+                Continuar pelo WhatsApp
+              </button>
+            </div>
+          )}
+
+        </div>
+      </div>
+    </div>
+  );
+};

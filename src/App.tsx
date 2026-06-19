@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Header } from './components/Header';
 import { Hero } from './components/Hero';
 import { Acolhimento } from './components/Acolhimento';
@@ -18,6 +18,7 @@ import { Localizacao } from './components/Localizacao';
 import { FAQ } from './components/FAQ';
 import { CTAFinal } from './components/CTAFinal';
 import { Footer } from './components/Footer';
+import { QualificationModal } from './components/QualificationModal';
 
 declare global {
   interface Window {
@@ -26,11 +27,12 @@ declare global {
 }
 
 export default function App() {
+  const [isModalOpen, setIsModalOpen] = useState(false);
+
   useEffect(() => {
-    // Placeholder function definition as requested
+    // Configura a função global para abrir o modal
     window.openQualificationModal = () => {
-      console.log('Open qualification modal triggered');
-      // No implementation for this stage.
+      setIsModalOpen(true);
     };
     
     // Config do WhatsApp constant as requested
@@ -55,6 +57,7 @@ export default function App() {
         <CTAFinal />
       </main>
       <Footer />
+      <QualificationModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} />
     </div>
   );
 }
