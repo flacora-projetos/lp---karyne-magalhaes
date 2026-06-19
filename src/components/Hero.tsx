@@ -1,25 +1,25 @@
 export const Hero = () => {
   return (
     <section className="relative w-full min-h-[90vh] flex md:items-center bg-primary-beige pt-20 overflow-hidden">
-      {/* Background Image covering the entire hero */}
-      <div className="absolute inset-0 w-full h-full z-0">
+      {/* Background Image Container */}
+      <div className="absolute right-0 top-0 w-full md:w-[75%] lg:w-[70%] h-full z-0">
         <img 
           src="https://lh3.googleusercontent.com/d/1_R1q6m9jY9ey84Pt7VC2Q94zOqtFR53m" 
           alt="Dra. Karyne Magalhães" 
-          className="w-full h-full object-cover object-[80%_top] md:w-[125%] md:max-w-none md:object-[60%_20%]"
+          className="w-full h-full object-cover object-[80%_top] md:object-[center_15%]"
         />
-        {/* Gradients to protect the text */}
         {/* Mobile: bottom gradient protecting text */}
         <div 
-          className="absolute inset-0 md:hidden" 
+          className="absolute inset-0 md:hidden pointer-events-none" 
           style={{ background: 'linear-gradient(0deg, #F6F0E9 0%, #F6F0E9 35%, rgba(246,240,233,0.85) 45%, rgba(246,240,233,0) 55%)' }}
         />
-        {/* Desktop: left to right gradient protecting text */}
-        <div 
-          className="absolute inset-0 hidden md:block" 
-          style={{ background: 'linear-gradient(90deg, #F6F0E9 0%, #F6F0E9 36%, rgba(246,240,233,0.88) 46%, rgba(246,240,233,0.25) 53%, rgba(246,240,233,0) 58%)' }}
-        />
       </div>
+
+      {/* Desktop: left to right gradient protecting text */}
+      <div 
+        className="absolute inset-0 hidden md:block z-0 pointer-events-none" 
+        style={{ background: 'linear-gradient(90deg, #F6F0E9 0%, #F6F0E9 36%, rgba(246,240,233,0.88) 46%, rgba(246,240,233,0.25) 53%, rgba(246,240,233,0) 58%)' }}
+      />
 
       <div className="relative z-10 max-w-7xl mx-auto px-6 w-full md:grid md:grid-cols-[55%_45%] gap-8 pb-10 mt-auto md:mt-0 pt-56 md:pt-0">
         <div className="flex flex-col justify-center md:py-14">
