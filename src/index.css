@@ -1,0 +1,29 @@
+@import url('https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600&family=Lora:ital,wght@0,400;0,500;0,600;1,400&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Geist", ui-sans-serif, system-ui, sans-serif;
+  --font-serif: "Lora", ui-serif, Georgia, serif;
+
+  --color-primary-beige: #F6F0E9;
+  --color-primary-white: #FEFEFE;
+  --color-primary-brown: #2B1B0A;
+  --color-primary-green: #222D19;
+  --color-secondary-green: #565E48;
+  --color-soft-green: #757D50;
+  --color-accent-copper: #A95B21;
+  --color-accent-earthy: #C98A42;
+  --color-accent-terra: #8B2312;
+  --color-border-gray: #E4DFD9;
+}
+
+body {
+  background-color: var(--color-primary-beige);
+  color: var(--color-primary-brown);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-serif);
+}

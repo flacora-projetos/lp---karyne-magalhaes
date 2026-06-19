@@ -1,0 +1,43 @@
+export const Footer = () => {
+  return (
+    <footer className="bg-primary-brown text-primary-beige py-16 border-t border-accent-copper/20">
+      <div className="max-w-7xl mx-auto px-6 flex flex-col md:flex-row justify-between gap-12">
+        <div className="flex flex-col gap-2">
+          <span className="font-serif text-2xl font-medium tracking-wide text-primary-white">
+            Dra. Karyne Magalhães
+          </span>
+          <span className="text-sm tracking-widest uppercase text-soft-green mb-4">
+            Especialista em Halitose
+          </span>
+          <p className="text-primary-beige/80 text-sm">CRO-GO 7954</p>
+          <p className="text-primary-beige/80 text-sm mt-4">
+            Atendimento presencial em Goiânia
+          </p>
+          <p className="text-primary-beige/80 text-sm leading-relaxed mt-2 max-w-xs">
+            Rua Terezina, 40, Ed. Essenciale Premier, Sala 701<br/>
+            Alto da Glória, Goiânia - GO<br/>
+            CEP 74815-715, Brasil
+          </p>
+        </div>
+
+        <div className="flex flex-col md:items-end justify-between gap-8">
+          <div className="flex gap-6">
+            <a href="#" className="text-primary-beige/80 hover:text-primary-white transition-colors text-sm underline decoration-accent-copper/40 underline-offset-4">
+              [Placeholder - Instagram]
+            </a>
+          </div>
+          
+          <div className="flex gap-6">
+            <a href="#" className="text-primary-beige/80 hover:text-primary-white transition-colors text-sm">
+              [Política de Privacidade - futura]
+            </a>
+          </div>
+          
+          <div className="text-xs text-primary-beige/40">
+            © {new Date().getFullYear()} Dra. Karyne Magalhães. Todos os direitos reservados.
+          </div>
+        </div>
+      </div>
+    </footer>
+  );
+};
