@@ -70,15 +70,36 @@ export const QualificationModal: React.FC<QualificationModalProps> = ({ isOpen, 
 
   // Handle escape key, tracking data, and generate leadId
   useEffect(() => {
+    let currentLeadId = leadId;
     if (isOpen) {
-      if (!leadId) {
+      if (!currentLeadId) {
         try {
-          setLeadId(crypto.randomUUID());
+          currentLeadId = crypto.randomUUID();
+          setLeadId(currentLeadId);
         } catch (e) {
-          setLeadId('lead-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9));
+          currentLeadId = 'lead-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9);
+          setLeadId(currentLeadId);
         }
       }
       getTrackingData();
+      
+      // Fire 'Filtro aberto' event when modal opens, if we are at step 1
+      if (step === 1) {
+        const payload = {
+          leadId: currentLeadId,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+          status: 'Filtro aberto (Abriu o filtro)',
+          currentStep: 1,
+          nomeCompleto: 'Visitante (Início)',
+          ...getTrackingData()
+        };
+        fetch(GOOGLE_SCRIPT_URL, {
+          method: "POST", mode: "no-cors",
+          headers: { "Content-Type": "text/plain;charset=utf-8" },
+          body: JSON.stringify(payload)
+        }).catch(e => console.error(e));
+      }
     }
     
     const handleEsc = (e: KeyboardEvent) => {
@@ -138,9 +159,10 @@ export const QualificationModal: React.FC<QualificationModalProps> = ({ isOpen, 
     setStep(nextS);
     window.scrollTo({ top: 0, behavior: 'auto' });
     
-    let status = 'Filtro em andamento';
-    if (nextS === 2) status = 'Contato capturado';
-    if (nextS === 6) status = 'Filtro concluído';
+    let status = 'Respondendo perguntas (Ainda no preenchimento)';
+    if (nextS === 2) status = 'Lead gerado(Lead formado)';
+    if (nextS === 3) status = 'Filtro iniciado (Começou a responder)';
+    if (nextS === 6) status = 'Filtro concluído(Concluiu o filtro)';
     sendDataToSheets(status, nextS);
   };
   const prevStep = () => setStep((s) => Math.max(s - 1, 1));
@@ -150,7 +172,7 @@ export const QualificationModal: React.FC<QualificationModalProps> = ({ isOpen, 
   };
 
   const handleWhatsApp = () => {
-    sendDataToSheets('WhatsApp aberto', 6);
+    sendDataToSheets('WhatsApp aberto(clicou para WhatsApp)', 6);
     const phone = '5562981340675';
     const text = `Olá! Vim pela página da consulta de Halitose e respondi à avaliação inicial.
 

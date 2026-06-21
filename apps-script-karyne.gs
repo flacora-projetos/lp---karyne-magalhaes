@@ -35,11 +35,21 @@ function processData(data, spreadsheetId) {
   }
 
   let kanbanSheet = ss.getSheetByName("Kanban");
+  const kanbanColumns = [
+    "Filtro aberto (Abriu o filtro)",
+    "Filtro iniciado (Começou a responder)",
+    "Respondendo perguntas (Ainda no preenchimento)",
+    "Lead gerado(Lead formado)",
+    "Filtro concluído(Concluiu o filtro)",
+    "WhatsApp aberto(clicou para WhatsApp)"
+  ];
+  
   if (!kanbanSheet) {
     kanbanSheet = ss.insertSheet("Kanban");
-    kanbanSheet.appendRow(["Aguardando Contato", "Em Negociação", "Agendado", "Perdido"]);
-    kanbanSheet.getRange(1, 1, 1, 4).setFontWeight("bold");
   }
+  
+  kanbanSheet.getRange(1, 1, 1, kanbanColumns.length).setValues([kanbanColumns]).setFontWeight("bold");
+
 
   const leadId = data.leadId;
   if (!leadId) {
@@ -90,17 +100,39 @@ function processData(data, spreadsheetId) {
     leadsSheet.getRange(rowIndex, 1, 1, rowData.length).setValues([rowData]);
   } else {
     leadsSheet.appendRow(rowData);
-    
-    // Adiciona o lead na aba Kanban, na coluna "Aguardando Contato" (Coluna A)
-    const kanbanAValues = kanbanSheet.getRange("A:A").getValues();
-    let nextRowA = 1;
-    for (let i = 0; i < kanbanAValues.length; i++) {
-        if (kanbanAValues[i][0] === "") {
-            nextRowA = i + 1;
-            break;
-        }
+  }
+
+  // Regenerate Kanban sheet fully
+  const lastRow = kanbanSheet.getLastRow();
+  const lastCol = Math.max(kanbanSheet.getLastColumn(), kanbanColumns.length);
+  if (lastRow > 1) {
+    kanbanSheet.getRange(2, 1, lastRow - 1, lastCol).clearContent();
+  }
+  
+  const allLeadsData = leadsSheet.getDataRange().getValues();
+  const stateMap = {};
+  kanbanColumns.forEach(c => stateMap[c] = []);
+  
+  // Headers are in index 0. Status is index 3. Nome completo is index 5.
+  for (let i = 1; i < allLeadsData.length; i++) {
+    const status = allLeadsData[i][3];
+    const name = allLeadsData[i][5] || "Lead s/ nome";
+    if (stateMap[status] !== undefined) {
+      stateMap[status].push(name);
     }
-    kanbanSheet.getRange(nextRowA, 1).setValue(data.nomeCompleto || "Lead s/ nome");
+  }
+
+  const maxRows = Math.max(...kanbanColumns.map(c => stateMap[c].length));
+  if (maxRows > 0) {
+    const kanbanOutput = [];
+    for (let r = 0; r < maxRows; r++) {
+      const row = [];
+      for (const col of kanbanColumns) {
+        row.push(stateMap[col][r] || "");
+      }
+      kanbanOutput.push(row);
+    }
+    kanbanSheet.getRange(2, 1, kanbanOutput.length, kanbanColumns.length).setValues(kanbanOutput);
   }
 
   return ContentService.createTextOutput(JSON.stringify({ status: "success", leadId: leadId }))
