@@ -90,6 +90,17 @@ function processData(data, spreadsheetId) {
     leadsSheet.getRange(rowIndex, 1, 1, rowData.length).setValues([rowData]);
   } else {
     leadsSheet.appendRow(rowData);
+    
+    // Adiciona o lead na aba Kanban, na coluna "Aguardando Contato" (Coluna A)
+    const kanbanAValues = kanbanSheet.getRange("A:A").getValues();
+    let nextRowA = 1;
+    for (let i = 0; i < kanbanAValues.length; i++) {
+        if (kanbanAValues[i][0] === "") {
+            nextRowA = i + 1;
+            break;
+        }
+    }
+    kanbanSheet.getRange(nextRowA, 1).setValue(data.nomeCompleto || "Lead s/ nome");
   }
 
   return ContentService.createTextOutput(JSON.stringify({ status: "success", leadId: leadId }))
