@@ -26,12 +26,35 @@ interface LeadData {
   datasOpcional: string;
 }
 
-const savePartialLead = () => {};
-const updateLeadProgress = () => {};
-const completeLead = () => {};
+const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxuZ_lYd25_ogdcYmOaGVwjux1-NGr7n6DOTcneSmgYC9_LwD8h9dzHV86ha2BfJFhB/exec";
+
+const getTrackingData = () => {
+  const params = new URLSearchParams(window.location.search);
+  const keys = ['utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'utm_term', 'fbclid', 'gclid'];
+  
+  keys.forEach(key => {
+    if (params.has(key)) {
+      sessionStorage.setItem(key, params.get(key) || '');
+    }
+  });
+
+  return {
+    utmSource: sessionStorage.getItem('utm_source') || '',
+    utmMedium: sessionStorage.getItem('utm_medium') || '',
+    utmCampaign: sessionStorage.getItem('utm_campaign') || '',
+    utmContent: sessionStorage.getItem('utm_content') || '',
+    utmTerm: sessionStorage.getItem('utm_term') || '',
+    fbclid: sessionStorage.getItem('fbclid') || '',
+    gclid: sessionStorage.getItem('gclid') || '',
+    pageUrl: window.location.href,
+    referrer: document.referrer,
+    userAgent: navigator.userAgent
+  };
+};
 
 export const QualificationModal: React.FC<QualificationModalProps> = ({ isOpen, onClose }) => {
   const [step, setStep] = useState(1);
+  const [leadId, setLeadId] = useState<string>('');
   const [data, setData] = useState<LeadData>({
     nome: '',
     whatsapp: '',
@@ -45,8 +68,15 @@ export const QualificationModal: React.FC<QualificationModalProps> = ({ isOpen, 
     datasOpcional: ''
   });
 
-  // Handle escape key
+  // Handle escape key, tracking data, and generate leadId
   useEffect(() => {
+    if (isOpen) {
+      if (!leadId) {
+        setLeadId(crypto.randomUUID());
+      }
+      getTrackingData();
+    }
+    
     const handleEsc = (e: KeyboardEvent) => {
       if (e.key === 'Escape') onClose();
     };
@@ -64,10 +94,46 @@ export const QualificationModal: React.FC<QualificationModalProps> = ({ isOpen, 
 
   if (!isOpen) return null;
 
+  const sendDataToSheets = (statusOverride?: string, stepOverride?: number) => {
+    const tracking = getTrackingData();
+    const payload = {
+      leadId,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      status: statusOverride || 'Contato capturado',
+      currentStep: stepOverride || step,
+      nomeCompleto: data.nome,
+      whatsapp: data.whatsapp,
+      email: data.email,
+      cidade: data.cidade,
+      estado: data.estado,
+      comportamentoHalito: data.comportamentoHalito,
+      opcaoInteresse: data.modalidade,
+      usoAntibiotico: data.antibioticos,
+      periodoPreferido: data.periodo,
+      datasPreferidas: data.datasOpcional,
+      ...tracking
+    };
+
+    fetch(GOOGLE_SCRIPT_URL, {
+      method: "POST",
+      mode: "no-cors",
+      headers: {
+        "Content-Type": "text/plain;charset=utf-8"
+      },
+      body: JSON.stringify(payload)
+    }).catch(e => console.error("Error sending lead to sheets:", e));
+  };
+
   const nextStep = () => {
-    updateLeadProgress();
-    setStep((s) => Math.min(s + 1, 6));
+    const nextS = Math.min(step + 1, 6);
+    setStep(nextS);
     window.scrollTo({ top: 0, behavior: 'auto' });
+    
+    let status = 'Filtro em andamento';
+    if (nextS === 2) status = 'Contato capturado';
+    if (nextS === 6) status = 'Filtro concluído';
+    sendDataToSheets(status, nextS);
   };
   const prevStep = () => setStep((s) => Math.max(s - 1, 1));
 
@@ -76,7 +142,7 @@ export const QualificationModal: React.FC<QualificationModalProps> = ({ isOpen, 
   };
 
   const handleWhatsApp = () => {
-    completeLead();
+    sendDataToSheets('WhatsApp aberto', 6);
     const phone = '5562981340675';
     const text = `Olá! Vim pela página da consulta de Halitose e respondi à avaliação inicial.
 
@@ -198,7 +264,6 @@ Gostaria de receber orientação e verificar os horários disponíveis para a co
               <div className="mt-10">
                 <button 
                   onClick={() => {
-                    savePartialLead();
                     nextStep();
                   }}
                   disabled={!isStep1Valid}

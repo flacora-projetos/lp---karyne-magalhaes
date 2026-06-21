@@ -4,7 +4,7 @@ import { ChevronDown, ChevronUp } from 'lucide-react';
 const itens = [
   {
     q: "Qual é a diferença entre as duas avaliações?",
-    a: "Existem duas modalidades de avaliação. As diferenças detalhadas entre elas serão apresentadas durante a avaliação inicial, antes do encaminhamento para o WhatsApp."
+    a: "Existem duas modalidades de avaliação. As diferenças detalhadas entre elas serão apresentadas durante a avaliação inicial, antes do encaminhamento para o WhatsApp. Clique nos botões de contato da página e comece sua avaliação."
   },
   {
     q: "A consulta já inclui o tratamento?",
@@ -24,11 +24,11 @@ const itens = [
   },
   {
     q: "Como conheço os valores?",
-    a: "Existem duas modalidades de avaliação. Os valores e as diferenças entre elas serão apresentados durante a avaliação inicial, antes do encaminhamento para o WhatsApp."
+    a: "Existem duas modalidades de avaliação. Os valores e as diferenças entre elas serão apresentados durante a avaliação inicial, antes do encaminhamento para o WhatsApp. Clique nos botões de contato da página e comece sua avaliação."
   },
   {
     q: "Como funciona o pagamento?",
-    a: "O acolhimento financeiro, opções de parcelamento e regras para confirmação da agenda serão explicados pela nossa equipe de atendimento após a avaliação inicial, no contato via WhatsApp."
+    a: "O acolhimento financeiro, opções de parcelamento e regras para confirmação da agenda serão explicados pela nossa equipe de atendimento após a avaliação inicial, no contato via WhatsApp. Clique nos botões de contato da página e comece sua avaliação."
   }
 ];
 
