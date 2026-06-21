@@ -95,7 +95,7 @@ export const QualificationModal: React.FC<QualificationModalProps> = ({ isOpen, 
       // Fire 'Filtro aberto' event when modal opens, if we are at step 1
       if (step === 1 && !eventIds.current.eventIdFilterOpen) {
         eventIds.current.eventIdFilterOpen = generateEventId();
-        trackCustomEvent(META_EVENTS.filterOpen, {}, { eventID: eventIds.current.eventIdFilterOpen });
+        trackCustomEvent(META_EVENTS.filterOpen, { lp_event: META_EVENTS.filterOpen }, { eventID: eventIds.current.eventIdFilterOpen });
         const payload = {
           leadId: currentLeadId,
           createdAt: new Date().toISOString(),
@@ -181,12 +181,12 @@ export const QualificationModal: React.FC<QualificationModalProps> = ({ isOpen, 
     const eventID = generateEventId();
     if (step === 1 && nextS === 2 && !eventIds.current.eventIdContactCaptured) {
       eventIds.current.eventIdContactCaptured = eventID;
-      trackCustomEvent(META_EVENTS.formStarted, {}, { eventID });
+      trackCustomEvent(META_EVENTS.formStarted, { lp_event: META_EVENTS.formStarted }, { eventID });
     } else if (nextS > 1 && nextS < 6) {
-      trackCustomEvent(META_EVENTS.stepAnswered, { step: nextS }, { eventID });
+      trackCustomEvent(META_EVENTS.stepAnswered, { lp_event: META_EVENTS.stepAnswered, step: nextS }, { eventID });
     } else if (nextS === 6 && !eventIds.current.eventIdLead) {
       eventIds.current.eventIdLead = eventID;
-      trackCustomEvent(META_EVENTS.filterComplete, {}, { eventID });
+      trackCustomEvent(META_EVENTS.filterComplete, { lp_event: META_EVENTS.filterComplete }, { eventID });
     }
 
     let status = 'Respondendo perguntas (Ainda no preenchimento)';
@@ -204,7 +204,7 @@ export const QualificationModal: React.FC<QualificationModalProps> = ({ isOpen, 
   const handleWhatsApp = () => {
     if (!eventIds.current.eventIdContact) {
       eventIds.current.eventIdContact = generateEventId();
-      trackCustomEvent(META_EVENTS.outboundClick, {}, { eventID: eventIds.current.eventIdContact });
+      trackCustomEvent(META_EVENTS.outboundClick, { lp_event: META_EVENTS.outboundClick }, { eventID: eventIds.current.eventIdContact });
     }
     sendDataToSheets('WhatsApp aberto(clicou para WhatsApp)', 6);
     const phone = '5562981340675';
