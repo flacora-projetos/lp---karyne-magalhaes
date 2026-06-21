@@ -19,22 +19,35 @@ function processData(data, spreadsheetId) {
   const ss = SpreadsheetApp.openById(spreadsheetId);
   
   let leadsSheet = ss.getSheetByName("Leads");
+  let headers = [
+    "Lead ID", "Criado em", "Atualizado em", "Status", "Etapa atual",
+    "Nome completo", "WhatsApp", "Melhor e-mail", "Cidade", "Estado",
+    "Situação informada", "Opção de interesse", "Uso de antibióticos",
+    "Período preferido", "Datas ou horários informados", "UTM Source",
+    "UTM Medium", "UTM Campaign", "UTM Content", "UTM Term",
+    "FBCLID", "GCLID", "URL da página", "Referrer", "User Agent",
+    "Event ID FilterOpen", "Event ID ContactCaptured", "Event ID Lead",
+    "Event ID Contact", "Meta FBP", "Meta FBC"
+  ];
+  
   if (!leadsSheet) {
     leadsSheet = ss.insertSheet("Leads");
-    const headers = [
-      "Lead ID", "Criado em", "Atualizado em", "Status", "Etapa atual",
-      "Nome completo", "WhatsApp", "Melhor e-mail", "Cidade", "Estado",
-      "Situação informada", "Opção de interesse", "Uso de antibióticos",
-      "Período preferido", "Datas ou horários informados", "UTM Source",
-      "UTM Medium", "UTM Campaign", "UTM Content", "UTM Term",
-      "FBCLID", "GCLID", "URL da página", "Referrer", "User Agent"
-    ];
     leadsSheet.appendRow(headers);
     leadsSheet.getRange(1, 1, 1, headers.length).setFontWeight("bold");
     leadsSheet.setFrozenRows(1);
+  } else {
+    // Check if new columns exist, append if missing
+    const currentHeaders = leadsSheet.getRange(1, 1, 1, leadsSheet.getLastColumn()).getValues()[0];
+    const missingHeaders = headers.filter(h => !currentHeaders.includes(h));
+    if (missingHeaders.length > 0) {
+      leadsSheet.getRange(1, currentHeaders.length + 1, 1, missingHeaders.length).setValues([missingHeaders]).setFontWeight("bold");
+    }
+    // Update headers array to match the actual sheet columns order
+    headers = leadsSheet.getRange(1, 1, 1, leadsSheet.getLastColumn()).getValues()[0];
   }
 
   let kanbanSheet = ss.getSheetByName("Kanban");
+
   const kanbanColumns = [
     "Filtro aberto (Abriu o filtro)",
     "Filtro iniciado (Começou a responder)",
@@ -57,33 +70,41 @@ function processData(data, spreadsheetId) {
       .setMimeType(ContentService.MimeType.JSON);
   }
 
-  const rowData = [
-    data.leadId || "",
-    data.createdAt || "",
-    data.updatedAt || "",
-    data.status || "",
-    data.currentStep || "",
-    data.nomeCompleto || "",
-    data.whatsapp || "",
-    data.email || "",
-    data.cidade || "",
-    data.estado || "",
-    data.comportamentoHalito || "",
-    data.opcaoInteresse || "",
-    data.usoAntibiotico || "",
-    data.periodoPreferido || "",
-    data.datasPreferidas || "",
-    data.utmSource || "",
-    data.utmMedium || "",
-    data.utmCampaign || "",
-    data.utmContent || "",
-    data.utmTerm || "",
-    data.fbclid || "",
-    data.gclid || "",
-    data.pageUrl || "",
-    data.referrer || "",
-    data.userAgent || ""
-  ];
+  const valuesMap = {
+    "Lead ID": data.leadId || "",
+    "Criado em": data.createdAt || "",
+    "Atualizado em": data.updatedAt || "",
+    "Status": data.status || "",
+    "Etapa atual": data.currentStep || "",
+    "Nome completo": data.nomeCompleto || "",
+    "WhatsApp": data.whatsapp || "",
+    "Melhor e-mail": data.email || "",
+    "Cidade": data.cidade || "",
+    "Estado": data.estado || "",
+    "Situação informada": data.comportamentoHalito || "",
+    "Opção de interesse": data.opcaoInteresse || "",
+    "Uso de antibióticos": data.usoAntibiotico || "",
+    "Período preferido": data.periodoPreferido || "",
+    "Datas ou horários informados": data.datasPreferidas || "",
+    "UTM Source": data.utmSource || "",
+    "UTM Medium": data.utmMedium || "",
+    "UTM Campaign": data.utmCampaign || "",
+    "UTM Content": data.utmContent || "",
+    "UTM Term": data.utmTerm || "",
+    "FBCLID": data.fbclid || "",
+    "GCLID": data.gclid || "",
+    "URL da página": data.pageUrl || "",
+    "Referrer": data.referrer || "",
+    "User Agent": data.userAgent || "",
+    "Event ID FilterOpen": data.eventIdFilterOpen || "",
+    "Event ID ContactCaptured": data.eventIdContactCaptured || "",
+    "Event ID Lead": data.eventIdLead || "",
+    "Event ID Contact": data.eventIdContact || "",
+    "Meta FBP": data.metaFbp || "",
+    "Meta FBC": data.metaFbc || ""
+  };
+  
+  const rowData = headers.map(h => valuesMap[h] !== undefined ? valuesMap[h] : "");
 
   const dataRange = leadsSheet.getDataRange();
   const values = dataRange.getValues();

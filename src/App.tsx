@@ -19,6 +19,7 @@ import { FAQ } from './components/FAQ';
 import { CTAFinal } from './components/CTAFinal';
 import { Footer } from './components/Footer';
 import { QualificationModal } from './components/QualificationModal';
+import { preserveFbclid } from './utils/metaPixel';
 
 declare global {
   interface Window {
@@ -30,6 +31,8 @@ export default function App() {
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   useEffect(() => {
+    preserveFbclid();
+    
     // Configura a função global para abrir o modal
     window.openQualificationModal = () => {
       setIsModalOpen(true);

@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { X, ArrowLeft, Check, ChevronDown } from 'lucide-react';
+import { trackCustomEvent, trackEvent, generateEventId, getFbpCookie, getFbcCookie } from '../utils/metaPixel';
 
 interface QualificationModalProps {
   isOpen: boolean;
@@ -26,7 +27,7 @@ interface LeadData {
   datasOpcional: string;
 }
 
-const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbz1rga1Ex1A6DpiDpHvbsDMF-yJONCxlWs_k4hA-qDAMySQuiNj5Q7x2_1p1Wt3EUGQ/exec";
+const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbypbOG2r2Zka810XL8er9zUUSGHjsscOQw_db95uh9azXYh7adlTNhAn1_u0VxzLn4/exec";
 
 const getTrackingData = () => {
   const params = new URLSearchParams(window.location.search);
@@ -48,13 +49,21 @@ const getTrackingData = () => {
     gclid: sessionStorage.getItem('gclid') || '',
     pageUrl: window.location.href,
     referrer: document.referrer,
-    userAgent: navigator.userAgent
+    userAgent: navigator.userAgent,
+    metaFbp: getFbpCookie() || '',
+    metaFbc: getFbcCookie() || ''
   };
 };
 
 export const QualificationModal: React.FC<QualificationModalProps> = ({ isOpen, onClose }) => {
   const [step, setStep] = useState(1);
   const [leadId, setLeadId] = useState<string>('');
+  const eventIds = useRef({
+    eventIdFilterOpen: '',
+    eventIdContactCaptured: '',
+    eventIdLead: '',
+    eventIdContact: ''
+  });
   const [data, setData] = useState<LeadData>({
     nome: '',
     whatsapp: '',
@@ -84,7 +93,9 @@ export const QualificationModal: React.FC<QualificationModalProps> = ({ isOpen, 
       getTrackingData();
       
       // Fire 'Filtro aberto' event when modal opens, if we are at step 1
-      if (step === 1) {
+      if (step === 1 && !eventIds.current.eventIdFilterOpen) {
+        eventIds.current.eventIdFilterOpen = generateEventId();
+        trackCustomEvent('FilterOpen', {}, { eventID: eventIds.current.eventIdFilterOpen });
         const payload = {
           leadId: currentLeadId,
           createdAt: new Date().toISOString(),
@@ -92,6 +103,10 @@ export const QualificationModal: React.FC<QualificationModalProps> = ({ isOpen, 
           status: 'Filtro aberto (Abriu o filtro)',
           currentStep: 1,
           nomeCompleto: 'Visitante (Início)',
+          eventIdFilterOpen: eventIds.current.eventIdFilterOpen,
+          eventIdContactCaptured: eventIds.current.eventIdContactCaptured,
+          eventIdLead: eventIds.current.eventIdLead,
+          eventIdContact: eventIds.current.eventIdContact,
           ...getTrackingData()
         };
         fetch(GOOGLE_SCRIPT_URL, {
@@ -137,6 +152,10 @@ export const QualificationModal: React.FC<QualificationModalProps> = ({ isOpen, 
       usoAntibiotico: data.antibioticos,
       periodoPreferido: data.periodo,
       datasPreferidas: data.datasOpcional,
+      eventIdFilterOpen: eventIds.current.eventIdFilterOpen,
+      eventIdContactCaptured: eventIds.current.eventIdContactCaptured,
+      eventIdLead: eventIds.current.eventIdLead,
+      eventIdContact: eventIds.current.eventIdContact,
       ...tracking
     };
 
@@ -159,6 +178,17 @@ export const QualificationModal: React.FC<QualificationModalProps> = ({ isOpen, 
     setStep(nextS);
     window.scrollTo({ top: 0, behavior: 'auto' });
     
+    const eventID = generateEventId();
+    if (step === 1 && nextS === 2 && !eventIds.current.eventIdContactCaptured) {
+      eventIds.current.eventIdContactCaptured = eventID;
+      trackCustomEvent('ContactCaptured', {}, { eventID });
+    } else if (nextS > 1 && nextS < 6) {
+      trackCustomEvent('QualificationStep', { step: nextS }, { eventID });
+    } else if (nextS === 6 && !eventIds.current.eventIdLead) {
+      eventIds.current.eventIdLead = eventID;
+      trackEvent('Lead', {}, { eventID });
+    }
+
     let status = 'Respondendo perguntas (Ainda no preenchimento)';
     if (nextS === 2) status = 'Lead gerado(Lead formado)';
     if (nextS === 3) status = 'Filtro iniciado (Começou a responder)';
@@ -172,6 +202,10 @@ export const QualificationModal: React.FC<QualificationModalProps> = ({ isOpen, 
   };
 
   const handleWhatsApp = () => {
+    if (!eventIds.current.eventIdContact) {
+      eventIds.current.eventIdContact = generateEventId();
+      trackEvent('Contact', {}, { eventID: eventIds.current.eventIdContact });
+    }
     sendDataToSheets('WhatsApp aberto(clicou para WhatsApp)', 6);
     const phone = '5562981340675';
     const text = `Olá! Vim pela página da consulta de Halitose e respondi à avaliação inicial.
