@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { X, ArrowLeft, Check, ChevronDown } from 'lucide-react';
-import { trackCustomEvent, trackEvent, generateEventId, getFbpCookie, getFbcCookie } from '../utils/metaPixel';
+import { trackCustomEvent, generateEventId, getFbpCookie, getFbcCookie, META_EVENTS } from '../utils/metaPixel';
 
 interface QualificationModalProps {
   isOpen: boolean;
@@ -95,7 +95,7 @@ export const QualificationModal: React.FC<QualificationModalProps> = ({ isOpen, 
       // Fire 'Filtro aberto' event when modal opens, if we are at step 1
       if (step === 1 && !eventIds.current.eventIdFilterOpen) {
         eventIds.current.eventIdFilterOpen = generateEventId();
-        trackCustomEvent('FilterOpen', {}, { eventID: eventIds.current.eventIdFilterOpen });
+        trackCustomEvent(META_EVENTS.filterOpen, {}, { eventID: eventIds.current.eventIdFilterOpen });
         const payload = {
           leadId: currentLeadId,
           createdAt: new Date().toISOString(),
@@ -181,12 +181,12 @@ export const QualificationModal: React.FC<QualificationModalProps> = ({ isOpen, 
     const eventID = generateEventId();
     if (step === 1 && nextS === 2 && !eventIds.current.eventIdContactCaptured) {
       eventIds.current.eventIdContactCaptured = eventID;
-      trackCustomEvent('ContactCaptured', {}, { eventID });
+      trackCustomEvent(META_EVENTS.formStarted, {}, { eventID });
     } else if (nextS > 1 && nextS < 6) {
-      trackCustomEvent('QualificationStep', { step: nextS }, { eventID });
+      trackCustomEvent(META_EVENTS.stepAnswered, { step: nextS }, { eventID });
     } else if (nextS === 6 && !eventIds.current.eventIdLead) {
       eventIds.current.eventIdLead = eventID;
-      trackEvent('Lead', {}, { eventID });
+      trackCustomEvent(META_EVENTS.filterComplete, {}, { eventID });
     }
 
     let status = 'Respondendo perguntas (Ainda no preenchimento)';
@@ -204,7 +204,7 @@ export const QualificationModal: React.FC<QualificationModalProps> = ({ isOpen, 
   const handleWhatsApp = () => {
     if (!eventIds.current.eventIdContact) {
       eventIds.current.eventIdContact = generateEventId();
-      trackEvent('Contact', {}, { eventID: eventIds.current.eventIdContact });
+      trackCustomEvent(META_EVENTS.outboundClick, {}, { eventID: eventIds.current.eventIdContact });
     }
     sendDataToSheets('WhatsApp aberto(clicou para WhatsApp)', 6);
     const phone = '5562981340675';

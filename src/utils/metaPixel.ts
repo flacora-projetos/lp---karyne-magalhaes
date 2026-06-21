@@ -1,5 +1,13 @@
 export const META_PIXEL_ID = "2060052434914188";
 
+export const META_EVENTS = {
+  filterOpen: "FiltroAberto",
+  formStarted: "FormularioIniciado",
+  stepAnswered: "EtapaRespondida",
+  filterComplete: "FiltroCompleto",
+  outboundClick: "CliqueSaida"
+};
+
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 declare global {
   interface Window {
