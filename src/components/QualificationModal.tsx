@@ -26,7 +26,7 @@ interface LeadData {
   datasOpcional: string;
 }
 
-const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwTK3NZGfAaB6KNU4wieHvgucX-OHDH9eOHqmD2oWtJlloyMY1rq7zMXEGnN6hwySc/exec";
+const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbz1rga1Ex1A6DpiDpHvbsDMF-yJONCxlWs_k4hA-qDAMySQuiNj5Q7x2_1p1Wt3EUGQ/exec";
 
 const getTrackingData = () => {
   const params = new URLSearchParams(window.location.search);
