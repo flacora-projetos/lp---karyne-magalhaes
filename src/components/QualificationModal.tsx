@@ -26,7 +26,7 @@ interface LeadData {
   datasOpcional: string;
 }
 
-const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxuZ_lYd25_ogdcYmOaGVwjux1-NGr7n6DOTcneSmgYC9_LwD8h9dzHV86ha2BfJFhB/exec";
+const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwTK3NZGfAaB6KNU4wieHvgucX-OHDH9eOHqmD2oWtJlloyMY1rq7zMXEGnN6hwySc/exec";
 
 const getTrackingData = () => {
   const params = new URLSearchParams(window.location.search);
@@ -72,7 +72,11 @@ export const QualificationModal: React.FC<QualificationModalProps> = ({ isOpen, 
   useEffect(() => {
     if (isOpen) {
       if (!leadId) {
-        setLeadId(crypto.randomUUID());
+        try {
+          setLeadId(crypto.randomUUID());
+        } catch (e) {
+          setLeadId('lead-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9));
+        }
       }
       getTrackingData();
     }
@@ -115,6 +119,8 @@ export const QualificationModal: React.FC<QualificationModalProps> = ({ isOpen, 
       ...tracking
     };
 
+    console.log("Enviando lead para Sheets:", payload);
+
     fetch(GOOGLE_SCRIPT_URL, {
       method: "POST",
       mode: "no-cors",
@@ -122,7 +128,9 @@ export const QualificationModal: React.FC<QualificationModalProps> = ({ isOpen, 
         "Content-Type": "text/plain;charset=utf-8"
       },
       body: JSON.stringify(payload)
-    }).catch(e => console.error("Error sending lead to sheets:", e));
+    })
+    .then(() => console.log("Fetch para Sheets enviado (no-cors). status:", statusOverride))
+    .catch(e => console.error("Error sending lead to sheets:", e));
   };
 
   const nextStep = () => {
