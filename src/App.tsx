@@ -40,7 +40,7 @@ export default function App() {
     };
     
     // Config do WhatsApp constant as requested
-    const WHATSAPP_NUMBER = '5562981340675';
+    const WHATSAPP_NUMBER = '5562999320675';
   }, []);
 
   return (

@@ -245,7 +245,7 @@ export const QualificationModal: React.FC<QualificationModalProps> = ({ isOpen, 
       sendMetaCapiEvent({ eventName: "CliqueSaida", eventId: eventIds.current.eventIdContact, ...capiPayloadBase });
     }
     sendDataToSheets('WhatsApp aberto(clicou para WhatsApp)', 6);
-    const phone = '5562981340675';
+    const phone = '5562999320675';
     const text = `Olá! Vim pela página da consulta de Halitose e respondi à avaliação inicial.
 
 Nome: ${data.nome}
