@@ -364,6 +364,9 @@ Gostaria de receber orientação e verificar os horários disponíveis para a co
                 </div>
               </div>
               <div className="mt-10">
+                <p className="text-[12px] md:text-[13px] text-[#2B1B0A]/60 mb-4 text-center">
+                  Ao continuar, você declara estar ciente da nossa <a href="/politica-de-privacidade" target="_blank" rel="noopener noreferrer" className="underline underline-offset-2 hover:text-[#222D19] transition-colors">Política de Privacidade</a>.
+                </p>
                 <button 
                   onClick={() => {
                     nextStep();

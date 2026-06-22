@@ -1,4 +1,4 @@
-import { Instagram } from "lucide-react";
+import { Instagram, Youtube } from "lucide-react";
 
 export const Footer = () => {
   return (
@@ -32,13 +32,23 @@ export const Footer = () => {
               aria-label="Instagram da Dra. Karyne Magalhães"
             >
               <Instagram strokeWidth={1.5} className="w-5 h-5 group-hover:-translate-y-1 transition-transform" />
-              <span className="text-sm">@dra.karynemagalhaes</span>
+              <span className="text-sm scale-90 md:scale-100">@dra.karynemagalhaes</span>
+            </a>
+            <a 
+              href="https://www.youtube.com/@KaryneMagalhaes"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-primary-beige/80 hover:text-primary-white transition-colors flex items-center gap-2 group"
+              aria-label="YouTube da Dra. Karyne Magalhães"
+            >
+              <Youtube strokeWidth={1.5} className="w-5 h-5 group-hover:-translate-y-1 transition-transform" />
+              <span className="text-sm scale-90 md:scale-100">YouTube</span>
             </a>
           </div>
           
           <div className="flex gap-6">
-            <a href="#" className="text-primary-beige/80 hover:text-primary-white transition-colors text-sm">
-              [Política de Privacidade - futura]
+            <a href="/politica-de-privacidade" className="text-primary-beige/80 hover:text-primary-white transition-colors text-sm">
+              Política de Privacidade
             </a>
           </div>
           

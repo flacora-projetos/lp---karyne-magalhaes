@@ -13,6 +13,7 @@ import { OQueEstaIncluido } from './components/OQueEstaIncluido';
 import { ComoFunciona } from './components/ComoFunciona';
 import { PreparacaoEOutrasCidades } from './components/Preparacao';
 import { DraKaryne } from './components/DraKaryne';
+import { YouTubeSection } from './components/YouTubeSection';
 import { Avaliacoes } from './components/Avaliacoes';
 import { Localizacao } from './components/Localizacao';
 import { FAQ } from './components/FAQ';
@@ -20,6 +21,7 @@ import { CTAFinal } from './components/CTAFinal';
 import { Footer } from './components/Footer';
 import { FloatingWhatsApp } from './components/FloatingWhatsApp';
 import { QualificationModal } from './components/QualificationModal';
+import { PrivacyPolicy } from './components/PrivacyPolicy';
 import { preserveFbclid } from './utils/metaPixel';
 
 declare global {
@@ -30,6 +32,7 @@ declare global {
 
 export default function App() {
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [currentPath, setCurrentPath] = useState(window.location.pathname);
 
   useEffect(() => {
     preserveFbclid();
@@ -41,7 +44,18 @@ export default function App() {
     
     // Config do WhatsApp constant as requested
     const WHATSAPP_NUMBER = '5562999320675';
+
+    const handleLocationChange = () => {
+      setCurrentPath(window.location.pathname);
+    };
+
+    window.addEventListener('popstate', handleLocationChange);
+    return () => window.removeEventListener('popstate', handleLocationChange);
   }, []);
+
+  if (currentPath === '/politica-de-privacidade') {
+    return <PrivacyPolicy />;
+  }
 
   return (
     <div className="font-sans text-primary-brown !scroll-smooth">
@@ -55,6 +69,7 @@ export default function App() {
         <ComoFunciona />
         <PreparacaoEOutrasCidades />
         <DraKaryne />
+        <YouTubeSection />
         <Avaliacoes />
         <Localizacao />
         <FAQ />
