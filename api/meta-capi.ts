@@ -52,6 +52,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       userAgent
     } = req.body;
 
+    const ALLOWED_EVENTS = ["FormularioIniciado", "FiltroCompleto", "CliqueSaida"];
+    if (!eventName || !ALLOWED_EVENTS.includes(eventName)) {
+      return res.status(200).json({ success: false, error: "Event not allowed via CAPI" });
+    }
+
     const clientIp = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
 
     const userData: any = {
@@ -105,13 +110,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const data = await response.json();
     
     if (!response.ok) {
-      console.error("[Meta CAPI] Error:", data);
-      return res.status(200).json({ success: false, error: "Failed to send event to Meta", details: data });
+      console.error("[Meta CAPI] Error: Failed to send event to Meta");
+      return res.status(200).json({ success: false, error: "Failed to send event to Meta" });
     }
 
-    return res.status(200).json({ success: true, data });
+    return res.status(200).json({ success: true, eventId });
   } catch (error) {
-    console.error("[Meta CAPI] Server error:", error);
+    console.error("[Meta CAPI] Server error");
     return res.status(200).json({ success: false, error: "Internal server error" });
   }
 }
