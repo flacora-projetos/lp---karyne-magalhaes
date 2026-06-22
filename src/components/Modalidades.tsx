@@ -10,18 +10,30 @@ export const Modalidades = () => {
             </h2>
             
             <div className="flex flex-col gap-6">
-              <div className="bg-primary-beige p-8 rounded-2xl border border-border-gray">
-                <h3 className="text-2xl font-serif text-primary-brown mb-4">OralChroma</h3>
-                <p className="text-secondary-green text-lg leading-relaxed">
-                  Mede separadamente os gases presentes no hálito no momento da consulta.
-                </p>
+              <div className="bg-primary-beige p-8 rounded-2xl border border-border-gray flex flex-col gap-4">
+                <div>
+                  <h3 className="text-2xl font-serif text-primary-brown mb-2">OralChroma</h3>
+                  <p className="text-secondary-green text-lg leading-relaxed">
+                    Indicado quando o odor costuma estar presente com mais frequência. Mede os gases do hálito no momento da avaliação e ajuda a orientar a investigação clínica.
+                  </p>
+                </div>
+                <div>
+                  <p className="text-sm text-soft-green font-medium mb-1">Duração aproximada: 1 hora.</p>
+                  <p className="text-xl font-medium text-primary-brown">R$ 770,00</p>
+                </div>
               </div>
 
-              <div className="bg-primary-brown p-8 rounded-2xl border border-primary-brown">
-                <h3 className="text-2xl font-serif text-primary-beige mb-4 shadow-sm">OralChroma + Desafio da Cisteína</h3>
-                <p className="text-primary-white/80 text-lg leading-relaxed">
-                  Também avalia o potencial de produção dos gases, sendo útil quando o odor oscila ou pode estar fraco no dia da consulta.
-                </p>
+              <div className="bg-primary-brown p-8 rounded-2xl border border-primary-brown flex flex-col gap-4">
+                <div>
+                  <h3 className="text-2xl font-serif text-primary-beige mb-2 shadow-sm">OralChroma + Desafio da Cisteína</h3>
+                  <p className="text-primary-white/80 text-lg leading-relaxed">
+                    Indicado especialmente quando o odor oscila, aparece em alguns momentos ou pode estar fraco no dia da consulta. Além da medição inicial, avalia o potencial de produção dos gases relacionados ao mau hálito.
+                  </p>
+                </div>
+                <div>
+                  <p className="text-sm text-primary-white/60 font-medium mb-1">Duração aproximada: até 1h30.</p>
+                  <p className="text-xl font-medium text-primary-beige">R$ 1.090,00</p>
+                </div>
               </div>
             </div>
 

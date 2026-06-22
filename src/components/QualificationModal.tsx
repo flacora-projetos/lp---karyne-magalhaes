@@ -411,7 +411,7 @@ Gostaria de receber orientação e verificar os horários disponíveis para a co
           {step === 3 && (
             <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
               <h2 className="text-2xl md:text-3xl font-medium font-serif leading-tight mb-2">Conheça as opções de avaliação</h2>
-              <p className="text-[#2B1B0A]/70 text-sm mb-6">A escolha poderá ser orientada e confirmada pela equipe antes do agendamento.</p>
+              <p className="text-[#2B1B0A]/70 text-sm mb-6">Com base nas suas respostas, você pode escolher uma das opções abaixo. Se ainda tiver dúvida, a equipe pode orientar qual avaliação faz mais sentido antes do agendamento.</p>
               
               <div className="space-y-4 mb-8">
                 {/* Opção 1 */}
@@ -617,6 +617,9 @@ Gostaria de receber orientação e verificar os horários disponíveis para a co
               </div>
 
               <div className="text-center mb-6">
+                <p className="text-[13px] text-[#2B1B0A]/70 mb-2">
+                  Suas respostas serão enviadas para a equipe, para que o atendimento continue com mais contexto e sem precisar começar do zero.
+                </p>
                 <p className="text-[13px] text-[#2B1B0A]/70">
                   Ao continuar, o WhatsApp será aberto com suas respostas organizadas para facilitar o atendimento.
                 </p>

@@ -3,32 +3,28 @@ import { ChevronDown, ChevronUp } from 'lucide-react';
 
 const itens = [
   {
-    q: "Qual é a diferença entre as duas avaliações?",
-    a: "Existem duas modalidades de avaliação. As diferenças detalhadas entre elas serão apresentadas durante a avaliação inicial, antes do encaminhamento para o WhatsApp. Clique nos botões de contato da página e comece sua avaliação."
+    q: "A consulta inclui tratamento?",
+    a: "A consulta é voltada ao diagnóstico. Caso seja identificada necessidade de tratamento, a Dra. Karyne explica as possibilidades após a avaliação, porque a conduta depende da causa encontrada."
   },
   {
-    q: "A consulta já inclui o tratamento?",
-    a: "Não. A consulta é exclusivamente destinada ao entendimento profundo e diagnóstico preciso da sua condição atual. O tratamento será sugerido após identificarmos a verdadeira origem da halitose."
+    q: "Por que o valor do tratamento não é informado antes?",
+    a: "Porque o tratamento depende da causa da halitose e das necessidades identificadas na avaliação. Primeiro é feito o diagnóstico; depois, se houver indicação, a equipe explica as opções e valores de tratamento."
   },
   {
-    q: "Quanto tempo dura a consulta?",
-    a: "A consulta costuma ser bastante imersiva e completa, envolvendo anamnese, medições e avaliações clínicas, variando de acordo com a complexidade de cada situação. Uma estimativa exata é provida no momento do agendamento."
+    q: "A consulta inclui retorno?",
+    a: "Na maioria dos casos, a avaliação permite orientar os próximos passos no próprio atendimento. Se a Dra. Karyne identificar necessidade de retorno para complementar o diagnóstico, a equipe orienta o paciente sobre esse processo."
   },
   {
-    q: "Preciso fazer alguma preparação?",
-    a: "Existe uma orientação importante: é necessário estar há pelo menos 21 dias sem utilizar antibióticos. Demais preparos específicos são enviados logo após o agendamento."
+    q: "Preciso fazer algum preparo antes da consulta?",
+    a: "É importante estar há pelo menos 21 dias sem utilizar antibióticos, pois o uso recente pode interferir nos resultados da avaliação. Caso tenha usado antibiótico recentemente, informe a equipe antes do agendamento."
   },
   {
     q: "Quem mora em outra cidade pode se consultar?",
     a: "Sim, muitos pacientes vêm de fora. Recomendamos que informe a sua origem durante o contato, para alinharmos toda a organização antes de sua viagem a Goiânia."
   },
   {
-    q: "Como conheço os valores?",
-    a: "Existem duas modalidades de avaliação. Os valores e as diferenças entre elas serão apresentados durante a avaliação inicial, antes do encaminhamento para o WhatsApp. Clique nos botões de contato da página e comece sua avaliação."
-  },
-  {
     q: "Como funciona o pagamento?",
-    a: "O acolhimento financeiro, opções de parcelamento e regras para confirmação da agenda serão explicados pela nossa equipe de atendimento após a avaliação inicial, no contato via WhatsApp. Clique nos botões de contato da página e comece sua avaliação."
+    a: "O acolhimento financeiro, opções de parcelamento e regras para confirmação da agenda serão explicados pela nossa equipe de atendimento após o contato via WhatsApp."
   }
 ];
 

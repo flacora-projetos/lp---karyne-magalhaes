@@ -35,7 +35,7 @@ export const Hero = () => {
           </h1>
           
           <p className="text-lg md:text-[1.15rem] text-secondary-green mb-5 md:mb-8 max-w-[480px] lg:max-w-[500px] leading-relaxed">
-            Avaliação odontológica completa, análise da saliva e medição objetiva dos gases do hálito com OralChroma.
+            Avaliação odontológica completa, análise da saliva e medição objetiva dos gases do hálito com OralChroma, para investigar melhor as possíveis causas da halitose.
           </p>
 
           <div className="flex flex-col sm:flex-row gap-3 md:gap-4 mb-8 md:mb-10">

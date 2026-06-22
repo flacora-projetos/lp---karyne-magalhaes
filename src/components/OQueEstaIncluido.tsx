@@ -2,13 +2,14 @@ import { Check } from 'lucide-react';
 
 export const OQueEstaIncluido = () => {
   const itens = [
-    "Anamnese e história clínica detalhada",
+    "Anamnese e história clínica",
     "Avaliação odontológica completa",
     "Fotografias intraorais",
-    "Sialometria (avaliação salivar)",
-    "Medição objetiva com OralChroma",
-    "Explicação técnica dos resultados",
-    "Orientação sobre os próximos passos"
+    "Avaliação da saliva",
+    "Sialometria, quando indicada",
+    "Medição objetiva dos gases do hálito com OralChroma",
+    "Explicação dos resultados",
+    "Orientação dos próximos passos"
   ];
 
   return (
@@ -21,7 +22,7 @@ export const OQueEstaIncluido = () => {
           
           <div className="bg-primary-white/10 p-6 rounded-xl border border-primary-white/20">
             <p className="text-lg leading-relaxed font-medium">
-              A consulta é destinada ao diagnóstico. O tratamento é proposto conforme a necessidade identificada ao fim da avaliação.
+              A consulta tem como objetivo reunir informações clínicas e exames objetivos para entender melhor o caso antes de indicar qualquer conduta.
             </p>
           </div>
         </div>

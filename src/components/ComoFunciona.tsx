@@ -1,10 +1,10 @@
 export const ComoFunciona = () => {
   const steps = [
-    { num: "01", title: "Entendimento do histórico" },
-    { num: "02", title: "Avaliação odontológica" },
+    { num: "01", title: "Entendimento do histórico e das queixas" },
+    { num: "02", title: "Avaliação odontológica completa" },
     { num: "03", title: "Análise da saliva" },
-    { num: "04", title: "Medição dos gases" },
-    { num: "05", title: "Diagnóstico e orientação" },
+    { num: "04", title: "Medição dos gases do hálito" },
+    { num: "05", title: "Explicação dos resultados e orientação dos próximos passos" },
   ];
 
   return (
@@ -25,7 +25,7 @@ export const ComoFunciona = () => {
             Uma avaliação completa para entender o seu caso.
           </h2>
           
-          <div className="relative border-l border-border-gray ml-4 space-y-10">
+          <div className="relative border-l border-border-gray ml-4 space-y-10 mb-8">
             {steps.map((step, idx) => (
               <div key={idx} className="relative pl-8">
                 {/* Dot connected to the line */}
@@ -41,6 +41,10 @@ export const ComoFunciona = () => {
               </div>
             ))}
           </div>
+
+          <p className="text-secondary-green leading-relaxed text-lg pt-4 border-t border-border-gray">
+            Caso seja identificada necessidade de tratamento, as possibilidades são explicadas após a avaliação, conforme a causa encontrada.
+          </p>
         </div>
 
       </div>

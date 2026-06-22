@@ -14,7 +14,7 @@ export const PorQueInvestigar = () => {
     },
     {
       title: "Medição dos Gases",
-      description: "Em vez de opiniões subjetivas, é fundamental detectar exatamente os tipos e concentrações dos gases que geram a halitose.",
+      description: "O OralChroma permite medir separadamente os principais gases relacionados ao mau hálito, oferecendo uma análise mais objetiva para auxiliar na investigação da causa.",
       icon: <Activity size={24} className="text-accent-earthy" />
     }
   ];
