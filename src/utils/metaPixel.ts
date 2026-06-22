@@ -44,3 +44,32 @@ export const preserveFbclid = () => {
     sessionStorage.setItem("fbclid", params.get("fbclid") || "");
   }
 };
+
+export const sendMetaCapiEvent = async (payload: {
+  eventName: string;
+  eventId: string;
+  email?: string;
+  phone?: string;
+  firstName?: string;
+  lastName?: string;
+  city?: string;
+  state?: string;
+  fbp?: string | null;
+  fbc?: string | null;
+  fbclid?: string | null;
+  pageUrl?: string;
+  referrer?: string;
+  userAgent?: string;
+}) => {
+  try {
+    fetch('/api/meta-capi', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(payload),
+    }).catch(e => console.error("[CAPI API Error]:", e));
+  } catch (e) {
+    console.error("[CAPI Sync Error]:", e);
+  }
+};

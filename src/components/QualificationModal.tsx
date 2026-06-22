@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { X, ArrowLeft, Check, ChevronDown } from 'lucide-react';
-import { trackCustomEvent, generateEventId, getFbpCookie, getFbcCookie } from '../utils/metaPixel';
+import { trackCustomEvent, generateEventId, getFbpCookie, getFbcCookie, sendMetaCapiEvent } from '../utils/metaPixel';
 
 interface QualificationModalProps {
   isOpen: boolean;
@@ -179,14 +179,31 @@ export const QualificationModal: React.FC<QualificationModalProps> = ({ isOpen, 
     window.scrollTo({ top: 0, behavior: 'auto' });
     
     const eventID = generateEventId();
+    const capiPayloadBase = {
+      email: data.email,
+      phone: data.whatsapp,
+      firstName: data.nome?.split(" ")[0] || "",
+      lastName: data.nome?.split(" ").slice(1).join(" ") || "",
+      city: data.cidade,
+      state: data.estado,
+      fbp: getFbpCookie(),
+      fbc: getFbcCookie() || sessionStorage.getItem('fbclid') || undefined,
+      fbclid: sessionStorage.getItem('fbclid') || undefined,
+      pageUrl: window.location.href,
+      referrer: document.referrer,
+      userAgent: navigator.userAgent
+    };
+
     if (step === 1 && nextS === 2 && !eventIds.current.eventIdContactCaptured) {
       eventIds.current.eventIdContactCaptured = eventID;
       trackCustomEvent("FormularioIniciado", { lp_event: "FormularioIniciado" }, { eventID });
+      sendMetaCapiEvent({ eventName: "FormularioIniciado", eventId: eventID, ...capiPayloadBase });
     } else if (nextS > 1 && nextS < 6) {
       trackCustomEvent("EtapaRespondida", { lp_event: "EtapaRespondida", step: nextS }, { eventID });
     } else if (nextS === 6 && !eventIds.current.eventIdLead) {
       eventIds.current.eventIdLead = eventID;
       trackCustomEvent("FiltroCompleto", { lp_event: "FiltroCompleto" }, { eventID });
+      sendMetaCapiEvent({ eventName: "FiltroCompleto", eventId: eventID, ...capiPayloadBase });
     }
 
     let status = 'Respondendo perguntas (Ainda no preenchimento)';
@@ -205,6 +222,21 @@ export const QualificationModal: React.FC<QualificationModalProps> = ({ isOpen, 
     if (!eventIds.current.eventIdContact) {
       eventIds.current.eventIdContact = generateEventId();
       trackCustomEvent("CliqueSaida", { lp_event: "CliqueSaida" }, { eventID: eventIds.current.eventIdContact });
+      const capiPayloadBase = {
+        email: data.email,
+        phone: data.whatsapp,
+        firstName: data.nome?.split(" ")[0] || "",
+        lastName: data.nome?.split(" ").slice(1).join(" ") || "",
+        city: data.cidade,
+        state: data.estado,
+        fbp: getFbpCookie(),
+        fbc: getFbcCookie() || sessionStorage.getItem('fbclid') || undefined,
+        fbclid: sessionStorage.getItem('fbclid') || undefined,
+        pageUrl: window.location.href,
+        referrer: document.referrer,
+        userAgent: navigator.userAgent
+      };
+      sendMetaCapiEvent({ eventName: "CliqueSaida", eventId: eventIds.current.eventIdContact, ...capiPayloadBase });
     }
     sendDataToSheets('WhatsApp aberto(clicou para WhatsApp)', 6);
     const phone = '5562981340675';
