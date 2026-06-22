@@ -56,7 +56,7 @@ export const Avaliacoes = () => {
 
         <div className="text-center">
           <a 
-            href="https://share.google/Sz1V6AMoDNkSkDhzf" 
+            href="https://share.google/pmRWvaLIzC0Gu8utc" 
             target="_blank" 
             rel="noopener noreferrer"
             className="inline-flex items-center justify-center px-8 py-4 bg-primary-brown text-primary-beige rounded-full font-medium hover:bg-opacity-90 transition-all shadow-sm text-sm"
