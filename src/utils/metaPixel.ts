@@ -1,13 +1,5 @@
 export const META_PIXEL_ID = "2060052434914188";
 
-export const META_EVENTS = {
-  filterOpen: "FiltroAberto",
-  formStarted: "FormularioIniciado",
-  stepAnswered: "EtapaRespondida",
-  filterComplete: "FiltroCompleto",
-  outboundClick: "CliqueSaida"
-};
-
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 declare global {
   interface Window {
@@ -24,18 +16,14 @@ export const generateEventId = (): string => {
 };
 
 export const trackEvent = (eventName: string, data = {}, eventData = {}) => {
-  if (typeof window !== "undefined" && typeof window.fbq === "function") {
+  if (typeof window !== "undefined" && window.fbq) {
     window.fbq("track", eventName, data, eventData);
-  } else {
-    console.warn(`Meta Pixel not loaded. Event '${eventName}' not sent.`);
   }
 };
 
 export const trackCustomEvent = (eventName: string, data = {}, eventData = {}) => {
-  if (typeof window !== "undefined" && typeof window.fbq === "function") {
+  if (typeof window !== "undefined" && window.fbq) {
     window.fbq("trackCustom", eventName, data, eventData);
-  } else {
-    console.warn(`Meta Pixel not loaded. Custom event '${eventName}' not sent.`);
   }
 };
 
