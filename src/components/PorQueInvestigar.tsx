@@ -8,8 +8,8 @@ export const PorQueInvestigar = () => {
       icon: <Search size={24} className="text-accent-earthy" />
     },
     {
-      title: "Análise da Saliva",
-      description: "A saliva regula o ambiente bucal. Alterações no volume e na composição salivar podem ser um dos principais gatilhos para o odor.",
+      title: "Sialometria (Avaliação Salivar)",
+      description: "A saliva regula o ambiente bucal. Alterações no fluxo, volume e na qualidade salivar podem ser um dos principais gatilhos para o odor.",
       icon: <Droplets size={24} className="text-accent-earthy" />
     },
     {

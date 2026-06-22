@@ -18,7 +18,7 @@ export const Modalidades = () => {
                   </p>
                 </div>
                 <div>
-                  <p className="text-sm text-soft-green font-medium mb-1">Duração aproximada: 1 hora.</p>
+                  <p className="text-sm text-soft-green font-medium mb-1">Duração aproximada: 2 horas.</p>
                 </div>
               </div>
 
@@ -30,7 +30,7 @@ export const Modalidades = () => {
                   </p>
                 </div>
                 <div>
-                  <p className="text-sm text-primary-white/60 font-medium mb-1">Duração aproximada: até 1h30.</p>
+                  <p className="text-sm text-primary-white/60 font-medium mb-1">Duração aproximada: 2 horas.</p>
                 </div>
               </div>
             </div>

@@ -2,7 +2,7 @@ export const ComoFunciona = () => {
   const steps = [
     { num: "01", title: "Entendimento do histórico e das queixas" },
     { num: "02", title: "Avaliação odontológica completa" },
-    { num: "03", title: "Análise da saliva" },
+    { num: "03", title: "Sialometria (avaliação do fluxo e qualidade salivar)" },
     { num: "04", title: "Medição dos gases do hálito" },
     { num: "05", title: "Explicação dos resultados e orientação dos próximos passos" },
   ];

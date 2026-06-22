@@ -5,8 +5,7 @@ export const OQueEstaIncluido = () => {
     "Anamnese e história clínica",
     "Avaliação odontológica completa",
     "Fotografias intraorais",
-    "Avaliação da saliva",
-    "Sialometria, quando indicada",
+    "Sialometria (avaliação do fluxo e qualidade salivar)",
     "Medição objetiva dos gases do hálito com OralChroma",
     "Explicação dos resultados",
     "Orientação dos próximos passos"

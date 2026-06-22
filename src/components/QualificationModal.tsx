@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { X, ArrowLeft, Check, ChevronDown } from 'lucide-react';
 import { trackCustomEvent, generateEventId, getFbpCookie, getFbcCookie, sendMetaCapiEvent } from '../utils/metaPixel';
+import { pushDataLayerEvent } from '../utils/gtm';
 
 interface QualificationModalProps {
   isOpen: boolean;
@@ -95,6 +96,7 @@ export const QualificationModal: React.FC<QualificationModalProps> = ({ isOpen, 
       // Fire 'Filtro aberto' event when modal opens, if we are at step 1
       if (step === 1 && !eventIds.current.eventIdFilterOpen) {
         eventIds.current.eventIdFilterOpen = generateEventId();
+        pushDataLayerEvent("filtro_aberto");
         trackCustomEvent("FiltroAberto", { lp_event: "FiltroAberto" }, { eventID: eventIds.current.eventIdFilterOpen });
         const payload = {
           leadId: currentLeadId,
@@ -198,12 +200,15 @@ export const QualificationModal: React.FC<QualificationModalProps> = ({ isOpen, 
       eventIds.current.eventIdContactCaptured = eventID;
       trackCustomEvent("FormularioIniciado", { lp_event: "FormularioIniciado" }, { eventID });
       sendMetaCapiEvent({ eventName: "FormularioIniciado", eventId: eventID, ...capiPayloadBase });
+      pushDataLayerEvent("formulario_iniciado");
     } else if (nextS > 1 && nextS < 6) {
       trackCustomEvent("EtapaRespondida", { lp_event: "EtapaRespondida", step: nextS }, { eventID });
+      pushDataLayerEvent("etapa_respondida", { step });
     } else if (nextS === 6 && !eventIds.current.eventIdLead) {
       eventIds.current.eventIdLead = eventID;
       trackCustomEvent("FiltroCompleto", { lp_event: "FiltroCompleto" }, { eventID });
       sendMetaCapiEvent({ eventName: "FiltroCompleto", eventId: eventID, ...capiPayloadBase });
+      pushDataLayerEvent("filtro_completo");
     }
 
     let status = 'Respondendo perguntas (Ainda no preenchimento)';
@@ -221,6 +226,7 @@ export const QualificationModal: React.FC<QualificationModalProps> = ({ isOpen, 
   const handleWhatsApp = () => {
     if (!eventIds.current.eventIdContact) {
       eventIds.current.eventIdContact = generateEventId();
+      pushDataLayerEvent("clique_saida");
       trackCustomEvent("CliqueSaida", { lp_event: "CliqueSaida" }, { eventID: eventIds.current.eventIdContact });
       const capiPayloadBase = {
         email: data.email,
@@ -425,7 +431,7 @@ Gostaria de receber orientação e verificar os horários disponíveis para a co
                   </p>
                   <div className="text-[13px] text-[#2B1B0A]/60 flex items-center gap-1.5">
                     <span className="w-1.5 h-1.5 rounded-full bg-[#A95B21]"></span>
-                    Cerca de 1 hora
+                    Cerca de 2 horas
                   </div>
                 </div>
 
@@ -440,7 +446,7 @@ Gostaria de receber orientação e verificar os horários disponíveis para a co
                   </p>
                   <div className="text-[13px] text-[#2B1B0A]/60 flex items-center gap-1.5">
                     <span className="w-1.5 h-1.5 rounded-full bg-[#A95B21]"></span>
-                    Até 1 hora e 30 minutos
+                    Cerca de 2 horas
                   </div>
                 </div>
               </div>
