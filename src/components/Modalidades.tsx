@@ -19,7 +19,6 @@ export const Modalidades = () => {
                 </div>
                 <div>
                   <p className="text-sm text-soft-green font-medium mb-1">Duração aproximada: 1 hora.</p>
-                  <p className="text-xl font-medium text-primary-brown">R$ 770,00</p>
                 </div>
               </div>
 
@@ -32,7 +31,6 @@ export const Modalidades = () => {
                 </div>
                 <div>
                   <p className="text-sm text-primary-white/60 font-medium mb-1">Duração aproximada: até 1h30.</p>
-                  <p className="text-xl font-medium text-primary-beige">R$ 1.090,00</p>
                 </div>
               </div>
             </div>

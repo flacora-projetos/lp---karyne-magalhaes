@@ -42,8 +42,14 @@ export const Footer = () => {
             </a>
           </div>
           
-          <div className="text-xs text-primary-beige/40">
-            © {new Date().getFullYear()} Dra. Karyne Magalhães. Todos os direitos reservados.
+          <div className="flex flex-col gap-2 md:text-right text-xs text-primary-beige/40">
+            <p>© {new Date().getFullYear()} Dra. Karyne Magalhães. Todos os direitos reservados.</p>
+            <p>
+              Desenvolvido por{' '}
+              <a href="https://wa.me/5562999465725" target="_blank" rel="noopener noreferrer" className="hover:text-primary-white transition-colors underline underline-offset-2">
+                Flávio Corá
+              </a>
+            </p>
           </div>
         </div>
       </div>

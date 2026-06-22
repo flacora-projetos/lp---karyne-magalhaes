@@ -18,6 +18,7 @@ import { Localizacao } from './components/Localizacao';
 import { FAQ } from './components/FAQ';
 import { CTAFinal } from './components/CTAFinal';
 import { Footer } from './components/Footer';
+import { FloatingWhatsApp } from './components/FloatingWhatsApp';
 import { QualificationModal } from './components/QualificationModal';
 import { preserveFbclid } from './utils/metaPixel';
 
@@ -60,6 +61,7 @@ export default function App() {
         <CTAFinal />
       </main>
       <Footer />
+      <FloatingWhatsApp />
       <QualificationModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} />
     </div>
   );
