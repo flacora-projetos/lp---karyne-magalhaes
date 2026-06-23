@@ -23,8 +23,8 @@ const itens = [
     a: "Sim, muitos pacientes vêm de fora. Recomendamos que informe a sua origem durante o contato, para alinharmos toda a organização antes de sua viagem a Goiânia."
   },
   {
-    q: "Como funciona o pagamento?",
-    a: "O acolhimento financeiro, opções de parcelamento e regras para confirmação da agenda serão explicados pela nossa equipe de atendimento após o contato via WhatsApp."
+    q: "Preciso pagar antes da consulta?",
+    a: "Sim. O horário é confirmado mediante pagamento no momento do agendamento. Como se trata de uma avaliação especializada, com duração aproximada de 2h a 2h30, o horário é reservado exclusivamente para o paciente.\n\nA consulta envolve tempo clínico individualizado, preparo da avaliação, análise clínica, avaliação da saliva e, conforme a modalidade escolhida, medição objetiva dos gases do hálito com OralChroma.\n\nApós a confirmação, a equipe envia as orientações da consulta pelo WhatsApp."
   }
 ];
 
@@ -62,7 +62,7 @@ export const FAQ = () => {
                   )}
                 </button>
                 {isOpen && (
-                  <div className="px-6 md:px-8 pb-6 md:pb-8 text-secondary-green text-lg leading-relaxed pt-2">
+                  <div className="px-6 md:px-8 pb-6 md:pb-8 text-secondary-green text-lg leading-relaxed pt-2 whitespace-pre-wrap">
                     {item.a}
                   </div>
                 )}

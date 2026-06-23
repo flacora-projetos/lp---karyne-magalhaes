@@ -7,6 +7,7 @@ export const Acolhimento = () => {
           <img 
             src="https://lh3.googleusercontent.com/d/1neQxPznSGT9lWFCIddPJLx3DmSm3Xr1y" 
             alt="Atendimento de confiança e reservado" 
+            loading="lazy"
             className="w-full h-auto aspect-[4/5] object-cover rounded-2xl shadow-sm border border-border-gray/50"
           />
         </div>

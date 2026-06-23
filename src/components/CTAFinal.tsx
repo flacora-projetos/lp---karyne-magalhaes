@@ -16,6 +16,7 @@ export const CTAFinal = () => {
           <img 
             src="https://lh3.googleusercontent.com/d/1-1M-IWgJPfDvGOJX0nVmdnpa9joM3UVA" 
             alt="Dra. Karyne Magalhães" 
+            loading="lazy"
             className="w-full h-full object-cover object-[center_10%] md:object-[center_25%]"
           />
         </div>

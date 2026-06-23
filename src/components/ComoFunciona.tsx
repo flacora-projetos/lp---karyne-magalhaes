@@ -16,6 +16,7 @@ export const ComoFunciona = () => {
           <img 
             src="https://lh3.googleusercontent.com/d/1R998hGla_Qn0l4drizl-GvlvliHwaMtI" 
             alt="Dra. Karyne avaliando a paciente" 
+            loading="lazy"
             className="w-full h-auto aspect-square object-cover rounded-2xl shadow-sm border border-border-gray/50"
           />
         </div>

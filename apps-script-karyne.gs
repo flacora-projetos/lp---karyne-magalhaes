@@ -134,12 +134,30 @@ function processData(data, spreadsheetId) {
   const stateMap = {};
   kanbanColumns.forEach(c => stateMap[c] = []);
   
-  // Headers are in index 0. Status is index 3. Nome completo is index 5.
+  // Headers are in index 0. Status is index 3. Nome completo is index 5. Atualizado em is index 2.
+  const statusIdx = allLeadsData[0].indexOf("Status");
+  const nameIdx = allLeadsData[0].indexOf("Nome completo");
+  const updatedIdx = allLeadsData[0].indexOf("Atualizado em");
+
   for (let i = 1; i < allLeadsData.length; i++) {
-    const status = allLeadsData[i][3];
-    const name = allLeadsData[i][5] || "Lead s/ nome";
+    const status = allLeadsData[i][statusIdx !== -1 ? statusIdx : 3];
+    const name = allLeadsData[i][nameIdx !== -1 ? nameIdx : 5] || "Lead s/ nome";
+    const updatedAt = allLeadsData[i][updatedIdx !== -1 ? updatedIdx : 2];
+    
+    let dateStr = "";
+    if (updatedAt) {
+      try {
+        const dateObj = new Date(updatedAt);
+        if (!isNaN(dateObj.getTime())) {
+          dateStr = Utilities.formatDate(dateObj, "America/Sao_Paulo", "dd/MM/yyyy HH:mm");
+        }
+      } catch(e) {}
+    }
+    
+    const displayText = dateStr ? `${name}\n${dateStr}` : name;
+
     if (stateMap[status] !== undefined) {
-      stateMap[status].push(name);
+      stateMap[status].push(displayText);
     }
   }
 

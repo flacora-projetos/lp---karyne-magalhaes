@@ -454,6 +454,10 @@ Gostaria de receber orientação e verificar os horários disponíveis para a co
                 </div>
               </div>
 
+              <p className="text-[13px] text-[#2B1B0A]/60 leading-relaxed text-center mb-8 italic">
+                Para confirmar o horário, a consulta é reservada mediante pagamento no momento do agendamento. Isso garante uma agenda individualizada, com tempo clínico dedicado, preparo da avaliação e uso dos recursos necessários para conduzir o diagnóstico com tranquilidade.
+              </p>
+
               <h4 className="font-medium text-base mb-4">Como você prefere prosseguir?</h4>
               
               <div className="space-y-3">

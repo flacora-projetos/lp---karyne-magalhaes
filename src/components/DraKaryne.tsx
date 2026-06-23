@@ -10,6 +10,7 @@ export const DraKaryne = () => {
             <img 
               src="https://lh3.googleusercontent.com/d/1sfkIsrKqxvF7oTnkkCPmEFhGplIV51iK" 
               alt="Dra. Karyne em formação e conteúdo" 
+              loading="lazy"
               className="w-full h-auto aspect-[3/4] object-cover rounded-2xl shadow-sm border border-border-gray/50 mb-8"
             />
           </div>
@@ -17,6 +18,7 @@ export const DraKaryne = () => {
             <img 
               src="https://lh3.googleusercontent.com/d/1gwopE6RKc1mdWo-mqBjt1_WG_8-XrJxM" 
               alt="Dra. Karyne Magalhães - Especialista" 
+              loading="lazy"
               className="w-full h-auto aspect-[3/4] object-cover rounded-2xl shadow-sm border border-border-gray/50 mt-12"
             />
           </div>
