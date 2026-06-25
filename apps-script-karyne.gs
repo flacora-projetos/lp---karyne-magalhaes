@@ -138,11 +138,18 @@ function processData(data, spreadsheetId) {
   const statusIdx = allLeadsData[0].indexOf("Status");
   const nameIdx = allLeadsData[0].indexOf("Nome completo");
   const updatedIdx = allLeadsData[0].indexOf("Atualizado em");
+  const utmSourceIdx = allLeadsData[0].indexOf("UTM Source");
+  const utmMediumIdx = allLeadsData[0].indexOf("UTM Medium");
+  const utmContentIdx = allLeadsData[0].indexOf("UTM Content");
 
   for (let i = 1; i < allLeadsData.length; i++) {
     const status = allLeadsData[i][statusIdx !== -1 ? statusIdx : 3];
     const name = allLeadsData[i][nameIdx !== -1 ? nameIdx : 5] || "Lead s/ nome";
     const updatedAt = allLeadsData[i][updatedIdx !== -1 ? updatedIdx : 2];
+    
+    const utmSource = utmSourceIdx !== -1 ? allLeadsData[i][utmSourceIdx] : "";
+    const utmMedium = utmMediumIdx !== -1 ? allLeadsData[i][utmMediumIdx] : "";
+    const utmContent = utmContentIdx !== -1 ? allLeadsData[i][utmContentIdx] : "";
     
     let dateStr = "";
     if (updatedAt) {
@@ -154,7 +161,13 @@ function processData(data, spreadsheetId) {
       } catch(e) {}
     }
     
-    const displayText = dateStr ? `${name}\n${dateStr}` : name;
+    let utmInfo = [];
+    if (utmSource) utmInfo.push(`Fonte: ${utmSource}`);
+    if (utmMedium) utmInfo.push(`Posicionamento: ${utmMedium}`);
+    if (utmContent) utmInfo.push(`Anúncio: ${utmContent}`);
+    const utmStr = utmInfo.length > 0 ? `\n${utmInfo.join(" | ")}` : "";
+    
+    const displayText = dateStr ? `${name}\n${dateStr}${utmStr}` : `${name}${utmStr}`;
 
     if (stateMap[status] !== undefined) {
       stateMap[status].push(displayText);
