@@ -24,8 +24,11 @@ export const PorQueInvestigar = () => {
       <div className="max-w-7xl mx-auto px-6">
         <div className="text-center max-w-2xl mx-auto mb-16">
           <h2 className="text-3xl md:text-4xl font-medium leading-tight text-primary-brown">
-            Mais do que mascarar o odor, é preciso investigar sua origem.
+            Como acabar com o mau hálito? Tratando a causa certa.
           </h2>
+          <p className="mt-4 text-lg text-secondary-green leading-relaxed">
+            Muitas pessoas procuram soluções rápidas ou acreditam sofrer de mau hálito estomacal. Porém, mais do que mascarar o odor, é preciso investigar sua origem exata (que na maioria das vezes é bucal) para conduzir um tratamento eficaz.
+          </p>
         </div>
         
         <div className="grid md:grid-cols-3 gap-8">

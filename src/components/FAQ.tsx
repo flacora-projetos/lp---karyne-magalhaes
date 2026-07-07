@@ -3,6 +3,14 @@ import { ChevronDown, ChevronUp } from 'lucide-react';
 
 const itens = [
   {
+    q: "Mau hálito tem cura?",
+    a: "Sim. Na grande maioria dos casos o mau hálito tem cura ou controle adequado, a depender da causa. O primeiro passo é realizar um diagnóstico preciso para identificar exatamente o que está gerando o problema e, assim, iniciar o tratamento correto."
+  },
+  {
+    q: "Mau hálito que vem do estômago tem tratamento?",
+    a: "Muitas pessoas acreditam que todo mau hálito é estomacal, mas na verdade, as causas vindas do estômago são minoria (grande parte tem origem bucal). Independentemente da causa identificada na consulta, existe tratamento adequado e tudo começa com essa investigação."
+  },
+  {
     q: "A consulta inclui tratamento?",
     a: "A consulta é voltada ao diagnóstico. Caso seja identificada necessidade de tratamento, a Dra. Karyne explica as possibilidades após a avaliação, porque a conduta depende da causa encontrada."
   },

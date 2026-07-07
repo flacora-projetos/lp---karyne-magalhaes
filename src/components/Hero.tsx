@@ -30,9 +30,13 @@ export const Hero = () => {
             <span>Consulta especializada em Halitose • Goiânia</span>
           </div>
           
-          <h1 className="text-[31px] min-[390px]:text-[34px] min-[430px]:text-[37px] md:text-[44px] lg:text-[50px] xl:text-[54px] font-medium leading-[1.02] md:leading-[1.12] mb-3 md:mb-6 text-primary-brown pr-2 sm:pr-8 md:pr-12 max-w-[95%] md:max-w-2xl tracking-tight">
+          <h1 className="text-[31px] min-[390px]:text-[34px] min-[430px]:text-[37px] md:text-[44px] lg:text-[50px] xl:text-[54px] font-medium leading-[1.02] md:leading-[1.12] mb-4 md:mb-5 text-primary-brown pr-2 sm:pr-8 md:pr-12 max-w-[95%] md:max-w-2xl tracking-tight">
             Diagnóstico especializado da halitose com avaliação clínica e tecnologia.
           </h1>
+
+          <p className="text-xl md:text-[1.35rem] font-medium text-primary-brown mb-4 max-w-[480px] lg:max-w-[500px] leading-snug">
+            Para acabar com o mau hálito de verdade, o primeiro passo é descobrir a causa — são mais de 60 possíveis.
+          </p>
           
           <p className="text-lg md:text-[1.15rem] text-secondary-green mb-5 md:mb-8 max-w-[480px] lg:max-w-[500px] leading-relaxed">
             Avaliação odontológica completa, Sialometria (avaliação do fluxo e qualidade salivar) e medição objetiva dos gases do hálito com OralChroma, para investigar melhor as possíveis causas da halitose.

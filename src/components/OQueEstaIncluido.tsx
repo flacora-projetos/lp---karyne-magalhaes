@@ -21,7 +21,7 @@ export const OQueEstaIncluido = () => {
           
           <div className="bg-primary-white/10 p-6 rounded-xl border border-primary-white/20">
             <p className="text-lg leading-relaxed font-medium">
-              A consulta tem como objetivo reunir informações clínicas e exames objetivos para entender melhor o caso antes de indicar qualquer conduta.
+              A consulta tem como objetivo reunir informações clínicas e exames objetivos para entender melhor o caso antes de indicar qualquer conduta. Caso seja identificada a necessidade, o tratamento existe e é conduzido pela própria Dra. Karyne de acordo com a causa encontrada.
             </p>
           </div>
         </div>
