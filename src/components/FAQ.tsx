@@ -58,8 +58,10 @@ export const FAQ = () => {
                 key={idx} 
                 className={`bg-primary-white rounded-2xl border transition-colors ${isOpen ? 'border-primary-brown border-opacity-30' : 'border-border-gray hover:border-primary-brown/20'}`}
               >
-                <button 
+                <button
                   onClick={() => toggle(idx)}
+                  aria-expanded={isOpen}
+                  aria-controls={`faq-answer-${idx}`}
                   className="flex items-center justify-between w-full p-6 md:p-8 text-left focus:outline-none"
                 >
                   <span className="text-lg text-primary-brown font-medium pr-6">{item.q}</span>
@@ -69,11 +71,18 @@ export const FAQ = () => {
                     <ChevronDown size={24} className="text-soft-green flex-shrink-0" />
                   )}
                 </button>
-                {isOpen && (
-                  <div className="px-6 md:px-8 pb-6 md:pb-8 text-secondary-green text-lg leading-relaxed pt-2 whitespace-pre-wrap">
-                    {item.a}
+                {/* Resposta sempre presente no DOM (crawlável); apenas oculta visualmente quando fechada */}
+                <div
+                  id={`faq-answer-${idx}`}
+                  aria-hidden={!isOpen}
+                  className={`grid transition-all duration-300 ease-in-out ${isOpen ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'}`}
+                >
+                  <div className="overflow-hidden">
+                    <div className="px-6 md:px-8 pb-6 md:pb-8 text-secondary-green text-lg leading-relaxed pt-2 whitespace-pre-wrap">
+                      {item.a}
+                    </div>
                   </div>
-                )}
+                </div>
               </div>
             );
           })}

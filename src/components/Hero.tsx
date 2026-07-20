@@ -5,9 +5,13 @@ export const Hero = () => {
     >
       {/* Background Image Container */}
       <div className="absolute right-0 top-0 w-full md:w-[75%] lg:w-[70%] h-[45vh] md:h-full z-0">
-        <img 
-          src="https://lh3.googleusercontent.com/d/1_R1q6m9jY9ey84Pt7VC2Q94zOqtFR53m" 
-          alt="Dra. Karyne Magalhães" 
+        <img
+          src="https://lh3.googleusercontent.com/d/1_R1q6m9jY9ey84Pt7VC2Q94zOqtFR53m"
+          alt="Dra. Karyne Magalhães, especialista em halitose, em seu consultório em Goiânia"
+          width="1200"
+          height="1500"
+          fetchPriority="high"
+          decoding="async"
           className="w-full h-full object-cover object-[75%_0%] md:object-[center_15%] -translate-y-8 md:translate-y-0"
         />
         {/* Mobile: bottom gradient protecting text */}
