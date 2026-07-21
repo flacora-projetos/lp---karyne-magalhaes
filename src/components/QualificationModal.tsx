@@ -30,6 +30,8 @@ interface LeadData {
 
 const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbypbOG2r2Zka810XL8er9zUUSGHjsscOQw_db95uh9azXYh7adlTNhAn1_u0VxzLn4/exec";
 
+const TOTAL_STEPS = 7;
+
 const getTrackingData = () => {
   const params = new URLSearchParams(window.location.search);
   const keys = ['utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'utm_term', 'fbclid', 'gclid'];
@@ -176,7 +178,7 @@ export const QualificationModal: React.FC<QualificationModalProps> = ({ isOpen, 
   };
 
   const nextStep = () => {
-    const nextS = Math.min(step + 1, 6);
+    const nextS = Math.min(step + 1, TOTAL_STEPS);
     setStep(nextS);
     window.scrollTo({ top: 0, behavior: 'auto' });
     
@@ -201,10 +203,10 @@ export const QualificationModal: React.FC<QualificationModalProps> = ({ isOpen, 
       trackCustomEvent("FormularioIniciado", { lp_event: "FormularioIniciado" }, { eventID });
       sendMetaCapiEvent({ eventName: "FormularioIniciado", eventId: eventID, ...capiPayloadBase });
       pushDataLayerEvent("formulario_iniciado");
-    } else if (nextS > 1 && nextS < 6) {
+    } else if (nextS > 1 && nextS < TOTAL_STEPS) {
       trackCustomEvent("EtapaRespondida", { lp_event: "EtapaRespondida", step: nextS }, { eventID });
       pushDataLayerEvent("etapa_respondida", { step });
-    } else if (nextS === 6 && !eventIds.current.eventIdLead) {
+    } else if (nextS === TOTAL_STEPS && !eventIds.current.eventIdLead) {
       eventIds.current.eventIdLead = eventID;
       trackCustomEvent("FiltroCompleto", { lp_event: "FiltroCompleto" }, { eventID });
       sendMetaCapiEvent({ eventName: "FiltroCompleto", eventId: eventID, ...capiPayloadBase });
@@ -214,7 +216,7 @@ export const QualificationModal: React.FC<QualificationModalProps> = ({ isOpen, 
     let status = 'Respondendo perguntas (Ainda no preenchimento)';
     if (nextS === 2) status = 'Lead gerado(Lead formado)';
     if (nextS === 3) status = 'Filtro iniciado (Começou a responder)';
-    if (nextS === 6) status = 'Filtro concluído(Concluiu o filtro)';
+    if (nextS === TOTAL_STEPS) status = 'Filtro concluído(Concluiu o filtro)';
     sendDataToSheets(status, nextS);
   };
   const prevStep = () => setStep((s) => Math.max(s - 1, 1));
@@ -244,19 +246,23 @@ export const QualificationModal: React.FC<QualificationModalProps> = ({ isOpen, 
       };
       sendMetaCapiEvent({ eventName: "CliqueSaida", eventId: eventIds.current.eventIdContact, ...capiPayloadBase });
     }
-    sendDataToSheets('WhatsApp aberto(clicou para WhatsApp)', 6);
+    sendDataToSheets('WhatsApp aberto(clicou para WhatsApp)', TOTAL_STEPS);
     const phone = '5562999320675';
+    const linhas = [
+      `Nome: ${data.nome}`,
+      `WhatsApp: ${data.whatsapp}`,
+      data.email && `Melhor e-mail: ${data.email}`,
+      (data.cidade || data.estado) && `Cidade/UF: ${[data.cidade, data.estado].filter(Boolean).join('/')}`,
+      `Situação informada: ${data.comportamentoHalito}`,
+      `Opção de interesse: ${data.modalidade}`,
+      `Uso de antibióticos nos últimos 21 dias: ${data.antibioticos}`,
+      `Período preferido: ${data.periodo}`,
+      `Datas ou horários informados: ${data.datasOpcional || 'Não informado'}`,
+    ].filter(Boolean).join('\n');
+
     const text = `Olá! Vim pela página da consulta de Halitose e respondi à avaliação inicial.
 
-Nome: ${data.nome}
-WhatsApp: ${data.whatsapp}
-Melhor e-mail: ${data.email}
-Cidade/UF: ${data.cidade}/${data.estado}
-Situação informada: ${data.comportamentoHalito}
-Opção de interesse: ${data.modalidade}
-Uso de antibióticos nos últimos 21 dias: ${data.antibioticos}
-Período preferido: ${data.periodo}
-Datas ou horários informados: ${data.datasOpcional || 'Não informado'}
+${linhas}
 
 Gostaria de receber orientação e verificar os horários disponíveis para a consulta com a Dra. Karyne Magalhães.`;
 
@@ -264,7 +270,8 @@ Gostaria de receber orientação e verificar os horários disponíveis para a co
     window.open(`https://wa.me/${phone}?text=${encodedText}`, '_blank');
   };
 
-  const isStep1Valid = !!data.nome && !!data.whatsapp && !!data.email && !!data.cidade && !!data.estado;
+  const isStep1Valid = !!data.whatsapp;
+  const isStep6Valid = !!data.nome;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-0 md:p-6 bg-black/40 backdrop-blur-sm transition-opacity">
@@ -280,7 +287,7 @@ Gostaria de receber orientação e verificar os horários disponíveis para a co
                 <ArrowLeft size={20} />
               </button>
             )}
-            <div className="text-sm font-medium text-[#A95B21]">Etapa {step} de 6</div>
+            <div className="text-sm font-medium text-[#A95B21]">Etapa {step} de {TOTAL_STEPS}</div>
           </div>
           <button onClick={onClose} className="p-2 -mr-2 rounded-full hover:bg-black/5 transition-colors text-[#2B1B0A]">
             <X size={20} />
@@ -291,7 +298,7 @@ Gostaria de receber orientação e verificar os horários disponíveis para a co
         <div className="h-1 bg-[#E4DFD9] w-full">
           <div 
             className="h-full bg-[#A95B21] transition-all duration-300 ease-out"
-            style={{ width: `${(step / 6) * 100}%` }}
+            style={{ width: `${(step / TOTAL_STEPS) * 100}%` }}
           />
         </div>
 
@@ -300,74 +307,26 @@ Gostaria de receber orientação e verificar os horários disponíveis para a co
           
           {step === 1 && (
             <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-              <h2 className="text-2xl md:text-3xl font-medium font-serif leading-tight mb-3">Para começar, como podemos falar com você?</h2>
-              <p className="text-[#2B1B0A]/70 text-sm mb-8">Seus dados serão usados pela equipe da clínica para orientar o atendimento e o agendamento.</p>
-              
+              <h2 className="text-2xl md:text-3xl font-medium font-serif leading-tight mb-3">Para começar, qual é o seu WhatsApp?</h2>
+              <p className="text-[#2B1B0A]/70 text-sm mb-8">Assim, mesmo que você feche essa janela no meio do caminho, a equipe consegue continuar por lá. As próximas perguntas são sobre o seu caso.</p>
+
               <div className="space-y-5">
                 <div>
-                  <label className="block text-sm font-medium mb-1.5 pl-1">Nome completo</label>
-                  <input 
-                    type="text" 
-                    value={data.nome}
-                    onChange={e => handleChange('nome', e.target.value)}
-                    className="w-full bg-[#FEFEFE] border border-[#E4DFD9] rounded-xl px-4 py-3.5 focus:outline-none focus:ring-2 focus:ring-[#A95B21]/40 focus:border-[#A95B21] transition-all"
-                    placeholder="Seu nome completo"
-                  />
-                </div>
-                <div>
                   <label className="block text-sm font-medium mb-1.5 pl-1">WhatsApp</label>
-                  <input 
-                    type="tel" 
+                  <input
+                    type="tel"
                     value={data.whatsapp}
                     onChange={e => handleChange('whatsapp', e.target.value)}
                     className="w-full bg-[#FEFEFE] border border-[#E4DFD9] rounded-xl px-4 py-3.5 focus:outline-none focus:ring-2 focus:ring-[#A95B21]/40 focus:border-[#A95B21] transition-all"
                     placeholder="(00) 00000-0000"
                   />
                 </div>
-                <div>
-                  <label className="block text-sm font-medium mb-1.5 pl-1">Melhor e-mail</label>
-                  <input 
-                    type="email" 
-                    value={data.email}
-                    onChange={e => handleChange('email', e.target.value)}
-                    className="w-full bg-[#FEFEFE] border border-[#E4DFD9] rounded-xl px-4 py-3.5 focus:outline-none focus:ring-2 focus:ring-[#A95B21]/40 focus:border-[#A95B21] transition-all"
-                    placeholder="voce@exemplo.com.br"
-                  />
-                </div>
-                <div className="grid grid-cols-3 gap-4">
-                  <div className="col-span-2">
-                    <label className="block text-sm font-medium mb-1.5 pl-1">Cidade</label>
-                    <input 
-                      type="text" 
-                      value={data.cidade}
-                      onChange={e => handleChange('cidade', e.target.value)}
-                      className="w-full bg-[#FEFEFE] border border-[#E4DFD9] rounded-xl px-4 py-3.5 focus:outline-none focus:ring-2 focus:ring-[#A95B21]/40 focus:border-[#A95B21] transition-all"
-                      placeholder="Sua cidade"
-                    />
-                  </div>
-                  <div className="col-span-1">
-                    <label className="block text-sm font-medium mb-1.5 pl-1">Estado</label>
-                    <div className="relative">
-                      <select 
-                        value={data.estado}
-                        onChange={e => handleChange('estado', e.target.value)}
-                        className="w-full appearance-none bg-[#FEFEFE] border border-[#E4DFD9] rounded-xl px-4 py-3.5 pr-10 focus:outline-none focus:ring-2 focus:ring-[#A95B21]/40 focus:border-[#A95B21] transition-all"
-                      >
-                        <option value="">UF</option>
-                        {UF_LIST.map(uf => (
-                          <option key={uf} value={uf}>{uf}</option>
-                        ))}
-                      </select>
-                      <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-[#2B1B0A]/50" size={18} />
-                    </div>
-                  </div>
-                </div>
               </div>
               <div className="mt-10">
                 <p className="text-[12px] md:text-[13px] text-[#2B1B0A]/60 mb-4 text-center">
                   Ao continuar, você declara estar ciente da nossa <a href="/politica-de-privacidade" target="_blank" rel="noopener noreferrer" className="underline underline-offset-2 hover:text-[#222D19] transition-colors">Política de Privacidade</a>.
                 </p>
-                <button 
+                <button
                   onClick={() => {
                     nextStep();
                   }}
@@ -459,7 +418,11 @@ Gostaria de receber orientação e verificar os horários disponíveis para a co
               </p>
 
               <h4 className="font-medium text-base mb-4">Como você prefere prosseguir?</h4>
-              
+
+              <p className="text-[13px] text-[#2B1B0A]/60 leading-relaxed mb-4">
+                Se ficar com dúvida sobre qual opção escolher, a equipe ajuda a decidir pelo WhatsApp, sem compromisso.
+              </p>
+
               <div className="space-y-3">
                 {[
                   'Tenho interesse no OralChroma',
@@ -493,8 +456,9 @@ Gostaria de receber orientação e verificar os horários disponíveis para a co
 
           {step === 4 && (
             <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-              <h2 className="text-2xl md:text-3xl font-medium font-serif leading-tight mb-8">Você utilizou antibióticos nos últimos 21 dias?</h2>
-              
+              <h2 className="text-2xl md:text-3xl font-medium font-serif leading-tight mb-2">Você utilizou antibióticos nos últimos 21 dias?</h2>
+              <p className="text-[#2B1B0A]/70 text-sm mb-8">Isso ajuda a garantir que sua avaliação tenha resultado confiável.</p>
+
               <div className="space-y-3">
                 {([ 'Não', 'Sim', 'Não tenho certeza' ] as AntibioticStatus[]).map((opcao) => (
                   <button
@@ -540,8 +504,9 @@ Gostaria de receber orientação e verificar os horários disponíveis para a co
 
           {step === 5 && (
             <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-              <h2 className="text-2xl md:text-3xl font-medium font-serif leading-tight mb-8">Qual período costuma ser melhor para você?</h2>
-              
+              <h2 className="text-2xl md:text-3xl font-medium font-serif leading-tight mb-2">Qual período costuma ser melhor para você?</h2>
+              <p className="text-[#2B1B0A]/70 text-sm mb-8">Isso ajuda a equipe a te oferecer o melhor horário disponível.</p>
+
               <div className="space-y-3 mb-8">
                 {([ 'Manhã', 'Tarde', 'Posso me adaptar' ] as PeriodOption[]).map((opcao) => (
                   <button
@@ -589,6 +554,78 @@ Gostaria de receber orientação e verificar os horários disponíveis para a co
 
           {step === 6 && (
             <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+              <h2 className="text-2xl md:text-3xl font-medium font-serif leading-tight mb-3">Só mais um passo. Como podemos te chamar?</h2>
+              <p className="text-[#2B1B0A]/70 text-sm mb-8">Esses dados ajudam a equipe da clínica a te chamar pelo nome e organizar o atendimento.</p>
+
+              <div className="space-y-5">
+                <div>
+                  <label className="block text-sm font-medium mb-1.5 pl-1">Nome completo</label>
+                  <input
+                    type="text"
+                    value={data.nome}
+                    onChange={e => handleChange('nome', e.target.value)}
+                    className="w-full bg-[#FEFEFE] border border-[#E4DFD9] rounded-xl px-4 py-3.5 focus:outline-none focus:ring-2 focus:ring-[#A95B21]/40 focus:border-[#A95B21] transition-all"
+                    placeholder="Seu nome completo"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1.5 pl-1">Melhor e-mail <span className="text-[#2B1B0A]/40 font-normal">(opcional)</span></label>
+                  <input
+                    type="email"
+                    value={data.email}
+                    onChange={e => handleChange('email', e.target.value)}
+                    className="w-full bg-[#FEFEFE] border border-[#E4DFD9] rounded-xl px-4 py-3.5 focus:outline-none focus:ring-2 focus:ring-[#A95B21]/40 focus:border-[#A95B21] transition-all"
+                    placeholder="voce@exemplo.com.br"
+                  />
+                </div>
+                <div className="grid grid-cols-3 gap-4">
+                  <div className="col-span-2">
+                    <label className="block text-sm font-medium mb-1.5 pl-1">Cidade <span className="text-[#2B1B0A]/40 font-normal">(opcional)</span></label>
+                    <input
+                      type="text"
+                      value={data.cidade}
+                      onChange={e => handleChange('cidade', e.target.value)}
+                      className="w-full bg-[#FEFEFE] border border-[#E4DFD9] rounded-xl px-4 py-3.5 focus:outline-none focus:ring-2 focus:ring-[#A95B21]/40 focus:border-[#A95B21] transition-all"
+                      placeholder="Sua cidade"
+                    />
+                  </div>
+                  <div className="col-span-1">
+                    <label className="block text-sm font-medium mb-1.5 pl-1">Estado</label>
+                    <div className="relative">
+                      <select
+                        value={data.estado}
+                        onChange={e => handleChange('estado', e.target.value)}
+                        className="w-full appearance-none bg-[#FEFEFE] border border-[#E4DFD9] rounded-xl px-4 py-3.5 pr-10 focus:outline-none focus:ring-2 focus:ring-[#A95B21]/40 focus:border-[#A95B21] transition-all"
+                      >
+                        <option value="">UF</option>
+                        {UF_LIST.map(uf => (
+                          <option key={uf} value={uf}>{uf}</option>
+                        ))}
+                      </select>
+                      <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-[#2B1B0A]/50" size={18} />
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div className="mt-10">
+                <p className="text-[12px] md:text-[13px] text-[#2B1B0A]/60 mb-4 text-center">
+                  Ao continuar, você declara estar ciente da nossa <a href="/politica-de-privacidade" target="_blank" rel="noopener noreferrer" className="underline underline-offset-2 hover:text-[#222D19] transition-colors">Política de Privacidade</a>.
+                </p>
+                <button
+                  onClick={() => {
+                    nextStep();
+                  }}
+                  disabled={!isStep6Valid}
+                  className="w-full bg-[#222D19] hover:bg-[#222D19]/90 disabled:bg-[#E4DFD9] disabled:text-[#2B1B0A]/40 transition-colors text-white py-4 rounded-xl font-medium text-[15px]"
+                >
+                  Continuar
+                </button>
+              </div>
+            </div>
+          )}
+
+          {step === 7 && (
+            <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
               <h2 className="text-2xl md:text-3xl font-medium font-serif leading-tight mb-8">Revise suas informações</h2>
               
               <div className="bg-[#FEFEFE] border border-[#E4DFD9] rounded-2xl p-5 md:p-6 space-y-5 mb-8">
@@ -596,8 +633,10 @@ Gostaria de receber orientação e verificar os horários disponíveis para a co
                 <div>
                   <div className="text-[12px] text-[#2B1B0A]/50 uppercase tracking-wider font-medium mb-1">Identificação</div>
                   <div className="text-[15px] font-medium">{data.nome}</div>
-                  <div className="text-[14px] text-[#2B1B0A]/70">{data.whatsapp} • {data.email}</div>
-                  <div className="text-[14px] text-[#2B1B0A]/70">{data.cidade} / {data.estado}</div>
+                  <div className="text-[14px] text-[#2B1B0A]/70">{data.whatsapp}{data.email && ` • ${data.email}`}</div>
+                  {(data.cidade || data.estado) && (
+                    <div className="text-[14px] text-[#2B1B0A]/70">{[data.cidade, data.estado].filter(Boolean).join(' / ')}</div>
+                  )}
                 </div>
 
                 <div className="h-px bg-[#E4DFD9] w-full"></div>

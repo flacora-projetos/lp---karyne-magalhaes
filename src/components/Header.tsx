@@ -31,7 +31,7 @@ export const Header = () => {
             onClick={() => window.openQualificationModal?.()}
             className="bg-primary-green text-primary-white px-6 py-2.5 rounded-full text-sm font-medium hover:bg-secondary-green transition-colors"
           >
-            Entender meu caso
+            Fazer avaliação inicial (2 min)
           </button>
         </nav>
 
@@ -61,7 +61,7 @@ export const Header = () => {
             }}
             className="bg-primary-green text-primary-white px-6 py-3 rounded-full text-sm font-medium w-full mt-2"
           >
-            Entender meu caso
+            Fazer avaliação inicial (2 min)
           </button>
         </div>
       )}

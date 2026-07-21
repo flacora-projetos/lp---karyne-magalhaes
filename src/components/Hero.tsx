@@ -1,3 +1,5 @@
+import { Star } from 'lucide-react';
+
 export const Hero = () => {
   return (
     <section 
@@ -32,6 +34,13 @@ export const Hero = () => {
           <div className="inline-flex items-center space-x-2 text-sm text-soft-green font-medium mb-2 md:mb-6">
             <span className="w-1.5 h-1.5 rounded-full bg-accent-copper"></span>
             <span>Consulta especializada em Halitose • Goiânia</span>
+          </div>
+
+          <div className="inline-flex items-center gap-1.5 text-sm text-soft-green font-medium mb-3 md:mb-4">
+            <div className="flex text-accent-earthy">
+              {[1, 2, 3, 4, 5].map(idx => <Star key={idx} size={14} fill="currentColor" />)}
+            </div>
+            <span>5,0 no Google • 250 avaliações</span>
           </div>
           
           <h1 className="text-[31px] min-[390px]:text-[34px] min-[430px]:text-[37px] md:text-[44px] lg:text-[50px] xl:text-[54px] font-medium leading-[1.02] md:leading-[1.12] mb-4 md:mb-5 text-primary-brown pr-2 sm:pr-8 md:pr-12 max-w-[95%] md:max-w-2xl tracking-tight">
