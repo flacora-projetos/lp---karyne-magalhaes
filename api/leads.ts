@@ -11,7 +11,24 @@ import { requireAuth } from '../lib/requireAuth.js';
  *         Fire-and-forget: sempre responde 200 para não quebrar o fluxo da LP.
  *
  * GET   — listagem para o painel /admin. Exige JWT do Supabase Auth (Bearer).
+ *
+ * PATCH — atualiza os campos comerciais de um lead (?id=<lead_id>). Exige JWT.
+ *         (Fica aqui, no caminho estático /api/leads, em vez de uma rota
+ *         dinâmica /api/leads/[id], porque o rewrite catch-all do vercel.json
+ *         engole rotas dinâmicas antes de chegarem à função.)
  */
+const STATUS_VALIDOS = [
+  'novo',
+  'contatado',
+  'aguardando_resposta',
+  'em_atendimento',
+  'consulta_marcada',
+  'consulta_realizada',
+  'tratamento_fechado',
+  'nao_fechou',
+  'lead_invalido',
+];
+
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method === 'POST') {
     return handlePost(req, res);
@@ -19,8 +36,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method === 'GET') {
     return handleGet(req, res);
   }
+  if (req.method === 'PATCH') {
+    return handlePatch(req, res);
+  }
 
-  res.setHeader('Allow', 'GET, POST');
+  res.setHeader('Allow', 'GET, POST, PATCH');
   return res.status(405).json({ success: false, error: 'Method not allowed' });
 }
 
@@ -110,5 +130,90 @@ async function handlePost(req: VercelRequest, res: VercelResponse) {
   } catch (error) {
     console.error('[api/leads POST] Erro interno');
     return res.status(200).json({ success: false, error: 'Internal server error' });
+  }
+}
+
+async function handlePatch(req: VercelRequest, res: VercelResponse) {
+  const user = await requireAuth(req, res);
+  if (!user) return;
+
+  const leadId = first(req.query.id);
+  if (!leadId) {
+    return res.status(400).json({ success: false, error: 'lead_id ausente (use ?id=)' });
+  }
+
+  let body = req.body;
+  if (typeof body === 'string') {
+    try {
+      body = JSON.parse(body);
+    } catch {
+      return res.status(400).json({ success: false, error: 'JSON inválido' });
+    }
+  }
+  if (!body || typeof body !== 'object') {
+    return res.status(400).json({ success: false, error: 'Corpo inválido' });
+  }
+
+  // Whitelist estrita de campos comerciais.
+  const update: Record<string, unknown> = {};
+
+  if ('status_comercial' in body) {
+    const s = String(body.status_comercial);
+    if (!STATUS_VALIDOS.includes(s)) {
+      return res.status(400).json({ success: false, error: 'status_comercial inválido' });
+    }
+    update.status_comercial = s;
+  }
+
+  if ('data_consulta' in body) {
+    const v = body.data_consulta;
+    update.data_consulta = v === null || v === '' ? null : String(v);
+  }
+
+  if ('valor_fechado' in body) {
+    const v = body.valor_fechado;
+    if (v === null || v === '') {
+      update.valor_fechado = null;
+    } else {
+      const n = Number(v);
+      if (Number.isNaN(n) || n < 0) {
+        return res.status(400).json({ success: false, error: 'valor_fechado inválido' });
+      }
+      update.valor_fechado = n;
+    }
+  }
+
+  for (const campo of ['motivo_perda', 'observacoes', 'responsavel'] as const) {
+    if (campo in body) {
+      const v = (body as Record<string, unknown>)[campo];
+      update[campo] = v === null || v === '' ? null : String(v);
+    }
+  }
+
+  if (Object.keys(update).length === 0) {
+    return res.status(400).json({ success: false, error: 'Nenhum campo comercial para atualizar' });
+  }
+
+  try {
+    const supabase = getSupabaseAdmin();
+    const { data, error } = await supabase
+      .from('leads')
+      .update(update)
+      .eq('lead_id', leadId)
+      .select('*')
+      .single();
+
+    if (error) {
+      if ((error as { code?: string }).code === 'PGRST116') {
+        return res.status(404).json({ success: false, error: 'Lead não encontrado' });
+      }
+      console.error('[api/leads PATCH] Erro:', error.message);
+      return res.status(500).json({ success: false, error: 'Falha ao atualizar lead' });
+    }
+
+    return res.status(200).json({ success: true, lead: data });
+  } catch {
+    console.error('[api/leads PATCH] Erro interno');
+    return res.status(500).json({ success: false, error: 'Internal server error' });
   }
 }

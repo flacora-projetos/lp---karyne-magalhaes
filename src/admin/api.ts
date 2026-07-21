@@ -46,7 +46,7 @@ export async function updateLead(
   leadId: string,
   update: LeadCommercialUpdate,
 ): Promise<Lead> {
-  const res = await fetch(`/api/leads/${encodeURIComponent(leadId)}`, {
+  const res = await fetch(`/api/leads?id=${encodeURIComponent(leadId)}`, {
     method: 'PATCH',
     headers: {
       'Content-Type': 'application/json',
