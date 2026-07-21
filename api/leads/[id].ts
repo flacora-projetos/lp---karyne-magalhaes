@@ -1,6 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { getSupabaseAdmin } from '../../lib/supabaseAdmin';
-import { requireAuth } from '../../lib/requireAuth';
+import { getSupabaseAdmin } from '../../lib/supabaseAdmin.js';
+import { requireAuth } from '../../lib/requireAuth.js';
 
 const STATUS_VALIDOS = [
   'novo',

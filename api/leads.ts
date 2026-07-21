@@ -1,7 +1,7 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { getSupabaseAdmin } from '../lib/supabaseAdmin';
-import { mapPayloadToRow, type SheetsPayload } from '../lib/mapLead';
-import { requireAuth } from '../lib/requireAuth';
+import { getSupabaseAdmin } from '../lib/supabaseAdmin.js';
+import { mapPayloadToRow, type SheetsPayload } from '../lib/mapLead.js';
+import { requireAuth } from '../lib/requireAuth.js';
 
 /**
  * /api/leads
