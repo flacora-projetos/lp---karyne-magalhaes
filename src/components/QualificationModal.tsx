@@ -30,6 +30,24 @@ interface LeadData {
 
 const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbypbOG2r2Zka810XL8er9zUUSGHjsscOQw_db95uh9azXYh7adlTNhAn1_u0VxzLn4/exec";
 
+/**
+ * Envia o MESMO payload da planilha, em paralelo, para o mini CRM (Postgres via
+ * /api/leads). Fire-and-forget e totalmente isolado: qualquer erro aqui é
+ * silencioso e NÃO afeta o envio para o Apps Script/planilha nem o fluxo da LP.
+ */
+const sendLeadToCrm = (payload: Record<string, unknown>) => {
+  try {
+    fetch("/api/leads", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+      keepalive: true,
+    }).catch(() => {});
+  } catch {
+    /* noop */
+  }
+};
+
 const TOTAL_STEPS = 7;
 
 const getTrackingData = () => {
@@ -118,6 +136,7 @@ export const QualificationModal: React.FC<QualificationModalProps> = ({ isOpen, 
           headers: { "Content-Type": "text/plain;charset=utf-8" },
           body: JSON.stringify(payload)
         }).catch(e => console.error(e));
+        sendLeadToCrm(payload);
       }
     }
     
@@ -175,6 +194,9 @@ export const QualificationModal: React.FC<QualificationModalProps> = ({ isOpen, 
     })
     .then(() => console.log("Fetch para Sheets enviado (no-cors). status:", statusOverride))
     .catch(e => console.error("Error sending lead to sheets:", e));
+
+    // Espelha o mesmo payload no mini CRM (Postgres), sem afetar o envio acima.
+    sendLeadToCrm(payload);
   };
 
   const nextStep = () => {

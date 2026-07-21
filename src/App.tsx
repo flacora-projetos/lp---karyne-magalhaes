@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, Suspense, lazy } from 'react';
 import { Header } from './components/Header';
 import { Hero } from './components/Hero';
 import { Acolhimento } from './components/Acolhimento';
@@ -23,6 +23,9 @@ import { FloatingWhatsApp } from './components/FloatingWhatsApp';
 import { QualificationModal } from './components/QualificationModal';
 import { PrivacyPolicy } from './components/PrivacyPolicy';
 import { preserveFbclid } from './utils/metaPixel';
+
+// Painel administrativo (mini CRM) — carregado sob demanda, fora do bundle da LP.
+const AdminApp = lazy(() => import('./admin/AdminApp'));
 
 declare global {
   interface Window {
@@ -55,6 +58,20 @@ export default function App() {
 
   if (currentPath === '/politica-de-privacidade') {
     return <PrivacyPolicy />;
+  }
+
+  if (currentPath === '/admin' || currentPath.startsWith('/admin/')) {
+    return (
+      <Suspense
+        fallback={
+          <div className="min-h-screen flex items-center justify-center bg-[#F6F0E9] text-[#2B1B0A]/50 font-sans text-sm">
+            Carregando…
+          </div>
+        }
+      >
+        <AdminApp />
+      </Suspense>
+    );
   }
 
   return (
