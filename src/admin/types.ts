@@ -57,18 +57,19 @@ export interface KanbanColumn {
   members: StatusComercial[]; // status agrupados nesta coluna
 }
 
-export const KANBAN_COLUMNS: KanbanColumn[] = [
-  { id: 'novo', label: 'Novo', status: 'novo', members: ['novo'] },
-  { id: 'contatado', label: 'Contatado', status: 'contatado', members: ['contatado'] },
-  { id: 'consulta_marcada', label: 'Consulta agendada', status: 'consulta_marcada', members: ['consulta_marcada'] },
-  { id: 'consulta_realizada', label: 'Consulta realizada', status: 'consulta_realizada', members: ['consulta_realizada'] },
-  { id: 'tratamento_fechado', label: 'Fechou', status: 'tratamento_fechado', members: ['tratamento_fechado'] },
-  { id: 'nao_fechou', label: 'Não fechou', status: 'nao_fechou', members: ['nao_fechou'] },
-  { id: 'outros', label: 'Outros', status: null, members: ['aguardando_resposta', 'em_atendimento', 'lead_invalido'] },
+// Cor de acento (dot do cabeçalho + faixa do card) por coluna.
+export const KANBAN_COLUMNS: (KanbanColumn & { accent: string })[] = [
+  { id: 'novo', label: 'Novo', status: 'novo', members: ['novo'], accent: '#8A94A6' },
+  { id: 'contatado', label: 'Contatado', status: 'contatado', members: ['contatado'], accent: '#C98A42' },
+  { id: 'consulta_marcada', label: 'Consulta agendada', status: 'consulta_marcada', members: ['consulta_marcada'], accent: '#A95B21' },
+  { id: 'consulta_realizada', label: 'Consulta realizada', status: 'consulta_realizada', members: ['consulta_realizada'], accent: '#565E48' },
+  { id: 'tratamento_fechado', label: 'Fechou', status: 'tratamento_fechado', members: ['tratamento_fechado'], accent: '#222D19' },
+  { id: 'nao_fechou', label: 'Não fechou', status: 'nao_fechou', members: ['nao_fechou'], accent: '#8B2312' },
+  { id: 'outros', label: 'Outros', status: null, members: ['aguardando_resposta', 'em_atendimento', 'lead_invalido'], accent: '#B7AFA4' },
 ];
 
 // Coluna a que um status pertence (fallback: "Outros").
-export function columnForStatus(status: StatusComercial): KanbanColumn {
+export function columnForStatus(status: StatusComercial): KanbanColumn & { accent: string } {
   return KANBAN_COLUMNS.find((c) => c.members.includes(status)) ?? KANBAN_COLUMNS[KANBAN_COLUMNS.length - 1];
 }
 
@@ -77,6 +78,13 @@ export const ORIGEM_STYLE: Record<string, string> = {
   'Meta Ads': 'bg-[#A95B21]/15 text-[#A95B21]',
   'Google Ads': 'bg-[#565E48]/20 text-[#565E48]',
   Direto: 'bg-[#E4DFD9] text-[#2B1B0A]/70',
+};
+
+// Cor sólida do avatar (inicial) por origem.
+export const ORIGEM_AVATAR: Record<string, string> = {
+  'Meta Ads': '#A95B21',
+  'Google Ads': '#565E48',
+  Direto: '#8A94A6',
 };
 
 export interface Lead {

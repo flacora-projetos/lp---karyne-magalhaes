@@ -12,9 +12,12 @@ import {
   type DragStartEvent,
   type DragEndEvent,
 } from '@dnd-kit/core';
+import { MessageCircle, Clock } from 'lucide-react';
 import type { Lead, StatusComercial, KanbanColumn } from './types';
-import { KANBAN_COLUMNS, columnForStatus, ORIGEM_STYLE } from './types';
-import { dateShort } from './format';
+import { KANBAN_COLUMNS, columnForStatus, ORIGEM_STYLE, ORIGEM_AVATAR } from './types';
+import { timeAgo, initials, brl } from './format';
+
+type Column = KanbanColumn & { accent: string };
 
 interface KanbanBoardProps {
   leads: Lead[];
@@ -25,27 +28,57 @@ interface KanbanBoardProps {
 const OrigemBadge: React.FC<{ origem: string | null }> = ({ origem }) => {
   if (!origem) return null;
   const cls = ORIGEM_STYLE[origem] ?? 'bg-[#E4DFD9] text-[#2B1B0A]/70';
-  return <span className={`inline-block px-2 py-0.5 rounded-full text-[11px] font-medium ${cls}`}>{origem}</span>;
+  return <span className={`inline-block px-2 py-0.5 rounded-full text-[10px] font-medium whitespace-nowrap ${cls}`}>{origem}</span>;
 };
 
 // Conteúdo do card (compartilhado entre card arrastável e overlay).
 // LGPD: nunca mostra comportamento_halito/uso_antibiotico aqui.
-const CardBody: React.FC<{ lead: Lead; dragging?: boolean }> = ({ lead, dragging }) => (
-  <div
-    className={`rounded-xl border border-[#E4DFD9] bg-[#FEFEFE] p-3 shadow-sm ${
-      dragging ? 'shadow-lg ring-2 ring-[#A95B21]/30' : ''
-    }`}
-  >
-    <div className="flex items-start justify-between gap-2">
-      <p className="text-[13px] font-medium text-[#2B1B0A] leading-tight truncate">{lead.nome || 'Lead sem nome'}</p>
-      <OrigemBadge origem={lead.origem} />
+const CardBody: React.FC<{ lead: Lead; accent: string; dragging?: boolean }> = ({ lead, accent, dragging }) => {
+  const avatarColor = (lead.origem && ORIGEM_AVATAR[lead.origem]) || '#8A94A6';
+  const closed = lead.status_comercial === 'tratamento_fechado' && lead.valor_fechado != null;
+  return (
+    <div
+      className={`relative overflow-hidden rounded-xl border border-[#E4DFD9] bg-[#FEFEFE] pl-3.5 pr-3 py-2.5 ${
+        dragging ? 'shadow-xl ring-2 ring-[#A95B21]/30 rotate-[1.5deg]' : 'shadow-sm hover:shadow-md hover:border-[#d8d0c6]'
+      } transition-all`}
+    >
+      <span className="absolute left-0 top-0 h-full w-1" style={{ backgroundColor: accent }} />
+      <div className="flex items-start gap-2.5">
+        <div
+          className="flex-none w-8 h-8 rounded-full grid place-items-center text-white text-[11px] font-semibold"
+          style={{ backgroundColor: avatarColor }}
+        >
+          {initials(lead.nome)}
+        </div>
+        <div className="min-w-0 flex-1">
+          <div className="flex items-start justify-between gap-2">
+            <p className="text-[13px] font-medium text-[#2B1B0A] leading-tight truncate">{lead.nome || 'Lead sem nome'}</p>
+            <OrigemBadge origem={lead.origem} />
+          </div>
+          <p className="text-[11px] text-[#2B1B0A]/45 truncate mt-0.5">
+            {[lead.cidade, lead.estado].filter(Boolean).join('/') || 'Sem cidade'}
+          </p>
+        </div>
+      </div>
+      <div className="mt-2 flex items-center justify-between gap-2">
+        <span className="inline-flex items-center gap-1 text-[11px] text-[#565E48] font-medium truncate">
+          <MessageCircle size={12} className="flex-none" /> {lead.whatsapp || '—'}
+        </span>
+        {closed ? (
+          <span className="flex-none text-[11px] font-semibold text-[#222D19] bg-[#222D19]/10 rounded-full px-2 py-0.5">
+            {brl(lead.valor_fechado)}
+          </span>
+        ) : (
+          <span className="flex-none inline-flex items-center gap-1 text-[10px] text-[#2B1B0A]/40">
+            <Clock size={10} /> {timeAgo(lead.criado_em)}
+          </span>
+        )}
+      </div>
     </div>
-    <p className="text-[12px] text-[#2B1B0A]/70 mt-1">{lead.whatsapp || '—'}</p>
-    <p className="text-[11px] text-[#2B1B0A]/45 mt-1.5">{dateShort(lead.criado_em)}</p>
-  </div>
-);
+  );
+};
 
-const DraggableCard: React.FC<{ lead: Lead; onSelect: (l: Lead) => void }> = ({ lead, onSelect }) => {
+const DraggableCard: React.FC<{ lead: Lead; accent: string; onSelect: (l: Lead) => void }> = ({ lead, accent, onSelect }) => {
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({ id: lead.lead_id, data: { lead } });
   return (
     <div
@@ -55,13 +88,13 @@ const DraggableCard: React.FC<{ lead: Lead; onSelect: (l: Lead) => void }> = ({ 
       onClick={() => onSelect(lead)}
       className={`cursor-grab active:cursor-grabbing touch-none select-none ${isDragging ? 'opacity-40' : ''}`}
     >
-      <CardBody lead={lead} />
+      <CardBody lead={lead} accent={accent} />
     </div>
   );
 };
 
-const Column: React.FC<{
-  column: KanbanColumn;
+const ColumnView: React.FC<{
+  column: Column;
   leads: Lead[];
   onSelect: (l: Lead) => void;
   isActiveTarget: boolean;
@@ -70,30 +103,33 @@ const Column: React.FC<{
   const { setNodeRef, isOver } = useDroppable({ id: column.id, disabled: !isDropTarget });
 
   return (
-    <div className="flex w-[264px] flex-none flex-col">
-      <div className="flex items-center justify-between px-1 pb-2">
-        <span className="text-[12px] font-semibold uppercase tracking-wide text-[#565E48]">{column.label}</span>
-        <span className="text-[11px] font-medium text-[#2B1B0A]/45 bg-[#E4DFD9]/60 rounded-full px-2 py-0.5">
+    <div className="flex w-[270px] flex-none flex-col">
+      <div className="flex items-center justify-between px-1.5 pb-2">
+        <span className="inline-flex items-center gap-2 text-[12px] font-semibold text-[#3a3227]">
+          <span className="w-2 h-2 rounded-full" style={{ backgroundColor: column.accent }} />
+          {column.label}
+        </span>
+        <span className="text-[11px] font-semibold text-[#2B1B0A]/50 bg-white/70 border border-[#E4DFD9] rounded-full min-w-[22px] text-center px-1.5 py-0.5">
           {leads.length}
         </span>
       </div>
       <div
         ref={setNodeRef}
-        className={`flex-1 min-h-[120px] rounded-2xl border p-2 space-y-2 transition-colors ${
+        className={`flex-1 min-h-[140px] rounded-2xl border p-2 space-y-2 transition-colors ${
           isDropTarget
             ? isOver && isActiveTarget
-              ? 'border-[#A95B21] bg-[#A95B21]/5'
-              : 'border-[#E4DFD9] bg-[#F6F0E9]/50'
-            : 'border-dashed border-[#E4DFD9] bg-[#F6F0E9]/30'
+              ? 'border-[#A95B21] border-2 bg-[#A95B21]/[0.06]'
+              : 'border-[#E4DFD9] bg-[#EFE7DD]/50'
+            : 'border-dashed border-[#D8D0C6] bg-[#EFE7DD]/25'
         }`}
       >
         {leads.length === 0 && (
-          <p className="text-[11px] text-[#2B1B0A]/30 text-center py-6">
+          <p className="text-[11px] text-[#2B1B0A]/30 text-center py-8">
             {isDropTarget ? 'Arraste um lead para cá' : 'Defina pelo detalhe do lead'}
           </p>
         )}
         {leads.map((l) => (
-          <DraggableCard key={l.lead_id} lead={l} onSelect={onSelect} />
+          <DraggableCard key={l.lead_id} lead={l} accent={column.accent} onSelect={onSelect} />
         ))}
       </div>
     </div>
@@ -119,6 +155,8 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({ leads, onSelect, onMov
     return map;
   }, [leads]);
 
+  const activeAccent = activeLead ? columnForStatus(activeLead.status_comercial).accent : '#A95B21';
+
   const handleDragStart = (e: DragStartEvent) => {
     const lead = (e.active.data.current as { lead?: Lead } | undefined)?.lead ?? null;
     setActiveLead(lead);
@@ -143,17 +181,17 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({ leads, onSelect, onMov
       onDragEnd={handleDragEnd}
       onDragCancel={() => setActiveLead(null)}
     >
-      <div className="overflow-x-auto pb-2">
+      <div className="overflow-x-auto pb-2 -mx-1 px-1">
         <div className="flex gap-3 min-w-max">
           {KANBAN_COLUMNS.map((c) => (
-            <Column key={c.id} column={c} leads={byColumn[c.id]} onSelect={onSelect} isActiveTarget={!!activeLead} />
+            <ColumnView key={c.id} column={c} leads={byColumn[c.id]} onSelect={onSelect} isActiveTarget={!!activeLead} />
           ))}
         </div>
       </div>
       <DragOverlay dropAnimation={null}>
         {activeLead ? (
-          <div className="w-[248px]">
-            <CardBody lead={activeLead} dragging />
+          <div className="w-[254px]">
+            <CardBody lead={activeLead} accent={activeAccent} dragging />
           </div>
         ) : null}
       </DragOverlay>

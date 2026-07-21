@@ -1,9 +1,11 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { Session } from '@supabase/supabase-js';
-import { RefreshCw, LogOut } from 'lucide-react';
+import { RefreshCw, LogOut, LayoutGrid, List, BarChart3, X } from 'lucide-react';
 import { supabase } from './supabaseClient';
 import { fetchLeads, updateLead, type LeadFilters } from './api';
 import type { Lead, StatusComercial } from './types';
+import { STATUS_LABEL } from './types';
+import { dateOnly } from './format';
 import { Filters } from './Filters';
 import { LeadsTable } from './LeadsTable';
 import { LeadDetailModal } from './LeadDetailModal';
@@ -16,10 +18,10 @@ interface PanelProps {
 
 const KNOWN_PLATFORMS = ['Google Ads', 'Meta Ads', 'Direto'];
 type Tab = 'kanban' | 'leads' | 'dashboard';
-const TABS: { id: Tab; label: string }[] = [
-  { id: 'kanban', label: 'Kanban' },
-  { id: 'leads', label: 'Leads' },
-  { id: 'dashboard', label: 'Dashboard' },
+const TABS: { id: Tab; label: string; icon: React.ComponentType<{ size?: number }> }[] = [
+  { id: 'kanban', label: 'Kanban', icon: LayoutGrid },
+  { id: 'leads', label: 'Leads', icon: List },
+  { id: 'dashboard', label: 'Dashboard', icon: BarChart3 },
 ];
 
 export const Panel: React.FC<PanelProps> = ({ session }) => {
@@ -128,19 +130,42 @@ export const Panel: React.FC<PanelProps> = ({ session }) => {
     return Array.from(set);
   }, [facets.plataformas]);
 
+  // Chips de filtros ativos (rótulo curto + chave para remoção).
+  const activeFilterChips = useMemo(() => {
+    const trunc = (v: string, n = 24) => (v.length > n ? `${v.slice(0, n - 1)}…` : v);
+    const chips: { key: keyof LeadFilters; label: string }[] = [];
+    const f = filters;
+    if (f.periodoDe) chips.push({ key: 'periodoDe', label: `De ${dateOnly(f.periodoDe)}` });
+    if (f.periodoAte) chips.push({ key: 'periodoAte', label: `Até ${dateOnly(f.periodoAte)}` });
+    if (f.plataforma) chips.push({ key: 'plataforma', label: f.plataforma });
+    if (f.statusComercial) chips.push({ key: 'statusComercial', label: STATUS_LABEL[f.statusComercial as keyof typeof STATUS_LABEL] ?? f.statusComercial });
+    if (f.campanha) chips.push({ key: 'campanha', label: `Camp.: ${trunc(f.campanha)}` });
+    if (f.criativo) chips.push({ key: 'criativo', label: `Criativo: ${trunc(f.criativo)}` });
+    if (f.termo) chips.push({ key: 'termo', label: `Termo: ${trunc(f.termo)}` });
+    if (f.cidade) chips.push({ key: 'cidade', label: `Cidade: ${trunc(f.cidade)}` });
+    if (f.responsavel) chips.push({ key: 'responsavel', label: `Resp.: ${trunc(f.responsavel)}` });
+    if (f.busca) chips.push({ key: 'busca', label: `"${trunc(f.busca)}"` });
+    return chips;
+  }, [filters]);
+
   return (
     <div className="min-h-screen bg-[#F6F0E9] font-sans text-[#2B1B0A]">
       {/* Top bar */}
-      <header className="sticky top-0 z-30 bg-[#F6F0E9]/90 backdrop-blur border-b border-[#E4DFD9]">
+      <header className="sticky top-0 z-30 bg-[#F6F0E9]/95 backdrop-blur border-b border-[#E4DFD9]">
         <div className="max-w-7xl mx-auto px-4 md:px-6 py-3 flex items-center justify-between gap-4">
-          <div>
-            <h1 className="text-lg font-serif font-medium text-[#222D19] leading-none">Painel de Leads</h1>
-            <p className="text-[12px] text-[#2B1B0A]/50 mt-0.5">Dra. Karyne Magalhães</p>
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl bg-[#222D19] text-[#F6F0E9] grid place-items-center font-serif text-[15px] font-medium leading-none">
+              KM
+            </div>
+            <div>
+              <h1 className="text-[15px] font-serif font-medium text-[#222D19] leading-none">Painel de Leads</h1>
+              <p className="text-[12px] text-[#2B1B0A]/50 mt-1">Dra. Karyne Magalhães</p>
+            </div>
           </div>
           <div className="flex items-center gap-2">
             <button
               onClick={() => load(filters)}
-              className="p-2 rounded-xl border border-[#E4DFD9] hover:bg-[#FEFEFE] transition-colors"
+              className="p-2 rounded-xl border border-[#E4DFD9] bg-[#FEFEFE] hover:bg-[#F0E9E0] transition-colors"
               title="Atualizar"
             >
               <RefreshCw size={16} className={loading ? 'animate-spin' : ''} />
@@ -148,27 +173,32 @@ export const Panel: React.FC<PanelProps> = ({ session }) => {
             <span className="hidden md:inline text-[12px] text-[#2B1B0A]/50 max-w-[180px] truncate">{session.user.email}</span>
             <button
               onClick={handleLogout}
-              className="flex items-center gap-1.5 text-sm px-3 py-2 rounded-xl border border-[#E4DFD9] hover:bg-[#FEFEFE] transition-colors"
+              className="flex items-center gap-1.5 text-sm px-3 py-2 rounded-xl border border-[#E4DFD9] bg-[#FEFEFE] hover:bg-[#F0E9E0] transition-colors"
             >
-              <LogOut size={15} /> Sair
+              <LogOut size={15} /> <span className="hidden sm:inline">Sair</span>
             </button>
           </div>
         </div>
-        {/* Tabs */}
-        <div className="max-w-7xl mx-auto px-4 md:px-6 flex gap-1">
-          {TABS.map((t) => (
-            <button
-              key={t.id}
-              onClick={() => setTab(t.id)}
-              className={`px-4 py-2.5 text-sm font-medium border-b-2 -mb-px transition-colors ${
-                tab === t.id
-                  ? 'border-[#A95B21] text-[#A95B21]'
-                  : 'border-transparent text-[#2B1B0A]/50 hover:text-[#2B1B0A]'
-              }`}
-            >
-              {t.label}
-            </button>
-          ))}
+        {/* Tabs — segmented pills */}
+        <div className="max-w-7xl mx-auto px-4 md:px-6 pb-3">
+          <div className="inline-flex gap-1 p-1 rounded-2xl bg-[#E7DED3] border border-[#E4DFD9]">
+            {TABS.map((t) => {
+              const Icon = t.icon;
+              return (
+                <button
+                  key={t.id}
+                  onClick={() => setTab(t.id)}
+                  className={`inline-flex items-center gap-2 px-3.5 md:px-4 py-2 rounded-xl text-sm font-medium transition-all ${
+                    tab === t.id
+                      ? 'bg-[#FEFEFE] text-[#222D19] shadow-sm'
+                      : 'text-[#2B1B0A]/55 hover:text-[#2B1B0A]'
+                  }`}
+                >
+                  <Icon size={16} /> {t.label}
+                </button>
+              );
+            })}
+          </div>
         </div>
       </header>
 
@@ -182,10 +212,29 @@ export const Panel: React.FC<PanelProps> = ({ session }) => {
           termos={facets.termos}
         />
 
-        <div className="flex items-center justify-between">
-          <div className="text-sm text-[#2B1B0A]/60">
+        <div className="flex items-center flex-wrap gap-x-3 gap-y-2">
+          <div className="text-sm font-medium text-[#2B1B0A]/70">
             {loading ? 'Carregando…' : `${leads.length} lead${leads.length === 1 ? '' : 's'}`}
           </div>
+          {activeFilterChips.length > 0 && (
+            <div className="flex items-center flex-wrap gap-1.5">
+              {activeFilterChips.map((c) => (
+                <span
+                  key={c.key}
+                  className="inline-flex items-center gap-1 text-[12px] text-[#565E48] bg-[#565E48]/10 border border-[#565E48]/15 rounded-full pl-2.5 pr-1 py-0.5"
+                >
+                  {c.label}
+                  <button
+                    onClick={() => setFilters((f) => ({ ...f, [c.key]: undefined }))}
+                    className="grid place-items-center w-4 h-4 rounded-full hover:bg-[#565E48]/20"
+                    title="Remover filtro"
+                  >
+                    <X size={11} />
+                  </button>
+                </span>
+              ))}
+            </div>
+          )}
         </div>
 
         {error && (

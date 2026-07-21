@@ -1,7 +1,7 @@
 import React from 'react';
 import type { Lead } from './types';
-import { STATUS_LABEL, STATUS_STYLE } from './types';
-import { dateTime } from './format';
+import { STATUS_LABEL, STATUS_STYLE, ORIGEM_AVATAR } from './types';
+import { dateTime, initials } from './format';
 
 interface LeadsTableProps {
   leads: Lead[];
@@ -48,7 +48,17 @@ export const LeadsTable: React.FC<LeadsTableProps> = ({ leads, onSelect }) => {
                 onClick={() => onSelect(l)}
                 className="cursor-pointer hover:bg-[#F6F0E9]/60 transition-colors"
               >
-                <td className="px-4 py-3 font-medium text-[#2B1B0A] max-w-[180px] truncate">{l.nome || '—'}</td>
+                <td className="px-4 py-3 font-medium text-[#2B1B0A] max-w-[200px]">
+                  <div className="flex items-center gap-2.5">
+                    <span
+                      className="flex-none w-7 h-7 rounded-full grid place-items-center text-white text-[10px] font-semibold"
+                      style={{ backgroundColor: (l.origem && ORIGEM_AVATAR[l.origem]) || '#8A94A6' }}
+                    >
+                      {initials(l.nome)}
+                    </span>
+                    <span className="truncate">{l.nome || '—'}</span>
+                  </div>
+                </td>
                 <td className="px-4 py-3 whitespace-nowrap text-[#2B1B0A]/80">{l.whatsapp || '—'}</td>
                 <td className="px-4 py-3 whitespace-nowrap text-[#2B1B0A]/80">
                   {[l.cidade, l.estado].filter(Boolean).join('/') || '—'}

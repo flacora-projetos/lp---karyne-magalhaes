@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X } from 'lucide-react';
+import { X, PartyPopper, XCircle } from 'lucide-react';
 import type { Lead, LeadCommercialUpdate, StatusComercial } from './types';
 import { STATUS_ORDER, STATUS_LABEL } from './types';
 import { updateLead } from './api';
@@ -39,6 +39,10 @@ export const LeadDetailModal: React.FC<LeadDetailModalProps> = ({ lead, onClose,
     setForm((f) => ({ ...f, ...patch }));
     setSavedMsg('');
   };
+
+  // Campos contextuais: valor ao fechar (ou se já houver valor), motivo ao perder.
+  const showValor = form.status_comercial === 'tratamento_fechado' || form.valor_fechado != null;
+  const showMotivo = form.status_comercial === 'nao_fechou' || !!form.motivo_perda;
 
   const handleSave = async () => {
     setSaving(true);
@@ -145,35 +149,57 @@ export const LeadDetailModal: React.FC<LeadDetailModalProps> = ({ lead, onClose,
                 <label className={labelCls}>Responsável</label>
                 <input className={inputCls} value={form.responsavel || ''} onChange={(e) => set({ responsavel: e.target.value })} placeholder="Quem está atendendo" />
               </div>
-              <div>
+              <div className="md:col-span-2">
                 <label className={labelCls}>Data da consulta</label>
                 <input type="date" className={inputCls} value={form.data_consulta || ''} onChange={(e) => set({ data_consulta: e.target.value })} />
               </div>
-              <div>
-                <label className={labelCls}>Valor fechado (R$)</label>
-                <input
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  className={inputCls}
-                  value={form.valor_fechado ?? ''}
-                  onChange={(e) => set({ valor_fechado: e.target.value === '' ? null : Number(e.target.value) })}
-                  placeholder="0,00"
-                />
+            </div>
+
+            {/* Callout do valor — aparece ao fechar (alimenta faturamento/ticket) */}
+            {showValor && (
+              <div className="mt-4 rounded-2xl border border-[#222D19]/25 bg-[#222D19]/[0.04] p-4">
+                <div className="flex items-center gap-2 text-[13px] font-semibold text-[#222D19]">
+                  <PartyPopper size={16} /> Tratamento fechado — registre o valor
+                </div>
+                <p className="text-[12px] text-[#2B1B0A]/55 mt-1 mb-3">
+                  Este valor alimenta o <strong>faturamento</strong> e o <strong>ticket médio</strong> do dashboard.
+                </p>
+                <label className={labelCls}>Valor do tratamento (R$)</label>
+                <div className="relative max-w-[220px]">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[#2B1B0A]/45 text-sm">R$</span>
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    className={`${inputCls} pl-9 text-[15px] font-medium`}
+                    value={form.valor_fechado ?? ''}
+                    onChange={(e) => set({ valor_fechado: e.target.value === '' ? null : Number(e.target.value) })}
+                    placeholder="0,00"
+                  />
+                </div>
               </div>
-              <div className="md:col-span-2">
+            )}
+
+            {/* Callout do motivo — aparece ao não fechar */}
+            {showMotivo && (
+              <div className="mt-4 rounded-2xl border border-[#8B2312]/25 bg-[#8B2312]/[0.05] p-4">
+                <div className="flex items-center gap-2 text-[13px] font-semibold text-[#8B2312]">
+                  <XCircle size={16} /> Não fechou — registre o motivo
+                </div>
+                <p className="text-[12px] text-[#2B1B0A]/55 mt-1 mb-3">Ajuda a entender as perdas nos relatórios.</p>
                 <label className={labelCls}>Motivo da perda</label>
-                <input className={inputCls} value={form.motivo_perda || ''} onChange={(e) => set({ motivo_perda: e.target.value })} placeholder="Preencher quando não fechou" />
+                <input className={inputCls} value={form.motivo_perda || ''} onChange={(e) => set({ motivo_perda: e.target.value })} placeholder="Ex.: valor, distância, foi em outro lugar…" />
               </div>
-              <div className="md:col-span-2">
-                <label className={labelCls}>Observações</label>
-                <textarea
-                  className={`${inputCls} min-h-[90px] resize-y`}
-                  value={form.observacoes || ''}
-                  onChange={(e) => set({ observacoes: e.target.value })}
-                  placeholder="Anotações internas do atendimento"
-                />
-              </div>
+            )}
+
+            <div className="mt-4">
+              <label className={labelCls}>Observações</label>
+              <textarea
+                className={`${inputCls} min-h-[90px] resize-y`}
+                value={form.observacoes || ''}
+                onChange={(e) => set({ observacoes: e.target.value })}
+                placeholder="Anotações internas do atendimento"
+              />
             </div>
             <p className="text-[11px] text-[#2B1B0A]/40 mt-2">Última atualização: {dateShort(lead.atualizado_em)}</p>
           </section>
