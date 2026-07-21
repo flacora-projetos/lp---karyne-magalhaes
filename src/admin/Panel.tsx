@@ -148,10 +148,27 @@ export const Panel: React.FC<PanelProps> = ({ session }) => {
     return chips;
   }, [filters]);
 
+  // Só o Kanban usa o layout de altura fixa (100dvh) para congelar a linha das
+  // colunas. Leads e Dashboard mantêm a rolagem natural da página (comportamento
+  // original), com o cabeçalho fixo no topo.
+  const isKanban = tab === 'kanban';
+
   return (
-    <div className="h-[100dvh] flex flex-col overflow-hidden bg-[#F6F0E9] font-sans text-[#2B1B0A]">
-      {/* Top bar (altura natural, sempre visível) */}
-      <header className="flex-none bg-[#F6F0E9] border-b border-[#E4DFD9]">
+    <div
+      className={
+        isKanban
+          ? 'h-[100dvh] flex flex-col overflow-hidden bg-[#F6F0E9] font-sans text-[#2B1B0A]'
+          : 'min-h-screen bg-[#F6F0E9] font-sans text-[#2B1B0A]'
+      }
+    >
+      {/* Top bar */}
+      <header
+        className={
+          isKanban
+            ? 'flex-none bg-[#F6F0E9] border-b border-[#E4DFD9]'
+            : 'sticky top-0 z-30 bg-[#F6F0E9]/95 backdrop-blur border-b border-[#E4DFD9]'
+        }
+      >
         <div className="max-w-7xl mx-auto px-4 md:px-6 py-3 flex items-center justify-between gap-4">
           <div className="flex items-center gap-3">
             <div className="w-9 h-9 rounded-xl bg-[#222D19] text-[#F6F0E9] grid place-items-center font-serif text-[15px] font-medium leading-none">
@@ -202,9 +219,15 @@ export const Panel: React.FC<PanelProps> = ({ session }) => {
         </div>
       </header>
 
-      <main className="flex-1 min-h-0 w-full max-w-7xl mx-auto px-4 md:px-6 pt-5 pb-4 flex flex-col gap-4">
-        {/* Bloco fixo: filtros + contagem (não rola) */}
-        <div className="flex-none space-y-4">
+      <main
+        className={
+          isKanban
+            ? 'flex-1 min-h-0 w-full max-w-7xl mx-auto px-4 md:px-6 pt-5 pb-4 flex flex-col gap-4'
+            : 'max-w-7xl mx-auto px-4 md:px-6 py-5 space-y-5'
+        }
+      >
+        {/* Filtros + contagem (fixos apenas no Kanban) */}
+        <div className={isKanban ? 'flex-none space-y-4' : 'space-y-5'}>
         <Filters
           value={filters}
           onChange={setFilters}
@@ -244,20 +267,15 @@ export const Panel: React.FC<PanelProps> = ({ session }) => {
         )}
         </div>
 
-        {/* Área de conteúdo: rola por dentro (mantém cabeçalhos/colunas à vista) */}
-        <div className="flex-1 min-h-0">
-          {tab === 'kanban' && <KanbanBoard leads={leads} onSelect={setSelected} onMove={moveLead} />}
-          {tab === 'leads' && (
-            <div className="h-full overflow-y-auto -mx-1 px-1">
-              <LeadsTable leads={leads} onSelect={setSelected} />
-            </div>
-          )}
-          {tab === 'dashboard' && (
-            <div className="h-full overflow-y-auto -mx-1 px-1">
-              <Dashboard leads={leads} />
-            </div>
-          )}
-        </div>
+        {/* Kanban: rola por dentro (mantém a linha das colunas à vista).
+            Leads e Dashboard: rolagem natural da página. */}
+        {tab === 'kanban' && (
+          <div className="flex-1 min-h-0">
+            <KanbanBoard leads={leads} onSelect={setSelected} onMove={moveLead} />
+          </div>
+        )}
+        {tab === 'leads' && <LeadsTable leads={leads} onSelect={setSelected} />}
+        {tab === 'dashboard' && <Dashboard leads={leads} />}
       </main>
 
       {selected && (
