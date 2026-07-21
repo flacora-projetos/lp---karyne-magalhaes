@@ -57,14 +57,21 @@ export const Dashboard: React.FC<DashboardProps> = ({ leads }) => {
 
   return (
     <div className="space-y-6">
-      {/* KPIs principais */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+      {/* Volume: total + por plataforma */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <Kpi label="Total de leads" value={m.total} />
-        <Kpi label="Consultas marcadas" value={m.consultasMarcadas} />
+        <Kpi label="Meta Ads" value={m.metaAds} hint={pct(m.metaAds, m.total) + ' do total'} />
+        <Kpi label="Google Ads" value={m.googleAds} hint={pct(m.googleAds, m.total) + ' do total'} />
+        <Kpi label="Diretos" value={m.diretos} hint={pct(m.diretos, m.total) + ' do total'} />
+      </div>
+
+      {/* Funil comercial */}
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+        <Kpi label="Consultas agendadas" value={m.consultasMarcadas} />
         <Kpi label="Consultas realizadas" value={m.consultasRealizadas} />
         <Kpi label="Tratamentos fechados" value={m.tratamentosFechados} />
-        <Kpi label="Conversão lead → consulta" value={pct(m.taxaConversao.num, m.taxaConversao.den)} hint="consultas marcadas / leads" />
-        <Kpi label="Taxa de comparecimento" value={pct(m.taxaComparecimento.num, m.taxaComparecimento.den)} hint="realizadas / marcadas" />
+        <Kpi label="Taxa de conversão" value={pct(m.taxaConversao.num, m.taxaConversao.den)} hint="consultas agendadas / leads" />
+        <Kpi label="Taxa de comparecimento" value={pct(m.taxaComparecimento.num, m.taxaComparecimento.den)} hint="realizadas / agendadas" />
         <Kpi label="Taxa de fechamento" value={pct(m.taxaFechamento.num, m.taxaFechamento.den)} hint="fechados / realizadas" />
         <Kpi label="Faturamento" value={brl(m.faturamento)} />
         <Kpi label="Ticket médio" value={brl(m.ticketMedio)} />

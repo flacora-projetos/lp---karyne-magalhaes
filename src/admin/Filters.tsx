@@ -7,13 +7,18 @@ interface FiltersProps {
   onChange: (next: LeadFilters) => void;
   onClear: () => void;
   plataformas: string[];
+  criativos: string[]; // valores distintos reais de utm_content
+  termos: string[]; // valores distintos reais de utm_term
 }
 
+// Encurta rótulos longos de criativo/termo mantendo o value cheio.
+const short = (v: string, max = 42) => (v.length > max ? `${v.slice(0, max - 1)}…` : v);
+
 const inputCls =
-  'w-full bg-[#FEFEFE] border border-[#E4DFD9] rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#A95B21]/30 focus:border-[#A95B21] transition-all';
+  'w-full bg-[#FEFEFE] border border-[#E4DFD9] rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#A95B21]/40 focus:border-[#A95B21] transition-all';
 const labelCls = 'block text-[11px] font-medium uppercase tracking-wide text-[#2B1B0A]/50 mb-1';
 
-export const Filters: React.FC<FiltersProps> = ({ value, onChange, onClear, plataformas }) => {
+export const Filters: React.FC<FiltersProps> = ({ value, onChange, onClear, plataformas, criativos, termos }) => {
   const set = (patch: Partial<LeadFilters>) => onChange({ ...value, ...patch });
 
   const hasAny = Object.values(value).some((v) => v !== undefined && String(v).trim() !== '');
@@ -53,11 +58,21 @@ export const Filters: React.FC<FiltersProps> = ({ value, onChange, onClear, plat
         </div>
         <div>
           <label className={labelCls}>Criativo</label>
-          <input className={inputCls} value={value.criativo || ''} onChange={(e) => set({ criativo: e.target.value })} placeholder="utm_content" />
+          <select className={inputCls} value={value.criativo || ''} onChange={(e) => set({ criativo: e.target.value })}>
+            <option value="">Todos</option>
+            {criativos.map((c) => (
+              <option key={c} value={c}>{short(c)}</option>
+            ))}
+          </select>
         </div>
         <div>
           <label className={labelCls}>Termo de pesquisa</label>
-          <input className={inputCls} value={value.termo || ''} onChange={(e) => set({ termo: e.target.value })} placeholder="utm_term" />
+          <select className={inputCls} value={value.termo || ''} onChange={(e) => set({ termo: e.target.value })}>
+            <option value="">Todos</option>
+            {termos.map((t) => (
+              <option key={t} value={t}>{short(t)}</option>
+            ))}
+          </select>
         </div>
         <div>
           <label className={labelCls}>Cidade</label>
@@ -75,7 +90,7 @@ export const Filters: React.FC<FiltersProps> = ({ value, onChange, onClear, plat
           <button
             onClick={onClear}
             disabled={!hasAny}
-            className="w-full border border-[#E4DFD9] text-[#2B1B0A]/70 rounded-lg px-3 py-2 text-sm hover:bg-[#F6F0E9] disabled:opacity-40 transition-colors"
+            className="w-full border border-[#E4DFD9] text-[#2B1B0A]/70 rounded-xl px-3 py-2 text-sm hover:bg-[#F6F0E9] disabled:opacity-40 transition-colors"
           >
             Limpar filtros
           </button>

@@ -22,6 +22,10 @@ export interface BreakdownRow {
 export interface Metrics {
   total: number;
   porPlataforma: Record<string, number>;
+  // Contagens explícitas por plataforma (cards do dashboard).
+  metaAds: number;
+  googleAds: number;
+  diretos: number;
   consultasMarcadas: number;
   consultasRealizadas: number;
   tratamentosFechados: number;
@@ -89,6 +93,9 @@ export function computeMetrics(leads: Lead[]): Metrics {
   return {
     total,
     porPlataforma,
+    metaAds: porPlataforma['Meta Ads'] || 0,
+    googleAds: porPlataforma['Google Ads'] || 0,
+    diretos: porPlataforma['Direto'] || 0,
     consultasMarcadas,
     consultasRealizadas,
     tratamentosFechados,

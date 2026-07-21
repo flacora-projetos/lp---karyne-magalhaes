@@ -12,7 +12,7 @@ interface LeadDetailModalProps {
 }
 
 const inputCls =
-  'w-full bg-[#FEFEFE] border border-[#E4DFD9] rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#A95B21]/30 focus:border-[#A95B21] transition-all';
+  'w-full bg-[#FEFEFE] border border-[#E4DFD9] rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#A95B21]/40 focus:border-[#A95B21] transition-all';
 const labelCls = 'block text-[11px] font-medium uppercase tracking-wide text-[#2B1B0A]/50 mb-1';
 
 const Field: React.FC<{ label: string; value: React.ReactNode }> = ({ label, value }) => (
@@ -186,13 +186,13 @@ export const LeadDetailModal: React.FC<LeadDetailModalProps> = ({ lead, onClose,
             {savedMsg && <span className="text-[#565E48]">{savedMsg}</span>}
           </div>
           <div className="flex gap-2">
-            <button onClick={onClose} className="px-4 py-2.5 rounded-lg text-sm border border-[#E4DFD9] hover:bg-[#FEFEFE] transition-colors">
+            <button onClick={onClose} className="px-4 py-2.5 rounded-xl text-sm border border-[#E4DFD9] hover:bg-[#FEFEFE] transition-colors">
               Fechar
             </button>
             <button
               onClick={handleSave}
               disabled={saving}
-              className="px-5 py-2.5 rounded-lg text-sm font-medium bg-[#222D19] hover:bg-[#222D19]/90 disabled:opacity-50 text-white transition-colors"
+              className="px-5 py-2.5 rounded-xl text-sm font-medium bg-[#222D19] hover:bg-[#222D19]/90 disabled:opacity-50 text-white transition-colors"
             >
               {saving ? 'Salvando…' : 'Salvar alterações'}
             </button>

@@ -46,6 +46,39 @@ export const STATUS_STYLE: Record<StatusComercial, string> = {
   lead_invalido: 'bg-[#2B1B0A]/10 text-[#2B1B0A]/60',
 };
 
+// ── Kanban ────────────────────────────────────────────────────────────────
+// 6 colunas nomeadas (alvo de drop) + "Outros" (bucket de exibição, NÃO é alvo
+// de drop). Os 9 status do banco continuam intactos; "Outros" só agrupa 3 deles
+// na exibição — a definição desses 3 continua sendo feita pelo modal de detalhe.
+export interface KanbanColumn {
+  id: string; // id do droppable
+  label: string;
+  status: StatusComercial | null; // null = "Outros" (não recebe drop)
+  members: StatusComercial[]; // status agrupados nesta coluna
+}
+
+export const KANBAN_COLUMNS: KanbanColumn[] = [
+  { id: 'novo', label: 'Novo', status: 'novo', members: ['novo'] },
+  { id: 'contatado', label: 'Contatado', status: 'contatado', members: ['contatado'] },
+  { id: 'consulta_marcada', label: 'Consulta agendada', status: 'consulta_marcada', members: ['consulta_marcada'] },
+  { id: 'consulta_realizada', label: 'Consulta realizada', status: 'consulta_realizada', members: ['consulta_realizada'] },
+  { id: 'tratamento_fechado', label: 'Fechou', status: 'tratamento_fechado', members: ['tratamento_fechado'] },
+  { id: 'nao_fechou', label: 'Não fechou', status: 'nao_fechou', members: ['nao_fechou'] },
+  { id: 'outros', label: 'Outros', status: null, members: ['aguardando_resposta', 'em_atendimento', 'lead_invalido'] },
+];
+
+// Coluna a que um status pertence (fallback: "Outros").
+export function columnForStatus(status: StatusComercial): KanbanColumn {
+  return KANBAN_COLUMNS.find((c) => c.members.includes(status)) ?? KANBAN_COLUMNS[KANBAN_COLUMNS.length - 1];
+}
+
+// Estilo do badge de origem (tokens da paleta da LP).
+export const ORIGEM_STYLE: Record<string, string> = {
+  'Meta Ads': 'bg-[#A95B21]/15 text-[#A95B21]',
+  'Google Ads': 'bg-[#565E48]/20 text-[#565E48]',
+  Direto: 'bg-[#E4DFD9] text-[#2B1B0A]/70',
+};
+
 export interface Lead {
   id: string;
   lead_id: string;
