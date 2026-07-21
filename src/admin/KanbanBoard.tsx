@@ -104,7 +104,8 @@ const ColumnView: React.FC<{
 
   return (
     <div className="flex w-[270px] flex-none flex-col">
-      <div className="flex items-center justify-between px-1.5 pb-2">
+      {/* Cabeçalho congelado: fica visível ao rolar os cartões */}
+      <div className="sticky top-0 z-10 bg-[#F6F0E9] flex items-center justify-between px-1.5 pt-0.5 pb-2">
         <span className="inline-flex items-center gap-2 text-[12px] font-semibold text-[#3a3227]">
           <span className="w-2 h-2 rounded-full" style={{ backgroundColor: column.accent }} />
           {column.label}
@@ -181,8 +182,8 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({ leads, onSelect, onMov
       onDragEnd={handleDragEnd}
       onDragCancel={() => setActiveLead(null)}
     >
-      <div className="overflow-x-auto pb-2 -mx-1 px-1">
-        <div className="flex gap-3 min-w-max">
+      <div className="h-full overflow-auto pb-1 -mx-1 px-1">
+        <div className="flex gap-3 min-w-max items-stretch">
           {KANBAN_COLUMNS.map((c) => (
             <ColumnView key={c.id} column={c} leads={byColumn[c.id]} onSelect={onSelect} isActiveTarget={!!activeLead} />
           ))}
