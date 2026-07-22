@@ -17,8 +17,8 @@ import crypto from 'crypto';
  * cliente (operatingAccount). Por cliente muda só CUSTOMER_ID + ACTION_ID.
  *
  * Env vars (Vercel):
- *  GOOGLE_SA_CLIENT_EMAIL          // client_email do JSON da service account
- *  GOOGLE_SA_PRIVATE_KEY           // private_key do JSON (com \n literais; tratado abaixo)
+ *  GOOGLE_SA_KEY_B64               // recomendado: JSON inteiro da SA em base64 (sem dor de \n)
+ *    (fallback) GOOGLE_SA_CLIENT_EMAIL + GOOGLE_SA_PRIVATE_KEY (private_key com \n literais)
  *  GOOGLE_ADS_CUSTOMER_ID          // operatingAccount, só dígitos (sem hífens)
  *  GOOGLE_ADS_LOGIN_CUSTOMER_ID    // opcional: MCC/loginAccount, só dígitos
  *  GOOGLE_ADS_CONVERSION_ACTION_ID // productDestinationId = ctId da ação de conversão
@@ -51,40 +51,63 @@ const b64url = (input: crypto.BinaryLike) =>
     .replace(/\//g, '_')
     .replace(/=+$/, '');
 
+// Carrega a service account: preferência pelo JSON em base64 (robusto contra \n),
+// com fallback pras duas env vars separadas.
+function loadServiceAccount(): { client_email: string; private_key: string } | null {
+  const b64 = process.env.GOOGLE_SA_KEY_B64;
+  if (b64) {
+    try {
+      const json = JSON.parse(Buffer.from(b64, 'base64').toString('utf8'));
+      if (json.client_email && json.private_key) return json;
+      console.error('[Google EC] GOOGLE_SA_KEY_B64 sem client_email/private_key');
+    } catch (e) {
+      console.error('[Google EC] GOOGLE_SA_KEY_B64 inválido:', (e as Error).message);
+    }
+  }
+  const client_email = process.env.GOOGLE_SA_CLIENT_EMAIL;
+  // Env vars da Vercel guardam o \n como texto literal — restaura as quebras.
+  const private_key = (process.env.GOOGLE_SA_PRIVATE_KEY || '').replace(/\\n/g, '\n');
+  if (client_email && private_key) return { client_email, private_key };
+  return null;
+}
+
 // Assina um JWT da service account e troca por um access token (escopo datamanager).
 async function getAccessToken(): Promise<string | null> {
-  const clientEmail = process.env.GOOGLE_SA_CLIENT_EMAIL;
-  // Env vars da Vercel guardam o \n como texto literal — restaura as quebras.
-  const privateKey = (process.env.GOOGLE_SA_PRIVATE_KEY || '').replace(/\\n/g, '\n');
-  if (!clientEmail || !privateKey) return null;
+  const sa = loadServiceAccount();
+  if (!sa) return null;
 
-  const now = Math.floor(Date.now() / 1000);
-  const header = { alg: 'RS256', typ: 'JWT' };
-  const claim = {
-    iss: clientEmail,
-    scope: 'https://www.googleapis.com/auth/datamanager',
-    aud: 'https://oauth2.googleapis.com/token',
-    iat: now,
-    exp: now + 3600,
-  };
-  const unsigned = `${b64url(JSON.stringify(header))}.${b64url(JSON.stringify(claim))}`;
-  const signature = crypto.createSign('RSA-SHA256').update(unsigned).sign(privateKey);
-  const jwt = `${unsigned}.${b64url(signature)}`;
+  try {
+    const now = Math.floor(Date.now() / 1000);
+    const header = { alg: 'RS256', typ: 'JWT' };
+    const claim = {
+      iss: sa.client_email,
+      scope: 'https://www.googleapis.com/auth/datamanager',
+      aud: 'https://oauth2.googleapis.com/token',
+      iat: now,
+      exp: now + 3600,
+    };
+    const unsigned = `${b64url(JSON.stringify(header))}.${b64url(JSON.stringify(claim))}`;
+    const signature = crypto.createSign('RSA-SHA256').update(unsigned).sign(sa.private_key);
+    const jwt = `${unsigned}.${b64url(signature)}`;
 
-  const res = await fetch('https://oauth2.googleapis.com/token', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    body: new URLSearchParams({
-      grant_type: 'urn:ietf:params:oauth:grant-type:jwt-bearer',
-      assertion: jwt,
-    }),
-  });
-  if (!res.ok) {
-    console.error('[Google EC] Falha no token da service account');
+    const res = await fetch('https://oauth2.googleapis.com/token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({
+        grant_type: 'urn:ietf:params:oauth:grant-type:jwt-bearer',
+        assertion: jwt,
+      }),
+    });
+    if (!res.ok) {
+      console.error('[Google EC] Falha no token da SA:', await res.text());
+      return null;
+    }
+    const j = (await res.json()) as { access_token?: string };
+    return j.access_token || null;
+  } catch (e) {
+    console.error('[Google EC] Erro ao assinar/trocar token:', (e as Error).message);
     return null;
   }
-  const j = (await res.json()) as { access_token?: string };
-  return j.access_token || null;
 }
 
 // Só a conclusão do lead vira conversão (o "FiltroCompleto" é o lead qualificado).
@@ -100,7 +123,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   try {
     const customerId = process.env.GOOGLE_ADS_CUSTOMER_ID;
-    if (!customerId || !process.env.GOOGLE_SA_CLIENT_EMAIL || !process.env.GOOGLE_SA_PRIVATE_KEY) {
+    if (!customerId || !loadServiceAccount()) {
       return res.status(200).json({ success: false, error: 'Google Data Manager não configurado' });
     }
 
@@ -185,7 +208,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     return res.status(200).json({ success: true, eventId });
   } catch (error) {
-    console.error('[Google EC] Erro interno');
+    console.error('[Google EC] Erro interno:', (error as Error).message);
     return res.status(200).json({ success: false, error: 'Internal server error' });
   }
 }
