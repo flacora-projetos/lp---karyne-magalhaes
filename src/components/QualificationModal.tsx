@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { X, ArrowLeft, Check, ChevronDown } from 'lucide-react';
 import { trackCustomEvent, generateEventId, getFbpCookie, getFbcCookie, sendMetaCapiEvent } from '../utils/metaPixel';
+import { sendGoogleEcEvent } from '../utils/googleAds';
 import { pushDataLayerEvent } from '../utils/gtm';
 
 interface QualificationModalProps {
@@ -232,6 +233,13 @@ export const QualificationModal: React.FC<QualificationModalProps> = ({ isOpen, 
       eventIds.current.eventIdLead = eventID;
       trackCustomEvent("FiltroCompleto", { lp_event: "FiltroCompleto" }, { eventID });
       sendMetaCapiEvent({ eventName: "FiltroCompleto", eventId: eventID, ...capiPayloadBase });
+      sendGoogleEcEvent({
+        eventName: "FiltroCompleto",
+        eventId: eventID, // mesmo id do Meta (dedupe)
+        email: data.email,
+        phone: data.whatsapp,
+        gclid: sessionStorage.getItem('gclid') || undefined,
+      });
       pushDataLayerEvent("filtro_completo");
     }
 
