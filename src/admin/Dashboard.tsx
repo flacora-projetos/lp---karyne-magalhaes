@@ -11,7 +11,7 @@ import {
   Receipt,
   Percent,
   UserRoundX,
-  BellRing,
+  RotateCcw,
 } from 'lucide-react';
 import type { Lead } from './types';
 import { computeMetrics, type BreakdownRow } from './metrics';
@@ -97,7 +97,7 @@ const BreakdownTable: React.FC<{ title: string; rows: BreakdownRow[]; keyLabel: 
             <tr key={r.chave} className="hover:bg-[#F6F0E9]/50">
               <td className="px-4 py-2.5 max-w-[220px] truncate text-[#2B1B0A]" title={r.chave}>{r.chave}</td>
               <td className="px-4 py-2.5 text-right text-[#2B1B0A]/80">{r.leads}</td>
-              <td className="px-4 py-2.5 text-right text-[#2B1B0A]/80">{r.consultasMarcadas}</td>
+              <td className="px-4 py-2.5 text-right text-[#2B1B0A]/80">{r.consultasAgendadas}</td>
               <td className="px-4 py-2.5 text-right text-[#2B1B0A]/80">{r.consultasRealizadas}</td>
               <td className="px-4 py-2.5 text-right text-[#2B1B0A]/80">{r.fechados}</td>
               <td className="px-4 py-2.5 text-right text-[#2B1B0A]/80">{brl(r.faturamento)}</td>
@@ -130,26 +130,25 @@ export const Dashboard: React.FC<DashboardProps> = ({ leads }) => {
           <Funnel
             stages={[
               { label: 'Leads', value: m.total, accent: '#8A94A6' },
-              { label: 'Consultas agendadas', value: m.consultasMarcadas, accent: '#A95B21' },
+              { label: 'Consultas agendadas', value: m.consultasAgendadas, accent: '#A95B21' },
               { label: 'Consultas realizadas', value: m.consultasRealizadas, accent: '#565E48' },
-              { label: 'Tratamentos fechados', value: m.tratamentosFechados, accent: '#222D19' },
             ]}
           />
         </div>
         <div className="grid grid-cols-2 lg:grid-cols-1 gap-3">
-          <Kpi label="Taxa de conversão" value={pct(m.taxaConversao.num, m.taxaConversao.den)} hint="agendadas / leads" icon={Percent} accent="#A95B21" />
-          <Kpi label="Taxa de fechamento" value={pct(m.taxaFechamento.num, m.taxaFechamento.den)} hint="fechados / realizadas" icon={BadgeCheck} accent="#222D19" />
+          <Kpi label="Taxa de agendamento" value={pct(m.taxaAgendamento.num, m.taxaAgendamento.den)} hint="agendadas / leads" icon={Percent} accent="#A95B21" />
+          <Kpi label="Comparecimento" value={pct(m.taxaComparecimento.num, m.taxaComparecimento.den)} hint="realizadas / agendadas" icon={BadgeCheck} accent="#222D19" />
         </div>
       </div>
 
       {/* Funil comercial — números */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
-        <Kpi label="Consultas agendadas" value={m.consultasMarcadas} icon={CalendarCheck2} accent="#A95B21" />
+        <Kpi label="Consultas agendadas" value={m.consultasAgendadas} icon={CalendarCheck2} accent="#A95B21" />
         <Kpi label="Consultas realizadas" value={m.consultasRealizadas} icon={Stethoscope} accent="#565E48" />
-        <Kpi label="Tratamentos fechados" value={m.tratamentosFechados} icon={BadgeCheck} accent="#222D19" />
         <Kpi label="Faturamento" value={brl(m.faturamento)} icon={Wallet} accent="#565E48" />
         <Kpi label="Ticket médio" value={brl(m.ticketMedio)} icon={Receipt} accent="#A95B21" />
-        <Kpi label="Sem acompanhamento" value={m.semAcompanhamento} hint="status “novo”" icon={BellRing} accent="#8A94A6" />
+        <Kpi label="Desistências" value={m.desistencias} hint="desistiu da consulta" icon={UserRoundX} accent="#B0553C" />
+        <Kpi label="Estornos / cancel." value={m.estornos} hint="estorno ou cancelamento" icon={RotateCcw} accent="#8B2312" />
       </div>
 
       {/* Leads por plataforma (resumo) */}

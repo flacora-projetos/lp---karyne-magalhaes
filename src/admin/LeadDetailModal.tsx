@@ -40,9 +40,12 @@ export const LeadDetailModal: React.FC<LeadDetailModalProps> = ({ lead, onClose,
     setSavedMsg('');
   };
 
-  // Campos contextuais: valor ao fechar (ou se já houver valor), motivo ao perder.
-  const showValor = form.status_comercial === 'tratamento_fechado' || form.valor_fechado != null;
-  const showMotivo = form.status_comercial === 'nao_fechou' || !!form.motivo_perda;
+  // Campos contextuais: valor quando a consulta é realizada (ou se já houver
+  // valor); motivo quando há perda (desistência, estorno/cancelamento, inválido).
+  const showValor = form.status_comercial === 'consulta_realizada' || form.valor_fechado != null;
+  const showMotivo =
+    ['desistiu_consulta', 'estorno_cancelada', 'outros_invalido'].includes(form.status_comercial as string) ||
+    !!form.motivo_perda;
 
   const handleSave = async () => {
     setSaving(true);
@@ -159,12 +162,12 @@ export const LeadDetailModal: React.FC<LeadDetailModalProps> = ({ lead, onClose,
             {showValor && (
               <div className="mt-4 rounded-2xl border border-[#222D19]/25 bg-[#222D19]/[0.04] p-4">
                 <div className="flex items-center gap-2 text-[13px] font-semibold text-[#222D19]">
-                  <PartyPopper size={16} /> Tratamento fechado — registre o valor
+                  <PartyPopper size={16} /> Consulta realizada — registre o valor
                 </div>
                 <p className="text-[12px] text-[#2B1B0A]/55 mt-1 mb-3">
                   Este valor alimenta o <strong>faturamento</strong> e o <strong>ticket médio</strong> do dashboard.
                 </p>
-                <label className={labelCls}>Valor do tratamento (R$)</label>
+                <label className={labelCls}>Valor da consulta (R$)</label>
                 <div className="relative max-w-[220px]">
                   <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[#2B1B0A]/45 text-sm">R$</span>
                   <input
@@ -184,7 +187,7 @@ export const LeadDetailModal: React.FC<LeadDetailModalProps> = ({ lead, onClose,
             {showMotivo && (
               <div className="mt-4 rounded-2xl border border-[#8B2312]/25 bg-[#8B2312]/[0.05] p-4">
                 <div className="flex items-center gap-2 text-[13px] font-semibold text-[#8B2312]">
-                  <XCircle size={16} /> Não fechou — registre o motivo
+                  <XCircle size={16} /> Perda — registre o motivo
                 </div>
                 <p className="text-[12px] text-[#2B1B0A]/55 mt-1 mb-3">Ajuda a entender as perdas nos relatórios.</p>
                 <label className={labelCls}>Motivo da perda</label>

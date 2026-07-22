@@ -1,19 +1,16 @@
 import type { Lead, StatusComercial } from './types';
 
-// Estágios do funil comercial que indicam que a consulta foi MARCADA.
-// (quem realizou ou fechou tratamento necessariamente passou por marcada)
-const REACHED_MARCADA: StatusComercial[] = [
-  'consulta_marcada',
-  'consulta_realizada',
-  'tratamento_fechado',
-];
-const REACHED_REALIZADA: StatusComercial[] = ['consulta_realizada', 'tratamento_fechado'];
-const FECHADO: StatusComercial[] = ['tratamento_fechado'];
+// Estágios que indicam consulta AGENDADA (inclui quem já realizou —
+// necessariamente passou por agendada).
+const REACHED_AGENDADA: StatusComercial[] = ['consulta_agendada', 'consulta_realizada'];
+const REACHED_REALIZADA: StatusComercial[] = ['consulta_realizada'];
+// Estágios de perda — alimentam os "motivos de perda".
+const PERDA: StatusComercial[] = ['desistiu_consulta', 'estorno_cancelada', 'outros_invalido'];
 
 export interface BreakdownRow {
   chave: string;
   leads: number;
-  consultasMarcadas: number;
+  consultasAgendadas: number;
   consultasRealizadas: number;
   fechados: number;
   faturamento: number;
@@ -26,15 +23,17 @@ export interface Metrics {
   metaAds: number;
   googleAds: number;
   diretos: number;
-  consultasMarcadas: number;
+  consultasAgendadas: number;
   consultasRealizadas: number;
-  tratamentosFechados: number;
-  taxaConversao: { num: number; den: number };
-  taxaComparecimento: { num: number; den: number };
-  taxaFechamento: { num: number; den: number };
+  desistencias: number;
+  estornos: number;
+  // "Fechados" = consultas com valor registrado (alimenta faturamento/ticket).
+  fechados: number;
   faturamento: number;
   ticketMedio: number;
-  semAcompanhamento: number;
+  taxaAgendamento: { num: number; den: number }; // agendadas / leads
+  taxaComparecimento: { num: number; den: number }; // realizadas / agendadas
+  emContato: number; // ainda parados em "Contato Realizado"
   motivosPerda: Record<string, number>;
   porPlataformaDet: BreakdownRow[];
   porCriativo: BreakdownRow[];
@@ -42,7 +41,7 @@ export interface Metrics {
 }
 
 function emptyRow(chave: string): BreakdownRow {
-  return { chave, leads: 0, consultasMarcadas: 0, consultasRealizadas: 0, fechados: 0, faturamento: 0 };
+  return { chave, leads: 0, consultasAgendadas: 0, consultasRealizadas: 0, fechados: 0, faturamento: 0 };
 }
 
 function breakdown(leads: Lead[], keyFn: (l: Lead) => string): BreakdownRow[] {
@@ -52,9 +51,9 @@ function breakdown(leads: Lead[], keyFn: (l: Lead) => string): BreakdownRow[] {
     if (!map.has(chave)) map.set(chave, emptyRow(chave));
     const row = map.get(chave)!;
     row.leads += 1;
-    if (REACHED_MARCADA.includes(l.status_comercial)) row.consultasMarcadas += 1;
+    if (REACHED_AGENDADA.includes(l.status_comercial)) row.consultasAgendadas += 1;
     if (REACHED_REALIZADA.includes(l.status_comercial)) row.consultasRealizadas += 1;
-    if (FECHADO.includes(l.status_comercial)) {
+    if (l.valor_fechado != null) {
       row.fechados += 1;
       row.faturamento += l.valor_fechado ?? 0;
     }
@@ -67,24 +66,28 @@ export function computeMetrics(leads: Lead[]): Metrics {
   const porPlataforma: Record<string, number> = {};
   const motivosPerda: Record<string, number> = {};
 
-  let consultasMarcadas = 0;
+  let consultasAgendadas = 0;
   let consultasRealizadas = 0;
-  let tratamentosFechados = 0;
+  let desistencias = 0;
+  let estornos = 0;
+  let fechados = 0;
   let faturamento = 0;
-  let semAcompanhamento = 0;
+  let emContato = 0;
 
   for (const l of leads) {
     const plat = l.origem || '(sem origem)';
     porPlataforma[plat] = (porPlataforma[plat] || 0) + 1;
 
-    if (REACHED_MARCADA.includes(l.status_comercial)) consultasMarcadas += 1;
+    if (REACHED_AGENDADA.includes(l.status_comercial)) consultasAgendadas += 1;
     if (REACHED_REALIZADA.includes(l.status_comercial)) consultasRealizadas += 1;
-    if (FECHADO.includes(l.status_comercial)) {
-      tratamentosFechados += 1;
+    if (l.status_comercial === 'desistiu_consulta') desistencias += 1;
+    if (l.status_comercial === 'estorno_cancelada') estornos += 1;
+    if (l.status_comercial === 'contato_realizado') emContato += 1;
+    if (l.valor_fechado != null) {
+      fechados += 1;
       faturamento += l.valor_fechado ?? 0;
     }
-    if (l.status_comercial === 'novo') semAcompanhamento += 1;
-    if (l.status_comercial === 'nao_fechou' && l.motivo_perda) {
+    if (PERDA.includes(l.status_comercial) && l.motivo_perda) {
       const m = l.motivo_perda.trim();
       motivosPerda[m] = (motivosPerda[m] || 0) + 1;
     }
@@ -96,15 +99,16 @@ export function computeMetrics(leads: Lead[]): Metrics {
     metaAds: porPlataforma['Meta Ads'] || 0,
     googleAds: porPlataforma['Google Ads'] || 0,
     diretos: porPlataforma['Direto'] || 0,
-    consultasMarcadas,
+    consultasAgendadas,
     consultasRealizadas,
-    tratamentosFechados,
-    taxaConversao: { num: consultasMarcadas, den: total },
-    taxaComparecimento: { num: consultasRealizadas, den: consultasMarcadas },
-    taxaFechamento: { num: tratamentosFechados, den: consultasRealizadas },
+    desistencias,
+    estornos,
+    fechados,
     faturamento,
-    ticketMedio: tratamentosFechados ? faturamento / tratamentosFechados : 0,
-    semAcompanhamento,
+    ticketMedio: fechados ? faturamento / fechados : 0,
+    taxaAgendamento: { num: consultasAgendadas, den: total },
+    taxaComparecimento: { num: consultasRealizadas, den: consultasAgendadas },
+    emContato,
     motivosPerda,
     porPlataformaDet: breakdown(leads, (l) => l.origem || ''),
     porCriativo: breakdown(leads, (l) => l.utm_content || ''),

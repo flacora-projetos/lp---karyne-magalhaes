@@ -35,7 +35,7 @@ const OrigemBadge: React.FC<{ origem: string | null }> = ({ origem }) => {
 // LGPD: nunca mostra comportamento_halito/uso_antibiotico aqui.
 const CardBody: React.FC<{ lead: Lead; accent: string; dragging?: boolean }> = ({ lead, accent, dragging }) => {
   const avatarColor = (lead.origem && ORIGEM_AVATAR[lead.origem]) || '#8A94A6';
-  const closed = lead.status_comercial === 'tratamento_fechado' && lead.valor_fechado != null;
+  const closed = lead.valor_fechado != null;
   return (
     <div
       className={`relative overflow-hidden rounded-xl border border-[#E4DFD9] bg-[#FEFEFE] pl-3.5 pr-3 py-2.5 ${

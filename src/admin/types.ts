@@ -1,74 +1,68 @@
 export type StatusComercial =
-  | 'novo'
-  | 'contatado'
-  | 'aguardando_resposta'
-  | 'em_atendimento'
-  | 'consulta_marcada'
+  | 'contato_realizado'
+  | 'negociando_consulta'
+  | 'desistiu_consulta'
+  | 'consulta_agendada'
   | 'consulta_realizada'
-  | 'tratamento_fechado'
-  | 'nao_fechou'
-  | 'lead_invalido';
+  | 'estorno_cancelada'
+  | 'outros_invalido';
 
+// Ordem do funil — usada no seletor do detalhe e no filtro de status.
 export const STATUS_ORDER: StatusComercial[] = [
-  'novo',
-  'contatado',
-  'aguardando_resposta',
-  'em_atendimento',
-  'consulta_marcada',
+  'contato_realizado',
+  'negociando_consulta',
+  'desistiu_consulta',
+  'consulta_agendada',
   'consulta_realizada',
-  'tratamento_fechado',
-  'nao_fechou',
-  'lead_invalido',
+  'estorno_cancelada',
+  'outros_invalido',
 ];
 
 export const STATUS_LABEL: Record<StatusComercial, string> = {
-  novo: 'Novo',
-  contatado: 'Contatado',
-  aguardando_resposta: 'Aguardando resposta',
-  em_atendimento: 'Em atendimento',
-  consulta_marcada: 'Consulta marcada',
-  consulta_realizada: 'Consulta realizada',
-  tratamento_fechado: 'Tratamento fechado',
-  nao_fechou: 'Não fechou',
-  lead_invalido: 'Lead inválido',
+  contato_realizado: 'Contato Realizado',
+  negociando_consulta: 'Negociando Consulta',
+  desistiu_consulta: 'Desistiu da Consulta',
+  consulta_agendada: 'Consulta Agendada',
+  consulta_realizada: 'Consulta Realizada',
+  estorno_cancelada: 'Estorno / Consulta Cancelada',
+  outros_invalido: 'Outros / Leads Inválidos',
 };
 
 // Cor de fundo / texto por status (tokens da paleta da LP)
 export const STATUS_STYLE: Record<StatusComercial, string> = {
-  novo: 'bg-[#E4DFD9] text-[#2B1B0A]',
-  contatado: 'bg-[#757D50]/20 text-[#565E48]',
-  aguardando_resposta: 'bg-[#C98A42]/20 text-[#8a5c1e]',
-  em_atendimento: 'bg-[#A95B21]/15 text-[#A95B21]',
-  consulta_marcada: 'bg-[#565E48]/20 text-[#565E48]',
-  consulta_realizada: 'bg-[#222D19]/15 text-[#222D19]',
-  tratamento_fechado: 'bg-[#222D19] text-white',
-  nao_fechou: 'bg-[#8B2312]/15 text-[#8B2312]',
-  lead_invalido: 'bg-[#2B1B0A]/10 text-[#2B1B0A]/60',
+  contato_realizado: 'bg-[#C98A42]/20 text-[#8a5c1e]',
+  negociando_consulta: 'bg-[#A95B21]/15 text-[#A95B21]',
+  desistiu_consulta: 'bg-[#8B2312]/12 text-[#8B2312]',
+  consulta_agendada: 'bg-[#565E48]/20 text-[#565E48]',
+  consulta_realizada: 'bg-[#222D19] text-white',
+  estorno_cancelada: 'bg-[#8B2312]/20 text-[#8B2312]',
+  outros_invalido: 'bg-[#2B1B0A]/10 text-[#2B1B0A]/60',
 };
 
 // ── Kanban ────────────────────────────────────────────────────────────────
-// 6 colunas nomeadas (alvo de drop) + "Outros" (bucket de exibição, NÃO é alvo
-// de drop). Os 9 status do banco continuam intactos; "Outros" só agrupa 3 deles
-// na exibição — a definição desses 3 continua sendo feita pelo modal de detalhe.
+// 7 colunas, TODAS alvo de drop (arrasta-se para qualquer uma, inclusive
+// "Outros / Leads Inválidos"). Cada coluna corresponde a exatamente um status
+// do banco (mapa 1:1). O status_comercial é a fonte da verdade — a coluna é só
+// a forma de exibi-lo.
 export interface KanbanColumn {
   id: string; // id do droppable
   label: string;
-  status: StatusComercial | null; // null = "Outros" (não recebe drop)
+  status: StatusComercial | null; // null = coluna só de exibição (não recebe drop)
   members: StatusComercial[]; // status agrupados nesta coluna
 }
 
 // Cor de acento (dot do cabeçalho + faixa do card) por coluna.
 export const KANBAN_COLUMNS: (KanbanColumn & { accent: string })[] = [
-  { id: 'novo', label: 'Novo', status: 'novo', members: ['novo'], accent: '#8A94A6' },
-  { id: 'contatado', label: 'Contatado', status: 'contatado', members: ['contatado'], accent: '#C98A42' },
-  { id: 'consulta_marcada', label: 'Consulta agendada', status: 'consulta_marcada', members: ['consulta_marcada'], accent: '#A95B21' },
-  { id: 'consulta_realizada', label: 'Consulta realizada', status: 'consulta_realizada', members: ['consulta_realizada'], accent: '#565E48' },
-  { id: 'tratamento_fechado', label: 'Fechou', status: 'tratamento_fechado', members: ['tratamento_fechado'], accent: '#222D19' },
-  { id: 'nao_fechou', label: 'Não fechou', status: 'nao_fechou', members: ['nao_fechou'], accent: '#8B2312' },
-  { id: 'outros', label: 'Outros', status: null, members: ['aguardando_resposta', 'em_atendimento', 'lead_invalido'], accent: '#B7AFA4' },
+  { id: 'contato_realizado', label: 'Contato Realizado', status: 'contato_realizado', members: ['contato_realizado'], accent: '#C98A42' },
+  { id: 'negociando_consulta', label: 'Negociando Consulta', status: 'negociando_consulta', members: ['negociando_consulta'], accent: '#A95B21' },
+  { id: 'desistiu_consulta', label: 'Desistiu da Consulta', status: 'desistiu_consulta', members: ['desistiu_consulta'], accent: '#B0553C' },
+  { id: 'consulta_agendada', label: 'Consulta Agendada', status: 'consulta_agendada', members: ['consulta_agendada'], accent: '#565E48' },
+  { id: 'consulta_realizada', label: 'Consulta Realizada', status: 'consulta_realizada', members: ['consulta_realizada'], accent: '#222D19' },
+  { id: 'estorno_cancelada', label: 'Estorno / Consulta Cancelada', status: 'estorno_cancelada', members: ['estorno_cancelada'], accent: '#8B2312' },
+  { id: 'outros_invalido', label: 'Outros / Leads Inválidos', status: 'outros_invalido', members: ['outros_invalido'], accent: '#8A94A6' },
 ];
 
-// Coluna a que um status pertence (fallback: "Outros").
+// Coluna a que um status pertence (fallback: "Outros / Leads Inválidos").
 export function columnForStatus(status: StatusComercial): KanbanColumn & { accent: string } {
   return KANBAN_COLUMNS.find((c) => c.members.includes(status)) ?? KANBAN_COLUMNS[KANBAN_COLUMNS.length - 1];
 }

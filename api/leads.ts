@@ -18,15 +18,13 @@ import { requireAuth } from '../lib/requireAuth.js';
  *         engole rotas dinâmicas antes de chegarem à função.)
  */
 const STATUS_VALIDOS = [
-  'novo',
-  'contatado',
-  'aguardando_resposta',
-  'em_atendimento',
-  'consulta_marcada',
+  'contato_realizado',
+  'negociando_consulta',
+  'desistiu_consulta',
+  'consulta_agendada',
   'consulta_realizada',
-  'tratamento_fechado',
-  'nao_fechou',
-  'lead_invalido',
+  'estorno_cancelada',
+  'outros_invalido',
 ];
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
