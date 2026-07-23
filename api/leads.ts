@@ -1,7 +1,10 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
+import crypto from 'crypto';
 import { getSupabaseAdmin } from '../lib/supabaseAdmin.js';
 import { mapPayloadToRow, type SheetsPayload } from '../lib/mapLead.js';
 import { requireAuth } from '../lib/requireAuth.js';
+import { sendMetaEvent } from '../lib/metaCapi.js';
+import { sendGoogleEcEvent } from '../lib/googleEc.js';
 
 /**
  * /api/leads
@@ -131,6 +134,57 @@ async function handlePost(req: VercelRequest, res: VercelResponse) {
   }
 }
 
+function splitName(nome: unknown): { firstName?: string; lastName?: string } {
+  const n = typeof nome === 'string' ? nome.trim() : '';
+  if (!n) return {};
+  const [firstName, ...rest] = n.split(/\s+/);
+  return { firstName, lastName: rest.join(' ') || undefined };
+}
+
+// Dispara o sinal de "negócio fechado de verdade" pro Meta e pro Google a
+// partir dos dados de contato já capturados no lead (sem pedir de novo).
+// Nunca lança — falha aqui não pode derrubar o PATCH do Kanban.
+async function dispatchConsultaRealizada(lead: Record<string, unknown>): Promise<void> {
+  try {
+    const eventId = crypto.randomUUID();
+    const { firstName, lastName } = splitName(lead.nome);
+    const email = typeof lead.email === 'string' ? lead.email : undefined;
+    const phone = typeof lead.whatsapp === 'string' ? lead.whatsapp : undefined;
+    const city = typeof lead.cidade === 'string' ? lead.cidade : undefined;
+    const state = typeof lead.estado === 'string' ? lead.estado : undefined;
+    const gclid = typeof lead.gclid === 'string' ? lead.gclid : undefined;
+
+    const conversionActionId = process.env.GOOGLE_ADS_CONVERSION_ACTION_ID_QUALIFICADO;
+
+    const results = await Promise.allSettled([
+      sendMetaEvent({
+        eventName: 'ConsultaRealizada',
+        eventId,
+        actionSource: 'system_generated',
+        email,
+        phone,
+        firstName,
+        lastName,
+        city,
+        state,
+      }),
+      conversionActionId
+        ? sendGoogleEcEvent({ conversionActionId, eventId, email, phone, gclid })
+        : Promise.resolve({ success: false, error: 'GOOGLE_ADS_CONVERSION_ACTION_ID_QUALIFICADO ausente' }),
+    ]);
+
+    for (const r of results) {
+      if (r.status === 'rejected') {
+        console.error('[api/leads] Falha ao disparar ConsultaRealizada:', r.reason);
+      } else if (!r.value.success) {
+        console.error('[api/leads] Falha ao disparar ConsultaRealizada:', r.value.error);
+      }
+    }
+  } catch (error) {
+    console.error('[api/leads] Erro interno ao disparar ConsultaRealizada:', (error as Error).message);
+  }
+}
+
 async function handlePatch(req: VercelRequest, res: VercelResponse) {
   const user = await requireAuth(req, res);
   if (!user) return;
@@ -194,6 +248,20 @@ async function handlePatch(req: VercelRequest, res: VercelResponse) {
 
   try {
     const supabase = getSupabaseAdmin();
+
+    // Só dispara o evento de conversão quando o status está de fato MUDANDO
+    // para consulta_realizada — evita disparo redundante em toda edição de
+    // um card que já está fechado.
+    let veioDeOutroStatus = false;
+    if (update.status_comercial === 'consulta_realizada') {
+      const { data: atual } = await supabase
+        .from('leads')
+        .select('status_comercial')
+        .eq('lead_id', leadId)
+        .single();
+      veioDeOutroStatus = atual?.status_comercial !== 'consulta_realizada';
+    }
+
     const { data, error } = await supabase
       .from('leads')
       .update(update)
@@ -207,6 +275,10 @@ async function handlePatch(req: VercelRequest, res: VercelResponse) {
       }
       console.error('[api/leads PATCH] Erro:', error.message);
       return res.status(500).json({ success: false, error: 'Falha ao atualizar lead' });
+    }
+
+    if (update.status_comercial === 'consulta_realizada' && veioDeOutroStatus) {
+      await dispatchConsultaRealizada(data);
     }
 
     return res.status(200).json({ success: true, lead: data });
