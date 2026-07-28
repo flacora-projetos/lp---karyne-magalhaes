@@ -87,6 +87,7 @@ export interface Lead {
   criado_em: string;
   atualizado_em: string;
   etapa_funil: string | null;
+  etapa_atual: number | null;
   nome: string | null;
   whatsapp: string | null;
   email: string | null;
