@@ -40,6 +40,19 @@ const clean = (v: unknown): string | null => {
 };
 
 /**
+ * Etapa numérica do modal (1..7). O rótulo de texto em `etapa_funil` agrupa
+ * várias etapas sob "Respondendo perguntas", então é este campo que permite
+ * saber exatamente onde a pessoa parou (ex.: separar a tela de preço das
+ * demais). Fora da faixa ou não numérico => null.
+ */
+const cleanStep = (v: unknown): number | null => {
+  if (v === undefined || v === null || v === '') return null;
+  const n = Number(v);
+  if (!Number.isInteger(n) || n < 1 || n > 99) return null;
+  return n;
+};
+
+/**
  * Deriva a origem do tráfego seguindo a mesma lógica da aba Resumo da planilha
  * (seção 19 do doc de contexto):
  *  - UTM Source define a origem;
@@ -70,6 +83,7 @@ export function mapPayloadToRow(p: SheetsPayload) {
   return {
     lead_id: clean(p.leadId),
     etapa_funil: clean(p.status),
+    etapa_atual: cleanStep(p.currentStep),
     nome: clean(p.nomeCompleto),
     whatsapp: clean(p.whatsapp),
     email: clean(p.email),

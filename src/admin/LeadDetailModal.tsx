@@ -129,6 +129,7 @@ export const LeadDetailModal: React.FC<LeadDetailModalProps> = ({ lead, onClose,
               <Field label="UTM Content (criativo)" value={lead.utm_content} />
               <Field label="UTM Term" value={lead.utm_term} />
               <Field label="Etapa do funil" value={lead.etapa_funil} />
+              <Field label="Parou na etapa" value={lead.etapa_atual ? `${lead.etapa_atual} de 7` : null} />
             </div>
           </section>
 
