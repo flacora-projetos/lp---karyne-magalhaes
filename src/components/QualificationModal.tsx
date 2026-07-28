@@ -243,6 +243,11 @@ export const QualificationModal: React.FC<QualificationModalProps> = ({ isOpen, 
       pushDataLayerEvent("filtro_completo");
     }
 
+    // Ordem das etapas: 1 WhatsApp · 2 situação · 3 antibiótico · 4 período ·
+    // 5 identificação · 6 modalidade/preço · 7 revisão. Os 5 rótulos de status
+    // são os mesmos de sempre (a aba Resumo da planilha agrupa por eles), então
+    // o abandono na tela de preço cai em "Respondendo perguntas" — para separar
+    // etapa a etapa, use a coluna "Etapa atual" (currentStep) da planilha.
     let status = 'Respondendo perguntas (Ainda no preenchimento)';
     if (nextS === 2) status = 'Lead gerado(Lead formado)';
     if (nextS === 3) status = 'Filtro iniciado (Começou a responder)';
@@ -301,7 +306,7 @@ Gostaria de receber orientação e verificar os horários disponíveis para a co
   };
 
   const isStep1Valid = !!data.whatsapp;
-  const isStep6Valid = !!data.nome;
+  const isStep5Valid = !!data.nome;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-0 md:p-6 bg-black/40 backdrop-blur-sm transition-opacity">
@@ -408,84 +413,6 @@ Gostaria de receber orientação e verificar os horários disponíveis para a co
 
           {step === 3 && (
             <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-              <h2 className="text-2xl md:text-3xl font-medium font-serif leading-tight mb-2">Conheça as opções de avaliação</h2>
-              <p className="text-[#2B1B0A]/70 text-sm mb-6">Com base nas suas respostas, você pode escolher uma das opções abaixo. Se ainda tiver dúvida, a equipe pode orientar qual avaliação faz mais sentido antes do agendamento.</p>
-              
-              <div className="space-y-4 mb-8">
-                {/* Opção 1 */}
-                <div className="bg-[#FEFEFE] border border-[#E4DFD9] rounded-2xl p-5 md:p-6">
-                  <div className="flex flex-col md:flex-row md:justify-between md:items-start gap-2 mb-3">
-                    <h3 className="text-lg font-medium font-serif text-[#222D19]">OralChroma</h3>
-                    <div className="text-base font-semibold text-[#A95B21] md:text-right">R$ 770,00</div>
-                  </div>
-                  <p className="text-sm text-[#2B1B0A]/80 leading-relaxed mb-4">
-                    Mede separadamente os gases presentes no hálito no momento da consulta.
-                  </p>
-                  <div className="text-[13px] text-[#2B1B0A]/60 flex items-center gap-1.5">
-                    <span className="w-1.5 h-1.5 rounded-full bg-[#A95B21]"></span>
-                    Cerca de 2 horas
-                  </div>
-                </div>
-
-                {/* Opção 2 */}
-                <div className="bg-[#FEFEFE] border border-[#E4DFD9] rounded-2xl p-5 md:p-6">
-                  <div className="flex flex-col md:flex-row md:justify-between md:items-start gap-2 mb-3">
-                    <h3 className="text-lg font-medium font-serif text-[#222D19]">OralChroma + Desafio da Cisteína</h3>
-                    <div className="text-base font-semibold text-[#A95B21] md:text-right">R$ 1.090,00</div>
-                  </div>
-                  <p className="text-sm text-[#2B1B0A]/80 leading-relaxed mb-4">
-                    Também avalia o potencial máximo de produção dos gases, sendo útil quando o odor oscila ou pode estar fraco no dia da consulta.
-                  </p>
-                  <div className="text-[13px] text-[#2B1B0A]/60 flex items-center gap-1.5">
-                    <span className="w-1.5 h-1.5 rounded-full bg-[#A95B21]"></span>
-                    Cerca de 2 horas
-                  </div>
-                </div>
-              </div>
-
-              <p className="text-[13px] text-[#2B1B0A]/60 leading-relaxed text-center mb-8 italic">
-                Para confirmar o horário, a consulta é reservada mediante pagamento no momento do agendamento. Isso garante uma agenda individualizada, com tempo clínico dedicado, preparo da avaliação e uso dos recursos necessários para conduzir o diagnóstico com tranquilidade.
-              </p>
-
-              <h4 className="font-medium text-base mb-4">Como você prefere prosseguir?</h4>
-
-              <p className="text-[13px] text-[#2B1B0A]/60 leading-relaxed mb-4">
-                Se ficar com dúvida sobre qual opção escolher, a equipe ajuda a decidir pelo WhatsApp, sem compromisso.
-              </p>
-
-              <div className="space-y-3">
-                {[
-                  'Tenho interesse no OralChroma',
-                  'Tenho interesse no OralChroma + Desafio da Cisteína',
-                  'Ainda não sei qual escolher',
-                  'Quero orientação da equipe antes de decidir'
-                ].map((opcao) => (
-                  <button
-                    key={opcao}
-                    onClick={() => {
-                      handleChange('modalidade', opcao);
-                      setTimeout(nextStep, 200);
-                    }}
-                    className={`w-full text-left p-4 rounded-xl border transition-all flex items-center justify-between group ${
-                      data.modalidade === opcao 
-                        ? 'bg-[#FEFEFE] border-[#A95B21] !shadow-[0_4px_12px_rgba(169,91,33,0.1)] ring-1 ring-[#A95B21]' 
-                        : 'bg-[#FEFEFE] border-[#E4DFD9] hover:border-[#A95B21]/40 hover:shadow-sm'
-                    }`}
-                  >
-                    <span className="text-[15px] pr-4">{opcao}</span>
-                    <div className={`w-5 h-5 rounded-full flex-shrink-0 border flex items-center justify-center transition-colors ${
-                      data.modalidade === opcao ? 'border-[#A95B21] bg-[#A95B21]' : 'border-[#E4DFD9] group-hover:border-[#A95B21]/40'
-                    }`}>
-                      {data.modalidade === opcao && <Check size={12} className="text-white" />}
-                    </div>
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {step === 4 && (
-            <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
               <h2 className="text-2xl md:text-3xl font-medium font-serif leading-tight mb-2">Você utilizou antibióticos nos últimos 21 dias?</h2>
               <p className="text-[#2B1B0A]/70 text-sm mb-8">Isso ajuda a garantir que sua avaliação tenha resultado confiável.</p>
 
@@ -532,7 +459,7 @@ Gostaria de receber orientação e verificar os horários disponíveis para a co
             </div>
           )}
 
-          {step === 5 && (
+          {step === 4 && (
             <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
               <h2 className="text-2xl md:text-3xl font-medium font-serif leading-tight mb-2">Qual período costuma ser melhor para você?</h2>
               <p className="text-[#2B1B0A]/70 text-sm mb-8">Isso ajuda a equipe a te oferecer o melhor horário disponível.</p>
@@ -582,9 +509,9 @@ Gostaria de receber orientação e verificar os horários disponíveis para a co
             </div>
           )}
 
-          {step === 6 && (
+          {step === 5 && (
             <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-              <h2 className="text-2xl md:text-3xl font-medium font-serif leading-tight mb-3">Só mais um passo. Como podemos te chamar?</h2>
+              <h2 className="text-2xl md:text-3xl font-medium font-serif leading-tight mb-3">Quase lá. Como podemos te chamar?</h2>
               <p className="text-[#2B1B0A]/70 text-sm mb-8">Esses dados ajudam a equipe da clínica a te chamar pelo nome e organizar o atendimento.</p>
 
               <div className="space-y-5">
@@ -645,11 +572,89 @@ Gostaria de receber orientação e verificar os horários disponíveis para a co
                   onClick={() => {
                     nextStep();
                   }}
-                  disabled={!isStep6Valid}
+                  disabled={!isStep5Valid}
                   className="w-full bg-[#222D19] hover:bg-[#222D19]/90 disabled:bg-[#E4DFD9] disabled:text-[#2B1B0A]/40 transition-colors text-white py-4 rounded-xl font-medium text-[15px]"
                 >
                   Continuar
                 </button>
+              </div>
+            </div>
+          )}
+
+          {step === 6 && (
+            <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+              <h2 className="text-2xl md:text-3xl font-medium font-serif leading-tight mb-2">Conheça as opções de avaliação</h2>
+              <p className="text-[#2B1B0A]/70 text-sm mb-6">Com base nas suas respostas, você pode escolher uma das opções abaixo. Se ainda tiver dúvida, a equipe pode orientar qual avaliação faz mais sentido antes do agendamento.</p>
+
+              <div className="space-y-4 mb-8">
+                {/* Opção 1 */}
+                <div className="bg-[#FEFEFE] border border-[#E4DFD9] rounded-2xl p-5 md:p-6">
+                  <div className="flex flex-col md:flex-row md:justify-between md:items-start gap-2 mb-3">
+                    <h3 className="text-lg font-medium font-serif text-[#222D19]">OralChroma</h3>
+                    <div className="text-base font-semibold text-[#A95B21] md:text-right">R$ 770,00</div>
+                  </div>
+                  <p className="text-sm text-[#2B1B0A]/80 leading-relaxed mb-4">
+                    Mede separadamente os gases presentes no hálito no momento da consulta.
+                  </p>
+                  <div className="text-[13px] text-[#2B1B0A]/60 flex items-center gap-1.5">
+                    <span className="w-1.5 h-1.5 rounded-full bg-[#A95B21]"></span>
+                    Cerca de 2 horas
+                  </div>
+                </div>
+
+                {/* Opção 2 */}
+                <div className="bg-[#FEFEFE] border border-[#E4DFD9] rounded-2xl p-5 md:p-6">
+                  <div className="flex flex-col md:flex-row md:justify-between md:items-start gap-2 mb-3">
+                    <h3 className="text-lg font-medium font-serif text-[#222D19]">OralChroma + Desafio da Cisteína</h3>
+                    <div className="text-base font-semibold text-[#A95B21] md:text-right">R$ 1.090,00</div>
+                  </div>
+                  <p className="text-sm text-[#2B1B0A]/80 leading-relaxed mb-4">
+                    Também avalia o potencial máximo de produção dos gases, sendo útil quando o odor oscila ou pode estar fraco no dia da consulta.
+                  </p>
+                  <div className="text-[13px] text-[#2B1B0A]/60 flex items-center gap-1.5">
+                    <span className="w-1.5 h-1.5 rounded-full bg-[#A95B21]"></span>
+                    Cerca de 2 horas
+                  </div>
+                </div>
+              </div>
+
+              <p className="text-[13px] text-[#2B1B0A]/60 leading-relaxed text-center mb-8 italic">
+                Para confirmar o horário, a consulta é reservada mediante pagamento no momento do agendamento. Isso garante uma agenda individualizada, com tempo clínico dedicado, preparo da avaliação e uso dos recursos necessários para conduzir o diagnóstico com tranquilidade.
+              </p>
+
+              <h4 className="font-medium text-base mb-4">Como você prefere prosseguir?</h4>
+
+              <p className="text-[13px] text-[#2B1B0A]/60 leading-relaxed mb-4">
+                Se ficar com dúvida sobre qual opção escolher, a equipe ajuda a decidir pelo WhatsApp, sem compromisso.
+              </p>
+
+              <div className="space-y-3">
+                {[
+                  'Tenho interesse no OralChroma',
+                  'Tenho interesse no OralChroma + Desafio da Cisteína',
+                  'Ainda não sei qual escolher',
+                  'Quero orientação da equipe antes de decidir'
+                ].map((opcao) => (
+                  <button
+                    key={opcao}
+                    onClick={() => {
+                      handleChange('modalidade', opcao);
+                      setTimeout(nextStep, 200);
+                    }}
+                    className={`w-full text-left p-4 rounded-xl border transition-all flex items-center justify-between group ${
+                      data.modalidade === opcao
+                        ? 'bg-[#FEFEFE] border-[#A95B21] !shadow-[0_4px_12px_rgba(169,91,33,0.1)] ring-1 ring-[#A95B21]'
+                        : 'bg-[#FEFEFE] border-[#E4DFD9] hover:border-[#A95B21]/40 hover:shadow-sm'
+                    }`}
+                  >
+                    <span className="text-[15px] pr-4">{opcao}</span>
+                    <div className={`w-5 h-5 rounded-full flex-shrink-0 border flex items-center justify-center transition-colors ${
+                      data.modalidade === opcao ? 'border-[#A95B21] bg-[#A95B21]' : 'border-[#E4DFD9] group-hover:border-[#A95B21]/40'
+                    }`}>
+                      {data.modalidade === opcao && <Check size={12} className="text-white" />}
+                    </div>
+                  </button>
+                ))}
               </div>
             </div>
           )}
