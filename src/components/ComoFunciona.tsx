@@ -14,7 +14,7 @@ export const ComoFunciona = () => {
         {/* Imagem fica na direita no desktop, na ordem original na mobile deixamos ela em segundo plano */}
         <div className="order-2 md:order-2">
           <img 
-            src="https://lh3.googleusercontent.com/d/1R998hGla_Qn0l4drizl-GvlvliHwaMtI" 
+            src="/images/avaliacao_paciente.jpg"
             alt="Dra. Karyne avaliando a paciente" 
             loading="lazy"
             className="w-full h-auto aspect-square object-cover rounded-2xl shadow-sm border border-border-gray/50"

@@ -8,7 +8,7 @@ export const DraKaryne = () => {
         <div className="order-2 md:order-1 flex gap-6 relative">
           <div className="w-1/2 flex flex-col justify-end">
             <img 
-              src="https://lh3.googleusercontent.com/d/1sfkIsrKqxvF7oTnkkCPmEFhGplIV51iK" 
+              src="/images/karyne_formacao.jpg"
               alt="Dra. Karyne em formação e conteúdo" 
               loading="lazy"
               className="w-full h-auto aspect-[3/4] object-cover rounded-2xl shadow-sm border border-border-gray/50 mb-8"
@@ -16,7 +16,7 @@ export const DraKaryne = () => {
           </div>
           <div className="w-1/2 flex flex-col justify-start">
             <img 
-              src="https://lh3.googleusercontent.com/d/1gwopE6RKc1mdWo-mqBjt1_WG_8-XrJxM" 
+              src="/images/karyne_especialista.jpg"
               alt="Dra. Karyne Magalhães - Especialista" 
               loading="lazy"
               className="w-full h-auto aspect-[3/4] object-cover rounded-2xl shadow-sm border border-border-gray/50 mt-12"
