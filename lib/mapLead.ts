@@ -30,6 +30,9 @@ export interface SheetsPayload {
   pageUrl?: string;
   referrer?: string;
   userAgent?: string;
+  metaFbp?: string;
+  metaFbc?: string;
+  clientIp?: string;
   [key: string]: unknown;
 }
 
@@ -105,5 +108,8 @@ export function mapPayloadToRow(p: SheetsPayload) {
     page_url: clean(p.pageUrl),
     referrer: clean(p.referrer),
     user_agent: clean(p.userAgent),
+    meta_fbp: clean(p.metaFbp),
+    meta_fbc: clean(p.metaFbc),
+    client_ip: clean(p.clientIp),
   };
 }

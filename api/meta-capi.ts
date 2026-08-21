@@ -18,6 +18,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       state,
       fbp,
       fbc,
+      fbclid,
+      externalId,
       pageUrl,
       userAgent
     } = req.body;
@@ -41,6 +43,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       state,
       fbp,
       fbc,
+      fbclid,
+      externalId,
       pageUrl,
       userAgent: userAgent || (req.headers['user-agent'] as string | undefined),
       clientIp: typeof clientIp === 'string' ? clientIp.split(',')[0].trim() : undefined,

@@ -57,6 +57,7 @@ export const sendMetaCapiEvent = async (payload: {
   fbp?: string | null;
   fbc?: string | null;
   fbclid?: string | null;
+  externalId?: string | null;
   pageUrl?: string;
   referrer?: string;
   userAgent?: string;

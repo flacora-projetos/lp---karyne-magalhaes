@@ -28,6 +28,31 @@ const hashString = (data?: string | null) => {
   return crypto.createHash('sha256').update(normalized).digest('hex');
 };
 
+const VALID_FBC = /^fb\.\d+\.\d+\..+$/;
+
+/**
+ * O Meta espera `fbc` no formato do cookie (_fbc), não o fbclid cru.
+ * Se o cookie não estiver disponível, reconstruímos o valor a partir do
+ * fbclid e do instante mais próximo do clique conhecido pela aplicação.
+ */
+export function resolveMetaFbc(
+  fbc?: string | null,
+  fbclid?: string | null,
+  clickTimeMs?: number,
+): string | undefined {
+  const cookie = fbc?.trim();
+  if (cookie && VALID_FBC.test(cookie)) return cookie;
+
+  const clickId = fbclid?.trim();
+  if (!clickId) return undefined;
+
+  const timestamp = Number.isFinite(clickTimeMs) && (clickTimeMs as number) > 0
+    ? Math.floor(clickTimeMs as number)
+    : Date.now();
+
+  return `fb.1.${timestamp}.${clickId}`;
+}
+
 export interface MetaEventInput {
   eventName: string;
   eventId?: string;
@@ -40,6 +65,9 @@ export interface MetaEventInput {
   state?: string | null;
   fbp?: string | null;
   fbc?: string | null;
+  fbclid?: string | null;
+  fbcTimestampMs?: number;
+  externalId?: string | null;
   clientIp?: string;
   userAgent?: string;
   pageUrl?: string;
@@ -70,8 +98,11 @@ export async function sendMetaEvent(input: MetaEventInput): Promise<MetaEventRes
   if (input.lastName) userData.ln = hashString(input.lastName);
   if (input.city) userData.ct = hashString(input.city);
   if (input.state) userData.st = hashString(input.state);
-  if (input.fbp) userData.fbp = input.fbp;
-  if (input.fbc) userData.fbc = input.fbc;
+  if (input.externalId) userData.external_id = hashData(input.externalId);
+  if (input.fbp) userData.fbp = input.fbp.trim();
+
+  const resolvedFbc = resolveMetaFbc(input.fbc, input.fbclid, input.fbcTimestampMs);
+  if (resolvedFbc) userData.fbc = resolvedFbc;
 
   Object.keys(userData).forEach((key) => userData[key] === undefined && delete userData[key]);
 

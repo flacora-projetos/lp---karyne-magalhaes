@@ -3,7 +3,7 @@ import crypto from 'crypto';
 import { getSupabaseAdmin } from '../lib/supabaseAdmin.js';
 import { mapPayloadToRow, type SheetsPayload } from '../lib/mapLead.js';
 import { requireAuth } from '../lib/requireAuth.js';
-import { sendMetaEvent } from '../lib/metaCapi.js';
+import { resolveMetaFbc, sendMetaEvent } from '../lib/metaCapi.js';
 import { sendGoogleEcEvent } from '../lib/googleEc.js';
 
 /**
@@ -48,6 +48,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 function first(v: string | string[] | undefined): string {
   if (Array.isArray(v)) return (v[0] || '').trim();
   return (v || '').trim();
+}
+
+function requestIp(req: VercelRequest): string | undefined {
+  const forwarded = req.headers['x-forwarded-for'];
+  const raw = Array.isArray(forwarded) ? forwarded[0] : forwarded;
+  if (typeof raw === 'string' && raw.trim()) return raw.split(',')[0].trim();
+  return req.socket.remoteAddress || undefined;
 }
 
 async function handleGet(req: VercelRequest, res: VercelResponse) {
@@ -117,7 +124,18 @@ async function handlePost(req: VercelRequest, res: VercelResponse) {
       return res.status(200).json({ success: false, error: 'leadId ausente' });
     }
 
-    const row = mapPayloadToRow(payload);
+    const createdAtMs = payload.createdAt ? Date.parse(payload.createdAt) : NaN;
+    const normalizedFbc = resolveMetaFbc(
+      typeof payload.metaFbc === 'string' ? payload.metaFbc : undefined,
+      typeof payload.fbclid === 'string' ? payload.fbclid : undefined,
+      Number.isFinite(createdAtMs) ? createdAtMs : undefined,
+    );
+
+    const row = mapPayloadToRow({
+      ...payload,
+      metaFbc: normalizedFbc,
+      clientIp: requestIp(req),
+    });
 
     const supabase = getSupabaseAdmin();
     const { error } = await supabase.rpc('upsert_lead', { p: row });
@@ -153,6 +171,14 @@ async function dispatchConsultaRealizada(lead: Record<string, unknown>): Promise
     const city = typeof lead.cidade === 'string' ? lead.cidade : undefined;
     const state = typeof lead.estado === 'string' ? lead.estado : undefined;
     const gclid = typeof lead.gclid === 'string' ? lead.gclid : undefined;
+    const fbclid = typeof lead.fbclid === 'string' ? lead.fbclid : undefined;
+    const fbp = typeof lead.meta_fbp === 'string' ? lead.meta_fbp : undefined;
+    const fbc = typeof lead.meta_fbc === 'string' ? lead.meta_fbc : undefined;
+    const userAgent = typeof lead.user_agent === 'string' ? lead.user_agent : undefined;
+    const clientIp = typeof lead.client_ip === 'string' ? lead.client_ip : undefined;
+    const pageUrl = typeof lead.page_url === 'string' ? lead.page_url : undefined;
+    const externalId = typeof lead.lead_id === 'string' ? lead.lead_id : undefined;
+    const createdAtMs = typeof lead.criado_em === 'string' ? Date.parse(lead.criado_em) : NaN;
 
     const conversionActionId = process.env.GOOGLE_ADS_CONVERSION_ACTION_ID_QUALIFICADO;
 
@@ -167,6 +193,14 @@ async function dispatchConsultaRealizada(lead: Record<string, unknown>): Promise
         lastName,
         city,
         state,
+        fbp,
+        fbc,
+        fbclid,
+        fbcTimestampMs: Number.isFinite(createdAtMs) ? createdAtMs : undefined,
+        externalId,
+        clientIp,
+        userAgent,
+        pageUrl,
       }),
       conversionActionId
         ? sendGoogleEcEvent({ conversionActionId, eventId, email, phone, gclid })
