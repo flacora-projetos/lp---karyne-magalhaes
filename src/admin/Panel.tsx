@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { Session } from '@supabase/supabase-js';
-import { RefreshCw, LogOut, LayoutGrid, List, BarChart3, X } from 'lucide-react';
+import { RefreshCw, LogOut, LayoutGrid, List, BarChart3, X, Download } from 'lucide-react';
 import { supabase } from './supabaseClient';
 import { fetchLeads, updateLead, type LeadFilters } from './api';
 import type { Lead, StatusComercial } from './types';
@@ -11,6 +11,7 @@ import { LeadsTable } from './LeadsTable';
 import { LeadDetailModal } from './LeadDetailModal';
 import { Dashboard } from './Dashboard';
 import { KanbanBoard } from './KanbanBoard';
+import { downloadLeadsCsv } from './exportCsv';
 
 interface PanelProps {
   session: Session;
@@ -260,6 +261,14 @@ export const Panel: React.FC<PanelProps> = ({ session }) => {
               ))}
             </div>
           )}
+          <button
+            onClick={() => downloadLeadsCsv(leads)}
+            disabled={loading || leads.length === 0}
+            className="ml-auto flex items-center gap-1.5 text-sm px-3 py-2 rounded-xl border border-[#E4E4E1] bg-[#FFFFFF] hover:bg-[#EFEFEC] transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+            title="Baixar os leads filtrados em CSV"
+          >
+            <Download size={15} /> <span className="hidden sm:inline">Baixar CSV</span>
+          </button>
         </div>
 
         {error && (
