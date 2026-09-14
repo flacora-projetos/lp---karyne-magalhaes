@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Menu, X } from 'lucide-react';
 
-export const Header = () => {
+export const Header = ({ directToWhatsapp = false }: { directToWhatsapp?: boolean }) => {
   const [isOpen, setIsOpen] = useState(false);
 
   const links = [
@@ -31,7 +31,7 @@ export const Header = () => {
             onClick={() => window.openQualificationModal?.()}
             className="bg-primary-green text-primary-white px-6 py-2.5 rounded-full text-sm font-medium hover:bg-secondary-green transition-colors"
           >
-            Fazer avaliação inicial (2 min)
+            {directToWhatsapp ? 'Falar pelo WhatsApp' : 'Fazer avaliação inicial (2 min)'}
           </button>
         </nav>
 
@@ -61,7 +61,7 @@ export const Header = () => {
             }}
             className="bg-primary-green text-primary-white px-6 py-3 rounded-full text-sm font-medium w-full mt-2"
           >
-            Fazer avaliação inicial (2 min)
+            {directToWhatsapp ? 'Falar pelo WhatsApp' : 'Fazer avaliação inicial (2 min)'}
           </button>
         </div>
       )}

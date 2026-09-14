@@ -23,6 +23,7 @@ import { FloatingWhatsApp } from './components/FloatingWhatsApp';
 import { QualificationModal } from './components/QualificationModal';
 import { PrivacyPolicy } from './components/PrivacyPolicy';
 import { preserveFbclid } from './utils/metaPixel';
+import { createGadsDirectHandler } from './utils/gadsDirect';
 
 // Painel administrativo (mini CRM) — carregado sob demanda, fora do bundle da LP.
 const AdminApp = lazy(() => import('./admin/AdminApp'));
@@ -36,24 +37,31 @@ declare global {
 export default function App() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [currentPath, setCurrentPath] = useState(window.location.pathname);
+  const normalizedPath = currentPath.replace(/\/+$/, '') || '/';
+  const isGads = normalizedPath === '/gads';
 
   useEffect(() => {
     preserveFbclid();
+    const openGadsWhatsApp = createGadsDirectHandler();
     
-    // Configura a função global para abrir o modal
     window.openQualificationModal = () => {
+      const path = window.location.pathname.replace(/\/+$/, '') || '/';
+      if (path === '/gads') {
+        openGadsWhatsApp();
+        return;
+      }
       setIsModalOpen(true);
     };
-    
-    // Config do WhatsApp constant as requested
-    const WHATSAPP_NUMBER = '5562999320675';
 
     const handleLocationChange = () => {
       setCurrentPath(window.location.pathname);
     };
 
     window.addEventListener('popstate', handleLocationChange);
-    return () => window.removeEventListener('popstate', handleLocationChange);
+    return () => {
+      window.removeEventListener('popstate', handleLocationChange);
+      delete window.openQualificationModal;
+    };
   }, []);
 
   if (currentPath === '/politica-de-privacidade') {
@@ -76,12 +84,12 @@ export default function App() {
 
   return (
     <div className="font-sans text-primary-brown !scroll-smooth">
-      <Header />
+      <Header directToWhatsapp={isGads} />
       <main>
-        <Hero />
+        <Hero directToWhatsapp={isGads} />
         <Acolhimento />
         <PorQueInvestigar />
-        <Modalidades />
+        <Modalidades directToWhatsapp={isGads} />
         <OQueEstaIncluido />
         <ComoFunciona />
         <PreparacaoEOutrasCidades />
@@ -90,10 +98,10 @@ export default function App() {
         <Avaliacoes />
         <Localizacao />
         <FAQ />
-        <CTAFinal />
+        <CTAFinal directToWhatsapp={isGads} />
       </main>
       <Footer />
-      <FloatingWhatsApp />
+      <FloatingWhatsApp directToWhatsapp={isGads} />
       <QualificationModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} />
     </div>
   );
