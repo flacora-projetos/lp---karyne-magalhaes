@@ -1,4 +1,4 @@
-export const CTAFinal = () => {
+export const CTAFinal = ({ directToWhatsapp = false }: { directToWhatsapp?: boolean }) => {
   return (
     <section className="relative w-full py-20 md:py-24 bg-primary-green flex items-center overflow-hidden">
       <div className="absolute inset-0 z-0 bg-primary-green">
@@ -27,14 +27,16 @@ export const CTAFinal = () => {
           O primeiro passo é entender qual avaliação faz sentido para o seu caso.
         </h2>
         <p className="text-xl text-primary-beige/90 mb-12 max-w-xl leading-relaxed">
-          Conheça as opções e responda algumas perguntas para facilitar a orientação e o agendamento.
+          {directToWhatsapp
+            ? 'Fale diretamente com a equipe para receber orientação e verificar os horários disponíveis.'
+            : 'Conheça as opções e responda algumas perguntas para facilitar a orientação e o agendamento.'}
         </p>
         
         <button 
           onClick={() => window.openQualificationModal?.()}
           className="bg-primary-beige text-primary-brown hover:bg-white px-10 py-5 rounded-full text-lg font-medium transition-colors shadow-lg shadow-black/20"
         >
-          Começar avaliação inicial
+          {directToWhatsapp ? 'Continuar pelo WhatsApp' : 'Começar avaliação inicial'}
         </button>
       </div>
     </section>

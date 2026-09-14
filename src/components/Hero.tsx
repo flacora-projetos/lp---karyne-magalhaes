@@ -1,6 +1,6 @@
 import { Star } from 'lucide-react';
 
-export const Hero = () => {
+export const Hero = ({ directToWhatsapp = false }: { directToWhatsapp?: boolean }) => {
   return (
     <section 
       className="relative w-full flex md:items-center bg-primary-beige overflow-hidden mt-[80px] md:min-h-[calc(100svh-80px)]"
@@ -60,7 +60,7 @@ export const Hero = () => {
               onClick={() => window.openQualificationModal?.()}
               className="bg-primary-green hover:bg-secondary-green transition-colors text-primary-white px-8 py-4 rounded-full text-base font-medium shadow-sm w-full sm:w-auto"
             >
-              Entender qual avaliação faz sentido
+              {directToWhatsapp ? 'Falar com a equipe pelo WhatsApp' : 'Entender qual avaliação faz sentido'}
             </button>
             <a 
               href="#como-funciona"

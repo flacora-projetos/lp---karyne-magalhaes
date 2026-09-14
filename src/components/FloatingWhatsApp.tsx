@@ -1,9 +1,9 @@
-export const FloatingWhatsApp = () => {
+export const FloatingWhatsApp = ({ directToWhatsapp = false }: { directToWhatsapp?: boolean }) => {
   return (
     <button
       onClick={() => window.openQualificationModal?.()}
       className="fixed bottom-6 right-6 md:bottom-8 md:right-8 z-40 bg-[#25D366] hover:bg-[#22bf5b] text-white p-3.5 md:p-4 rounded-full shadow-[0_4px_14px_rgba(37,211,102,0.4)] transition-all hover:scale-105 active:scale-95 group focus:outline-none focus:ring-4 focus:ring-[#25D366]/30"
-      aria-label="Abrir opções de contato via WhatsApp"
+      aria-label={directToWhatsapp ? 'Falar com a equipe pelo WhatsApp' : 'Abrir opções de contato via WhatsApp'}
     >
       <svg 
         xmlns="http://www.w3.org/2000/svg" 
