@@ -1,0 +1,143 @@
+{
+  "id": "draft-pauta-5-avaliacao",
+  "sourceId": "wp-1546+wp-1525",
+  "version": 2,
+  "slug": "como-funciona-avaliacao-especializada-mau-halito",
+  "title": "Como funciona uma avaliação especializada de mau hálito: etapas, exames e preparação",
+  "description": "Veja as etapas de uma investigação estruturada da halitose, o papel dos exames e por que o preparo deve seguir as orientações da equipe.",
+  "status": "approved",
+  "body": [
+    {
+      "type": "p",
+      "text": "Uma consulta para investigar mau hálito não deveria começar por um aparelho nem terminar em um diagnóstico automático. A lógica é juntar história, exame clínico e medições úteis para entender quais hipóteses fazem sentido naquele caso."
+    },
+    {
+      "type": "p",
+      "text": "Diretrizes e pesquisas recentes sobre diagnóstico de halitose convergem em um ponto básico: uma história clínica detalhada e a avaliação do odor do hálito são partes centrais do processo. Outros exames podem complementar a investigação conforme o quadro e o protocolo do serviço."
+    },
+    {
+      "type": "h2",
+      "text": "1. A consulta começa antes dos exames"
+    },
+    {
+      "type": "p",
+      "text": "A anamnese organiza informações como início da queixa, frequência, situações em que piora ou melhora, percepção de outras pessoas, higiene oral, doenças conhecidas, medicamentos e sintomas associados. Esse contexto ajuda a evitar interpretações isoladas de um único teste."
+    },
+    {
+      "type": "p",
+      "text": "Também é importante conversar sobre como a queixa afeta a rotina. A percepção do próprio hálito pode ser imprecisa, e existe uma diferença entre odor objetivamente detectável e preocupação persistente sem confirmação clínica. Essa distinção precisa ser tratada com cuidado, sem desqualificar o relato do paciente."
+    },
+    {
+      "type": "h2",
+      "text": "2. Exame da boca e das possíveis fontes locais"
+    },
+    {
+      "type": "p",
+      "text": "A avaliação odontológica pode observar língua, gengiva, dentes, restaurações, próteses, higiene e sinais de inflamação ou infecção. Como muitas causas de halitose estão na própria cavidade oral, essa etapa costuma ter papel importante na investigação."
+    },
+    {
+      "type": "p",
+      "text": "Se os achados não explicarem a queixa ou se houver sinais de outra origem, pode ser necessário encaminhamento para outra especialidade. A avaliação de halitose não substitui investigação médica quando existem indícios de problema fora da boca."
+    },
+    {
+      "type": "h2",
+      "text": "3. Avaliação da saliva quando houver indicação"
+    },
+    {
+      "type": "p",
+      "text": "Sintomas de boca seca, uso de certos medicamentos e outros fatores podem justificar uma avaliação mais detalhada da saliva. A sialometria mede o fluxo salivar e oferece uma informação objetiva que deve ser interpretada junto com os sintomas e o exame."
+    },
+    {
+      "type": "p",
+      "text": "Ela não funciona como um teste isolado de 'tem ou não tem mau hálito'. Seu papel é responder perguntas específicas sobre produção salivar e ajudar a compor o quadro clínico."
+    },
+    {
+      "type": "h2",
+      "text": "4. Avaliação do odor e medição de compostos do hálito"
+    },
+    {
+      "type": "p",
+      "text": "Serviços especializados podem combinar avaliação do odor com métodos instrumentais. Equipamentos que medem compostos voláteis fornecem dados objetivos sobre determinados gases, mas nenhum número deve ser interpretado sem o restante da avaliação."
+    },
+    {
+      "type": "p",
+      "text": "O uso de OralChroma aparece na oferta atual da Dra. Karyne. O equipamento fornece informações complementares e não define sozinho a causa da halitose."
+    },
+    {
+      "type": "h2",
+      "text": "5. Integração dos achados e próximos passos"
+    },
+    {
+      "type": "p",
+      "text": "Ao final, o valor da avaliação está em relacionar história, exame e medições. O próximo passo pode envolver orientação de higiene, tratamento odontológico, investigação de saliva, acompanhamento ou encaminhamento para outra área. A conduta depende do que foi realmente encontrado."
+    },
+    {
+      "type": "h2",
+      "text": "E o preparo para a consulta?"
+    },
+    {
+      "type": "p",
+      "text": "Medições de hálito e saliva podem exigir orientações prévias para reduzir interferências. Essas regras variam conforme o protocolo utilizado. Ao agendar, solicite à equipe as instruções de preparo e informe os medicamentos que usa, inclusive antibióticos recentes. Não suspenda medicamentos por conta própria."
+    },
+    {
+      "type": "h2",
+      "text": "O que esperar de uma avaliação bem explicada"
+    },
+    {
+      "type": "ul",
+      "items": [
+        "entender o que cada etapa procura responder",
+        "saber quais achados foram objetivos e quais dependem de relato clínico",
+        "receber explicação dos limites de cada exame",
+        "saber quando outro profissional precisa participar",
+        "ter próximos passos coerentes com a causa ou hipótese identificada"
+      ]
+    },
+    {
+      "type": "p",
+      "text": "A função de uma avaliação estruturada é reduzir incerteza. Ela não deve prometer cura automática, nem transformar um aparelho em resposta universal."
+    }
+  ],
+  "ctaLabel": "Conhecer a avaliação inicial",
+  "internalLinks": [
+    {
+      "label": "qual profissional procurar",
+      "slug": "mau-halito-persistente-qual-profissional-procurar"
+    },
+    {
+      "label": "saliva, boca seca e sialometria",
+      "slug": "saliva-mau-halito-boca-seca-avaliacao"
+    },
+    {
+      "label": "página principal da consulta",
+      "url": "/"
+    }
+  ],
+  "references": [
+    {
+      "title": "Clinical Practice Guidelines on the Diagnosis and Treatment of Halitosis (2026)",
+      "url": "https://pubmed.ncbi.nlm.nih.gov/41678945/"
+    },
+    {
+      "title": "Current methods for halitosis diagnosis and the impact of COVID-19 pandemic: an international survey",
+      "url": "https://pubmed.ncbi.nlm.nih.gov/39774073/"
+    },
+    {
+      "title": "Halitosis management by the general dental practitioner - results of an international consensus workshop",
+      "url": "https://pubmed.ncbi.nlm.nih.gov/24566222/"
+    },
+    {
+      "title": "Dry Mouth - National Institute of Dental and Craniofacial Research",
+      "url": "https://www.nidcr.nih.gov/health-info/dry-mouth"
+    }
+  ],
+  "author": "Dra. Karyne Magalhães",
+  "datePublished": "2026-10-08T23:48:50.465Z",
+  "dateModified": "2026-10-08T23:48:50.465Z",
+  "approval": {
+    "version": 2,
+    "editorial": true,
+    "clinical": true,
+    "contentHash": "1bc8c791b9342e679faadcf5a72b1b7aaa0755072806515d1bcc2503f1bb7b3c"
+  }
+}

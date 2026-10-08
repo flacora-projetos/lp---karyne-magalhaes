@@ -1,0 +1,124 @@
+{
+  "id": "draft-pauta-2-saliva",
+  "sourceId": "wp-1498",
+  "version": 2,
+  "slug": "saliva-mau-halito-boca-seca-avaliacao",
+  "title": "Saliva e mau hálito: boca seca, fluxo salivar e o que pode ser avaliado",
+  "description": "Boca seca e baixa produção de saliva não são exatamente a mesma coisa. Veja como a saliva participa da saúde bucal e por que sintomas persistentes merecem avaliação.",
+  "status": "approved",
+  "body": [
+    {
+      "type": "p",
+      "text": "A saliva faz muito mais do que manter a boca úmida. Ela participa da mastigação e da deglutição, ajuda a remover resíduos, protege dentes e tecidos da boca e contribui para o equilíbrio do ambiente oral. Quando a pessoa sente a boca seca ou produz pouca saliva, esse equilíbrio pode mudar."
+    },
+    {
+      "type": "p",
+      "text": "Mau hálito pode aparecer junto com boca seca, mas isso não significa que toda halitose seja causada pela saliva. A relação precisa ser analisada dentro do conjunto de achados da boca, dos hábitos, dos medicamentos e da saúde geral."
+    },
+    {
+      "type": "h2",
+      "text": "Boca seca e pouca saliva são a mesma coisa?"
+    },
+    {
+      "type": "p",
+      "text": "Não necessariamente. Xerostomia é o termo usado para a sensação de boca seca. Hipossalivação descreve uma redução objetiva da produção de saliva medida por um teste. Uma pessoa pode relatar secura sem apresentar fluxo muito reduzido no momento do exame, e o contrário também pode ocorrer."
+    },
+    {
+      "type": "p",
+      "text": "Por isso, perguntar apenas 'sua boca é seca?' não substitui avaliação clínica quando o sintoma é persistente. Dependendo do caso, o profissional pode revisar sintomas, medicamentos, condições de saúde e medir a quantidade de saliva produzida."
+    },
+    {
+      "type": "h2",
+      "text": "Por que a saliva importa para o hálito?"
+    },
+    {
+      "type": "p",
+      "text": "A saliva ajuda a limpar a boca, lubrificar tecidos e limitar o acúmulo de resíduos. Quando a boca permanece seca, pode haver mais desconforto, maior retenção de resíduos e maior risco de problemas como cárie e infecções orais. Instituições como o NIDCR e a ADA também incluem mau hálito entre os sintomas que podem acompanhar a boca seca."
+    },
+    {
+      "type": "p",
+      "text": "Isso é uma associação clínica, não um diagnóstico automático. Se existe halitose persistente, ainda é necessário avaliar outras fontes possíveis, como língua, gengiva, dentes, próteses, hábitos e fatores extraorais quando houver indicação."
+    },
+    {
+      "type": "h2",
+      "text": "O que pode reduzir a saliva ou aumentar a sensação de secura"
+    },
+    {
+      "type": "ul",
+      "items": [
+        "alguns medicamentos",
+        "algumas doenças sistêmicas e autoimunes",
+        "tratamentos oncológicos que envolvem cabeça e pescoço",
+        "desidratação e situações transitórias",
+        "tabaco, álcool e outros fatores de estilo de vida",
+        "alterações de glândulas salivares ou de sua inervação"
+      ]
+    },
+    {
+      "type": "p",
+      "text": "A lista é ampla. Não é seguro interromper medicamento por conta própria porque ele parece estar relacionado à boca seca. Quando existe suspeita, o profissional que prescreveu a medicação pode avaliar riscos, alternativas e ajustes."
+    },
+    {
+      "type": "h2",
+      "text": "O que é sialometria"
+    },
+    {
+      "type": "p",
+      "text": "Sialometria é a medição do fluxo salivar. O teste pode ser feito em condições diferentes, como fluxo não estimulado ou estimulado, conforme o protocolo utilizado. O resultado ajuda a transformar uma sensação subjetiva em uma informação objetiva que pode ser interpretada junto com o restante da avaliação."
+    },
+    {
+      "type": "p",
+      "text": "A sialometria não determina sozinha a causa do mau hálito e não substitui exame da boca ou história clínica. Ela responde a uma pergunta específica: quanto de saliva está sendo produzido nas condições do teste."
+    },
+    {
+      "type": "h2",
+      "text": "O que fazer enquanto a causa não está esclarecida"
+    },
+    {
+      "type": "p",
+      "text": "Medidas gerais como hidratação adequada e higiene bucal cuidadosa costumam ser orientações de baixo risco para muitas pessoas. O NIDCR também cita opções como goma sem açúcar em situações apropriadas. Ainda assim, sintomas persistentes merecem investigação porque a melhor conduta depende da causa da secura e das condições de cada pessoa."
+    },
+    {
+      "type": "p",
+      "text": "No atendimento da Dra. Karyne, a avaliação salivar aparece entre os recursos da consulta. As orientações de preparo e a interpretação dos resultados são explicadas pela equipe conforme a avaliação indicada."
+    }
+  ],
+  "ctaLabel": "Entender como a saliva é avaliada",
+  "internalLinks": [
+    {
+      "label": "qual profissional procurar para mau hálito persistente",
+      "slug": "mau-halito-persistente-qual-profissional-procurar"
+    },
+    {
+      "label": "como funciona a avaliação especializada",
+      "slug": "como-funciona-avaliacao-especializada-mau-halito"
+    },
+    {
+      "label": "página principal da consulta",
+      "url": "/"
+    }
+  ],
+  "references": [
+    {
+      "title": "Dry Mouth - National Institute of Dental and Craniofacial Research (NIDCR)",
+      "url": "https://www.nidcr.nih.gov/health-info/dry-mouth"
+    },
+    {
+      "title": "Xerostomia (Dry Mouth) - American Dental Association",
+      "url": "https://www.ada.org/resources/ada-library/oral-health-topics/xerostomia"
+    },
+    {
+      "title": "Xerostomia, reduced salivary flow, and oral burning: Associations from a cross-sectional study",
+      "url": "https://pubmed.ncbi.nlm.nih.gov/37316427/"
+    }
+  ],
+  "author": "Dra. Karyne Magalhães",
+  "datePublished": "2026-10-08T23:48:50.465Z",
+  "dateModified": "2026-10-08T23:48:50.465Z",
+  "approval": {
+    "version": 2,
+    "editorial": true,
+    "clinical": true,
+    "contentHash": "0e7619a3bce9e91a433d84215a9900ed9ad273d8a03ffa0b7ec900b88ef31e8a"
+  }
+}

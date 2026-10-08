@@ -1,0 +1,122 @@
+{
+  "id": "draft-pauta-1-profissional-procurar",
+  "sourceId": "wp-1362+wp-1525",
+  "version": 2,
+  "slug": "mau-halito-persistente-qual-profissional-procurar",
+  "title": "Mau hálito persistente: qual profissional procurar e o que precisa ser investigado?",
+  "description": "Entenda por que a avaliação odontológica costuma ser um bom ponto de partida para o mau hálito persistente e quando outros profissionais podem participar da investigação.",
+  "status": "approved",
+  "body": [
+    {
+      "type": "p",
+      "text": "Quando o mau hálito aparece só em situações pontuais, como ao acordar ou depois de muitas horas sem comer, a causa pode ser transitória. Quando o problema é persistente, recorrente ou interfere na convivência, vale investigar em vez de tentar apenas mascarar o odor com balas, enxaguantes ou soluções caseiras."
+    },
+    {
+      "type": "p",
+      "text": "A pergunta 'qual profissional devo procurar?' não tem uma resposta idêntica para todas as pessoas. A literatura clínica recente trata a halitose como um problema de causas variadas e recomenda uma avaliação estruturada antes de definir tratamento. Como grande parte dos casos está relacionada à cavidade oral, a avaliação odontológica costuma ser um ponto de partida razoável."
+    },
+    {
+      "type": "h2",
+      "text": "Por que começar pela avaliação odontológica?"
+    },
+    {
+      "type": "p",
+      "text": "O dentista pode examinar dentes, gengiva, língua, saliva, higiene oral, próteses e outros fatores locais que podem contribuir para o odor. Também pode revisar hábitos, medicamentos e sinais que indiquem necessidade de avaliação por outra área."
+    },
+    {
+      "type": "p",
+      "text": "Isso não significa que todo mau hálito tenha origem na boca, nem que um único exame consiga explicar todos os casos. O objetivo da consulta inicial é organizar as hipóteses e evitar uma sequência de tentativas sem diagnóstico."
+    },
+    {
+      "type": "h2",
+      "text": "Dentista, médico ou especialista em halitose?"
+    },
+    {
+      "type": "p",
+      "text": "Se não existe um diagnóstico prévio que explique o problema, uma avaliação odontológica com experiência em halitose pode reunir informações importantes logo no início. Quando a história ou o exame sugerem participação de vias aéreas, alterações sistêmicas, medicamentos ou outras condições, pode ser necessário encaminhamento para profissionais como otorrinolaringologista, clínico ou médico responsável pelo problema de base."
+    },
+    {
+      "type": "p",
+      "text": "Encaminhar não significa que a avaliação odontológica falhou. Em problemas multifatoriais, reconhecer quando outra especialidade deve entrar faz parte de uma investigação cuidadosa."
+    },
+    {
+      "type": "h2",
+      "text": "O que uma boa avaliação precisa investigar"
+    },
+    {
+      "type": "ul",
+      "items": [
+        "quando o odor começou e em que situações aparece",
+        "percepção do próprio paciente e de pessoas próximas",
+        "saúde bucal, língua, gengiva, dentes e próteses",
+        "sensação de boca seca e sinais relacionados à saliva",
+        "uso de medicamentos e condições de saúde relevantes",
+        "hábitos que podem interferir no hálito",
+        "necessidade de medir o odor ou compostos presentes no hálito, quando indicado",
+        "sinais que justifiquem encaminhamento para outra área"
+      ]
+    },
+    {
+      "type": "p",
+      "text": "Uma pesquisa internacional recente com profissionais que atuam com halitose mostrou ampla concordância sobre dois pontos: história clínica detalhada e exame do odor do hálito são componentes centrais da investigação. A forma exata dos testes varia entre serviços, por isso o processo precisa ser explicado ao paciente sem transformar tecnologia em promessa de diagnóstico automático."
+    },
+    {
+      "type": "h2",
+      "text": "Quando procurar ajuda em vez de continuar testando soluções por conta própria"
+    },
+    {
+      "type": "p",
+      "text": "Se o mau hálito persiste apesar de higiene adequada, volta com frequência ou está afetando relações pessoais e profissionais, uma avaliação pode reduzir a incerteza e direcionar os próximos passos. Também é importante procurar atendimento quando existem outros sintomas relevantes, como dor, sangramento gengival persistente, feridas, dificuldade para engolir, alterações importantes de boca seca ou sintomas de garganta que não melhoram."
+    },
+    {
+      "type": "h2",
+      "text": "O objetivo é descobrir a causa, não apenas esconder o odor"
+    },
+    {
+      "type": "p",
+      "text": "Produtos que mudam o cheiro por algumas horas podem ser úteis em situações específicas, mas não substituem investigação quando a queixa é persistente. O tratamento depende da causa encontrada. Por isso, o ponto de partida mais seguro é entender o quadro antes de escolher a conduta."
+    },
+    {
+      "type": "p",
+      "text": "Na avaliação da Dra. Karyne, a proposta atual inclui investigação clínica do hálito e recursos complementares."
+    }
+  ],
+  "ctaLabel": "Conhecer a avaliação inicial",
+  "internalLinks": [
+    {
+      "label": "como funciona uma avaliação especializada",
+      "slug": "como-funciona-avaliacao-especializada-mau-halito"
+    },
+    {
+      "label": "papel da saliva na investigação",
+      "slug": "saliva-mau-halito-boca-seca-avaliacao"
+    },
+    {
+      "label": "página principal da consulta",
+      "url": "/"
+    }
+  ],
+  "references": [
+    {
+      "title": "Clinical Practice Guidelines on the Diagnosis and Treatment of Halitosis (2026)",
+      "url": "https://pubmed.ncbi.nlm.nih.gov/41678945/"
+    },
+    {
+      "title": "Current methods for halitosis diagnosis and the impact of COVID-19 pandemic: an international survey",
+      "url": "https://pubmed.ncbi.nlm.nih.gov/39774073/"
+    },
+    {
+      "title": "The Underestimated Problem of Intra-Oral Halitosis in Dental Practice: An Expert Consensus Review",
+      "url": "https://pubmed.ncbi.nlm.nih.gov/32753975/"
+    }
+  ],
+  "author": "Dra. Karyne Magalhães",
+  "datePublished": "2026-10-08T23:48:50.465Z",
+  "dateModified": "2026-10-08T23:48:50.465Z",
+  "approval": {
+    "version": 2,
+    "editorial": true,
+    "clinical": true,
+    "contentHash": "cbe6a4b74bae8daaa3f2a8f3ff59d3baf03d07e72924acdc8533ea56f258e702"
+  }
+}

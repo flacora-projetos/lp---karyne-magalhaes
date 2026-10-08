@@ -170,7 +170,9 @@ async function dispatchConsultaRealizada(lead: Record<string, unknown>): Promise
     const phone = typeof lead.whatsapp === 'string' ? lead.whatsapp : undefined;
     const city = typeof lead.cidade === 'string' ? lead.cidade : undefined;
     const state = typeof lead.estado === 'string' ? lead.estado : undefined;
-    const gclid = typeof lead.gclid === 'string' ? lead.gclid : undefined;
+    const gclid = typeof lead.gclid === 'string' && lead.gclid
+      ? lead.gclid
+      : typeof lead.google_match_gclid === 'string' ? lead.google_match_gclid : undefined;
     const fbclid = typeof lead.fbclid === 'string' ? lead.fbclid : undefined;
     const fbp = typeof lead.meta_fbp === 'string' ? lead.meta_fbp : undefined;
     const fbc = typeof lead.meta_fbc === 'string' ? lead.meta_fbc : undefined;

@@ -3,6 +3,8 @@ import { X, ArrowLeft, Check, ChevronDown, Star } from 'lucide-react';
 import { trackCustomEvent, generateEventId, getFbpCookie, getFbcCookie, sendMetaCapiEvent } from '../utils/metaPixel';
 import { sendGoogleEcEvent } from '../utils/googleAds';
 import { pushDataLayerEvent } from '../utils/gtm';
+import { getAttributionExtras } from '../utils/acquisition';
+import { sendLeadToCrm } from '../utils/crmLead';
 
 interface QualificationModalProps {
   isOpen: boolean;
@@ -30,50 +32,43 @@ interface LeadData {
 }
 
 const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbypbOG2r2Zka810XL8er9zUUSGHjsscOQw_db95uh9azXYh7adlTNhAn1_u0VxzLn4/exec";
-
-/**
- * Envia o MESMO payload da planilha, em paralelo, para o mini CRM (Postgres via
- * /api/leads). Fire-and-forget e totalmente isolado: qualquer erro aqui é
- * silencioso e NÃO afeta o envio para o Apps Script/planilha nem o fluxo da LP.
- */
-const sendLeadToCrm = (payload: Record<string, unknown>) => {
-  try {
-    fetch("/api/leads", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-      keepalive: true,
-    }).catch(() => {});
-  } catch {
-    /* noop */
-  }
-};
+const isLocalPreview = () => ['127.0.0.1', 'localhost'].includes(window.location.hostname);
 
 const TOTAL_STEPS = 7;
 
-const getTrackingData = () => {
+export const getTrackingData = () => {
   const params = new URLSearchParams(window.location.search);
-  const keys = ['utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'utm_term', 'fbclid', 'gclid'];
-  
-  keys.forEach(key => {
-    if (params.has(key)) {
-      sessionStorage.setItem(key, params.get(key) || '');
+  const attribution = getAttributionExtras() as Record<string, unknown>;
+  const hasCurrentAcquisition = attribution.currentAcquisitionAvailable === true;
+  const currentValue = (queryKey: string, attributionKey: string) => {
+    if (params.has(queryKey)) {
+      const value = params.get(queryKey) || '';
+      sessionStorage.setItem(queryKey, value);
+      return value;
     }
-  });
+    if (hasCurrentAcquisition) {
+      const attributed = typeof attribution[attributionKey] === 'string' ? String(attribution[attributionKey]) : '';
+      if (attributed) sessionStorage.setItem(queryKey, attributed);
+      else sessionStorage.removeItem(queryKey);
+      return attributed;
+    }
+    return sessionStorage.getItem(queryKey) || '';
+  };
 
   return {
-    utmSource: sessionStorage.getItem('utm_source') || '',
-    utmMedium: sessionStorage.getItem('utm_medium') || '',
-    utmCampaign: sessionStorage.getItem('utm_campaign') || '',
-    utmContent: sessionStorage.getItem('utm_content') || '',
-    utmTerm: sessionStorage.getItem('utm_term') || '',
-    fbclid: sessionStorage.getItem('fbclid') || '',
-    gclid: sessionStorage.getItem('gclid') || '',
+    utmSource: currentValue('utm_source', 'currentUtmSource'),
+    utmMedium: currentValue('utm_medium', 'currentUtmMedium'),
+    utmCampaign: currentValue('utm_campaign', 'currentUtmCampaign'),
+    utmContent: currentValue('utm_content', 'currentUtmContent'),
+    utmTerm: currentValue('utm_term', 'currentUtmTerm'),
+    fbclid: currentValue('fbclid', 'currentFbclid'),
+    gclid: currentValue('gclid', 'currentGclid'),
     pageUrl: window.location.href,
-    referrer: document.referrer,
+    referrer: (attribution.currentReferrer as string) || document.referrer,
     userAgent: navigator.userAgent,
     metaFbp: getFbpCookie() || '',
-    metaFbc: getFbcCookie() || ''
+    metaFbc: getFbcCookie() || '',
+    ...attribution
   };
 };
 
@@ -132,12 +127,14 @@ export const QualificationModal: React.FC<QualificationModalProps> = ({ isOpen, 
           eventIdContact: eventIds.current.eventIdContact,
           ...getTrackingData()
         };
-        fetch(GOOGLE_SCRIPT_URL, {
+        if (!isLocalPreview()) fetch(GOOGLE_SCRIPT_URL, {
           method: "POST", mode: "no-cors",
           headers: { "Content-Type": "text/plain;charset=utf-8" },
           body: JSON.stringify(payload)
         }).catch(e => console.error(e));
-        sendLeadToCrm(payload);
+        void sendLeadToCrm(payload).then((result) => {
+          if (!result.success) console.warn('[CRM] persistência não confirmada:', result.error);
+        });
       }
     }
     
@@ -185,7 +182,7 @@ export const QualificationModal: React.FC<QualificationModalProps> = ({ isOpen, 
 
     console.log("Enviando lead para Sheets:", payload);
 
-    fetch(GOOGLE_SCRIPT_URL, {
+    if (!isLocalPreview()) fetch(GOOGLE_SCRIPT_URL, {
       method: "POST",
       mode: "no-cors",
       headers: {
@@ -197,7 +194,9 @@ export const QualificationModal: React.FC<QualificationModalProps> = ({ isOpen, 
     .catch(e => console.error("Error sending lead to sheets:", e));
 
     // Espelha o mesmo payload no mini CRM (Postgres), sem afetar o envio acima.
-    sendLeadToCrm(payload);
+    void sendLeadToCrm(payload).then((result) => {
+      if (!result.success) console.warn('[CRM] persistência não confirmada:', result.error);
+    });
   };
 
   const nextStep = () => {
@@ -304,7 +303,7 @@ ${linhas}
 Gostaria de receber orientação e verificar os horários disponíveis para a consulta com a Dra. Karyne Magalhães.`;
 
     const encodedText = encodeURIComponent(text);
-    window.open(`https://wa.me/${phone}?text=${encodedText}`, '_blank');
+    if (!isLocalPreview()) window.open(`https://wa.me/${phone}?text=${encodedText}`, '_blank');
   };
 
   const isStep1Valid = !!data.whatsapp;

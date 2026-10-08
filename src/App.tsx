@@ -24,6 +24,7 @@ import { QualificationModal } from './components/QualificationModal';
 import { PrivacyPolicy } from './components/PrivacyPolicy';
 import { preserveFbclid } from './utils/metaPixel';
 import { createGadsDirectHandler } from './utils/gadsDirect';
+import { captureFirstAcquisition } from './utils/acquisition';
 
 // Painel administrativo (mini CRM) — carregado sob demanda, fora do bundle da LP.
 const AdminApp = lazy(() => import('./admin/AdminApp'));
@@ -42,6 +43,7 @@ export default function App() {
 
   useEffect(() => {
     preserveFbclid();
+    captureFirstAcquisition();
     const openGadsWhatsApp = createGadsDirectHandler();
     
     window.openQualificationModal = () => {
@@ -52,6 +54,12 @@ export default function App() {
       }
       setIsModalOpen(true);
     };
+
+    // CTA editorial volta ao funil já existente. Nenhum segundo formulário é criado.
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('blog_cta') === '1' && window.location.pathname === '/') {
+      setIsModalOpen(true);
+    }
 
     const handleLocationChange = () => {
       setCurrentPath(window.location.pathname);

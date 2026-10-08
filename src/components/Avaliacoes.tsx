@@ -29,11 +29,8 @@ export const Avaliacoes = () => {
           <p className="text-secondary-green text-lg mb-4">
             Avaliações públicas deixadas por pacientes no Google.
           </p>
-          <div className="flex items-center justify-center gap-1 text-sm text-soft-green">
-            <div className="flex text-accent-earthy">
-              {[1, 2, 3, 4, 5].map(idx => <Star key={idx} size={16} fill="currentColor" />)}
-            </div>
-            <span className="font-medium ml-1">5,0 no Google • 250 avaliações</span>
+          <div className="text-sm text-soft-green">
+            <span className="font-medium">Avaliações públicas no Google</span>
           </div>
         </div>
         
