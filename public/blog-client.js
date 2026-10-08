@@ -94,13 +94,30 @@
     window.gtag('event','page_view',event);
   }
 
-  document.querySelectorAll('a.cta').forEach((el) => el.addEventListener('click',() => {
+  document.querySelectorAll('a.cta').forEach((el) => el.addEventListener('click',(event) => {
     try {
       const latest = parse(sessionStorage.getItem(EDITORIAL_SESSION)) || editorial || {};
       const withCta = {...latest,ctaId:'avaliacao_inicial',ctaDestination:'home_filter'};
       sessionStorage.setItem(EDITORIAL_SESSION,JSON.stringify(withCta));
       persist(EDITORIAL_PERSISTED,'context',withCta);
     } catch {}
-    if (!preview && typeof window.gtag === 'function') window.gtag('event','blog_cta_click',{article_id:articleId,article_slug:slug,cta_id:'avaliacao_inicial',cta_destination:'home_filter'});
+    if (!preview && typeof window.gtag === 'function') {
+      const params = {send_to:'G-3783BP5DSB',article_id:articleId,article_slug:slug,cta_id:'avaliacao_inicial',cta_destination:'home_filter'};
+      const destination = el.getAttribute?.('href');
+      if (destination && event?.button === 0 && !event.metaKey && !event.ctrlKey && !event.shiftKey && !event.altKey) {
+        event.preventDefault();
+        let navigated = false;
+        const navigate = () => {
+          if (navigated) return;
+          navigated = true;
+          window.location.assign(destination);
+        };
+        // A navegação imediata podia cancelar o envio do clique editorial.
+        window.gtag('event','blog_cta_click',{...params,event_callback:navigate,event_timeout:500});
+        setTimeout(navigate,600);
+      } else {
+        window.gtag('event','blog_cta_click',params);
+      }
+    }
   }));
 })();

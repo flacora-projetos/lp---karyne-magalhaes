@@ -47,6 +47,9 @@ export const Footer = () => {
           </div>
           
           <div className="flex gap-6">
+            <a href="/blog/" className="text-primary-beige/80 hover:text-primary-white transition-colors text-sm">
+              Artigos sobre mau hálito
+            </a>
             <a href="/politica-de-privacidade" className="text-primary-beige/80 hover:text-primary-white transition-colors text-sm">
               Política de Privacidade
             </a>

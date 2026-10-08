@@ -40,11 +40,13 @@ function setBrowser({search='',href='https://tratamentodomauhalito.com.br/',refe
 }
 
 const blogClientSource = fs.readFileSync('public/blog-client.js','utf8');
-function runBlogClient({slug='',pageType='article',search='',referrer='',preview='1',local=new MemoryStorage(),session=new MemoryStorage()}={}) {
+function runBlogClient({slug='',pageType='article',search='',referrer='',preview='1',ctaHref='',local=new MemoryStorage(),session=new MemoryStorage()}={}) {
   const listeners = new Map<string,()=>void>();
-  const cta = {addEventListener:(name:string, fn:()=>void) => listeners.set(name,fn)};
+  const cta = {getAttribute:()=>ctaHref,addEventListener:(name:string, fn:()=>void) => listeners.set(name,fn)};
   const href = `https://tratamentodomauhalito.com.br/${pageType === 'index' ? 'blog/' : `blog/${slug}/`}${search}`;
-  const location = {href,search,hostname:'tratamentodomauhalito.com.br'};
+  const navigations:string[] = [];
+  const timers:Array<()=>void> = [];
+  const location = {href,search,hostname:'tratamentodomauhalito.com.br',assign:(url:string)=>navigations.push(url)};
   const gtagCalls:any[] = [];
   const document = {
     referrer,
@@ -53,9 +55,26 @@ function runBlogClient({slug='',pageType='article',search='',referrer='',preview
     querySelectorAll:() => pageType === 'article' ? [cta] : [],
   };
   const window = {location,gtag:(...args:any[]) => gtagCalls.push(args)};
-  vm.runInNewContext(blogClientSource,{document,window,location,sessionStorage:session,localStorage:local,URLSearchParams,URL,Date});
-  return {local,session,gtagCalls,click:()=>listeners.get('click')?.()};
+  vm.runInNewContext(blogClientSource,{document,window,location,sessionStorage:session,localStorage:local,URLSearchParams,URL,Date,setTimeout:(fn:()=>void)=>timers.push(fn)});
+  return {local,session,gtagCalls,navigations,timers,click:(event?:unknown)=>(listeners.get('click') as any)?.(event)};
 }
+
+test('CTA aguarda envio e navega uma vez, com limite mesmo sem resposta da tag', () => {
+  const result = runBlogClient({slug:'artigo-a',preview:'0',ctaHref:'/?blog_cta=1'});
+  let prevented=false;
+  result.click({button:0,preventDefault:()=>{prevented=true;}});
+  assert.equal(prevented,true);
+  assert.equal(result.navigations.length,0);
+  const ctaEvent=result.gtagCalls.find(args=>args[1]==='blog_cta_click');
+  assert.equal(ctaEvent?.[2].send_to,'G-3783BP5DSB');
+  ctaEvent?.[2].event_callback();
+  result.timers[0]();
+  assert.deepEqual(result.navigations,['/?blog_cta=1']);
+  const withoutCallback=runBlogClient({slug:'artigo-a',preview:'0',ctaHref:'/?blog_cta=1'});
+  withoutCallback.click({button:0,preventDefault:()=>{}});
+  withoutCallback.timers[0]();
+  assert.deepEqual(withoutCallback.navigations,['/?blog_cta=1']);
+});
 
 test('produção exige revisão exata, hash do conteúdo, autoria e data', () => {
   const base = approvedArticle();
