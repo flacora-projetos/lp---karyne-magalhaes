@@ -5,10 +5,14 @@
   "type": "module",
   "scripts": {
     "dev": "vite --port=3000 --host=0.0.0.0",
-    "build": "vite build",
+    "build": "vite build && node scripts/blog/generate.mjs && tsx scripts/seo/postbuild.tsx",
+    "blog:preview:build": "vite build && node scripts/blog/generate.mjs --preview --fixture && tsx scripts/seo/postbuild.tsx",
+    "blog:preview": "node scripts/blog/preview-server.mjs",
     "preview": "vite preview",
     "clean": "rm -rf dist server.js",
-    "lint": "tsc --noEmit"
+    "lint": "tsc --noEmit",
+    "test:blog": "tsx --test scripts/blog/*.test.ts",
+    "verify:build": "node scripts/blog/verify-build.mjs"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",

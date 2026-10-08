@@ -7,9 +7,11 @@ import {
   trackCustomEvent,
 } from './metaPixel';
 import { sendGoogleEcEvent } from './googleAds';
+import { getAttributionExtras } from './acquisition';
 
 const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbypbOG2r2Zka810XL8er9zUUSGHjsscOQw_db95uh9azXYh7adlTNhAn1_u0VxzLn4/exec';
 const WHATSAPP_NUMBER = '5562999320675';
+const isLocalPreview = () => ['127.0.0.1', 'localhost'].includes(window.location.hostname);
 
 type DirectFlowState = {
   leadId: string;
@@ -42,6 +44,7 @@ const trackingData = () => {
     userAgent: navigator.userAgent,
     metaFbp: getFbpCookie() || '',
     metaFbc: getFbcCookie() || '',
+    ...getAttributionExtras(),
   };
 };
 
@@ -53,7 +56,7 @@ const recordLead = (payload: Record<string, unknown>) => {
     keepalive: true,
   }).catch(() => {});
 
-  fetch(GOOGLE_SCRIPT_URL, {
+  if (!isLocalPreview()) fetch(GOOGLE_SCRIPT_URL, {
     method: 'POST',
     mode: 'no-cors',
     headers: { 'Content-Type': 'text/plain;charset=utf-8' },
@@ -113,6 +116,6 @@ export const createGadsDirectHandler = () => {
     const text = encodeURIComponent(
       'Olá! Vim pelo Google e gostaria de receber orientação e verificar os horários disponíveis para a consulta com a Dra. Karyne Magalhães.',
     );
-    window.open(`https://wa.me/${WHATSAPP_NUMBER}?text=${text}`, '_blank');
+    if (!isLocalPreview()) window.open(`https://wa.me/${WHATSAPP_NUMBER}?text=${text}`, '_blank');
   };
 };

@@ -1,0 +1,18 @@
+{
+  "id": "fixture-tecnico-001",
+  "sourceId": "fixture",
+  "version": 1,
+  "slug": "exemplo-tecnico-blog",
+  "title": "Exemplo técnico do blog: página de validação",
+  "description": "Conteúdo fictício e neutro criado somente para validar geração, navegação, metadados e segurança do piloto.",
+  "status": "fixture",
+  "body": [
+    {"type":"p","text":"Este texto não contém orientação clínica e não representa conteúdo da Dra. Karyne. Ele existe apenas para provar que um artigo completo chega no HTML inicial."},
+    {"type":"h2","text":"O que esta página valida"},
+    {"type":"ul","items":["HTML completo sem JavaScript","URL e canonical próprios","navegação e CTA usando o fluxo existente","sanitização por renderização de texto escapado"]},
+    {"type":"h2","text":"Conteúdo deliberadamente neutro"},
+    {"type":"p","text":"Se este parágrafo aparecer no código-fonte da resposta local, o requisito técnico foi atendido sem depender de hidratação React."}
+  ],
+  "ctaLabel": "Testar fluxo de avaliação",
+  "reviewPending": ["fixture técnica; nunca publicar"]
+}
