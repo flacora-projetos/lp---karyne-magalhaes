@@ -18,6 +18,6 @@
     {"source": "/politica-de-privacidade", "destination": "/politica-de-privacidade/index.html"},
     {"source": "/blog/", "destination": "/blog/index.html"},
     {"source": "/blog/:slug/", "destination": "/blog/:slug/index.html"},
-    {"source": "/(.*)", "destination": "/index.html"}
+    {"source": "/((?!blog(?:/|$)).*)", "destination": "/index.html"}
   ]
 }
