@@ -1,6 +1,6 @@
 export const CTAFinal = ({ directToWhatsapp = false }: { directToWhatsapp?: boolean }) => {
   return (
-    <section className="relative w-full py-20 md:py-24 bg-primary-green flex items-center overflow-hidden">
+    <section data-ga-section="cta_final" className="relative w-full py-20 md:py-24 bg-primary-green flex items-center overflow-hidden">
       <div className="absolute inset-0 z-0 bg-primary-green">
         <div className="absolute inset-0 md:left-auto md:right-0 md:w-[62%] lg:w-[58%] xl:w-[55%] h-full">
           {/* Mobile original styling preserved */}
@@ -33,7 +33,7 @@ export const CTAFinal = ({ directToWhatsapp = false }: { directToWhatsapp?: bool
         </p>
         
         <button 
-          onClick={() => window.openQualificationModal?.()}
+          onClick={() => window.openQualificationModal?.('cta_final')}
           className="bg-primary-beige text-primary-brown hover:bg-white px-10 py-5 rounded-full text-lg font-medium transition-colors shadow-lg shadow-black/20"
         >
           {directToWhatsapp ? 'Continuar pelo WhatsApp' : 'Começar avaliação inicial'}

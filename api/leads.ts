@@ -5,6 +5,7 @@ import { mapPayloadToRow, type SheetsPayload } from '../lib/mapLead.js';
 import { requireAuth } from '../lib/requireAuth.js';
 import { resolveMetaFbc, sendMetaEvent } from '../lib/metaCapi.js';
 import { sendGoogleEcEvent } from '../lib/googleEc.js';
+import { sendGa4ServerEvent } from '../lib/ga4MeasurementProtocol.js';
 
 /**
  * /api/leads
@@ -183,6 +184,7 @@ async function dispatchConsultaRealizada(lead: Record<string, unknown>): Promise
     const createdAtMs = typeof lead.criado_em === 'string' ? Date.parse(lead.criado_em) : NaN;
 
     const conversionActionId = process.env.GOOGLE_ADS_CONVERSION_ACTION_ID_QUALIFICADO;
+    const valorFechado = Number(lead.valor_fechado);
 
     const results = await Promise.allSettled([
       sendMetaEvent({
@@ -207,6 +209,24 @@ async function dispatchConsultaRealizada(lead: Record<string, unknown>): Promise
       conversionActionId
         ? sendGoogleEcEvent({ conversionActionId, eventId, email, phone, gclid })
         : Promise.resolve({ success: false, error: 'GOOGLE_ADS_CONVERSION_ACTION_ID_QUALIFICADO ausente' }),
+      // Evento recomendado do Google para "lead virou cliente"; já é evento principal no GA4.
+      sendGa4ServerEvent({
+        eventName: 'close_convert_lead',
+        clientId: typeof lead.ga_client_id === 'string' ? lead.ga_client_id : null,
+        sessionId: typeof lead.ga_session_id === 'string' ? lead.ga_session_id : null,
+        fallbackId: externalId || eventId,
+        params: {
+          lead_status: 'consulta_realizada',
+          currency: 'BRL',
+          value: Number.isFinite(valorFechado) && valorFechado > 0 ? valorFechado : undefined,
+          lead_source: typeof lead.origem === 'string' ? lead.origem : undefined,
+        },
+      }).then(async (result) => {
+        if (result.success && externalId) {
+          await getSupabaseAdmin().from('leads').update({ ga_conversao_enviada_em: new Date().toISOString() }).eq('lead_id', externalId);
+        }
+        return result;
+      }),
     ]);
 
     for (const r of results) {

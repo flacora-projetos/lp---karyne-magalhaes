@@ -1,6 +1,6 @@
 export const Localizacao = () => {
   return (
-    <section id="localizacao" className="py-16 md:py-20 lg:py-24 bg-primary-white">
+    <section data-ga-section="localizacao" id="localizacao" className="py-16 md:py-20 lg:py-24 bg-primary-white">
       <div className="max-w-7xl mx-auto px-6 grid md:grid-cols-2 gap-16 items-center">
         
         <div className="flex flex-col">
@@ -21,6 +21,7 @@ export const Localizacao = () => {
 
           <div>
             <button 
+              data-ga-event="clique_mapa" data-ga-local="localizacao"
               onClick={() => window.open('https://www.google.com/maps/search/?api=1&query=Rua%20Terezina%2C%2040%2C%20Ed.%20Essenciale%20Premier%2C%20Sala%20701%2C%20Alto%20da%20Gl%C3%B3ria%2C%20Goi%C3%A2nia%20-%20GO%2C%2074815-715', '_blank')}
               className="border border-primary-brown text-primary-brown hover:bg-primary-brown hover:text-primary-white px-8 py-4 rounded-full text-base font-medium transition-colors w-full sm:w-auto"
             >

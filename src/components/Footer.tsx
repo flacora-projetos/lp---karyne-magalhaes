@@ -26,6 +26,7 @@ export const Footer = () => {
           <div className="flex gap-6">
             <a 
               href="https://www.instagram.com/dra.karynemagalhaes/"
+              data-ga-event="clique_rede_social" data-ga-rede="instagram" data-ga-local="rodape"
               target="_blank"
               rel="noopener noreferrer"
               className="text-primary-beige/80 hover:text-primary-white transition-colors flex items-center gap-2 group"
@@ -36,6 +37,7 @@ export const Footer = () => {
             </a>
             <a 
               href="https://www.youtube.com/@KaryneMagalhaes"
+              data-ga-event="clique_rede_social" data-ga-rede="youtube" data-ga-local="rodape"
               target="_blank"
               rel="noopener noreferrer"
               className="text-primary-beige/80 hover:text-primary-white transition-colors flex items-center gap-2 group"
@@ -47,10 +49,10 @@ export const Footer = () => {
           </div>
           
           <div className="flex gap-6">
-            <a href="/blog/" className="text-primary-beige/80 hover:text-primary-white transition-colors text-sm">
+            <a href="/blog/" data-ga-event="clique_blog" data-ga-local="rodape" className="text-primary-beige/80 hover:text-primary-white transition-colors text-sm">
               Artigos sobre mau hálito
             </a>
-            <a href="/politica-de-privacidade" className="text-primary-beige/80 hover:text-primary-white transition-colors text-sm">
+            <a href="/politica-de-privacidade" data-ga-event="clique_politica_privacidade" data-ga-local="rodape" className="text-primary-beige/80 hover:text-primary-white transition-colors text-sm">
               Política de Privacidade
             </a>
           </div>

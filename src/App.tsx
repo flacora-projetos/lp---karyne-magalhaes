@@ -26,18 +26,20 @@ import { preserveFbclid } from './utils/metaPixel';
 import { createGadsDirectHandler } from './utils/gadsDirect';
 import { captureFirstAcquisition } from './utils/acquisition';
 import { trackEditorialCtaArrival } from './utils/gtm';
+import { bindDeclarativeGa4Clicks, observeSections, primeGaIds, trackGa4 } from './utils/ga4';
 
 // Painel administrativo (mini CRM) — carregado sob demanda, fora do bundle da LP.
 const AdminApp = lazy(() => import('./admin/AdminApp'));
 
 declare global {
   interface Window {
-    openQualificationModal?: () => void;
+    openQualificationModal?: (ctaLocation?: string) => void;
   }
 }
 
 export default function App() {
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [ctaLocation, setCtaLocation] = useState('');
   const [currentPath, setCurrentPath] = useState(window.location.pathname);
   const normalizedPath = currentPath.replace(/\/+$/, '') || '/';
   const isGads = normalizedPath === '/gads';
@@ -47,12 +49,18 @@ export default function App() {
     captureFirstAcquisition();
     const openGadsWhatsApp = createGadsDirectHandler();
     
-    window.openQualificationModal = () => {
+    primeGaIds();
+    const unbindClicks = bindDeclarativeGa4Clicks();
+
+    window.openQualificationModal = (location = 'nao_informado') => {
       const path = window.location.pathname.replace(/\/+$/, '') || '/';
+      const fluxo = path === '/gads' ? 'gads_direto' : 'filtro';
+      trackGa4('cta_click', { cta_location: location, fluxo });
       if (path === '/gads') {
-        openGadsWhatsApp();
+        openGadsWhatsApp(location);
         return;
       }
+      setCtaLocation(location);
       setIsModalOpen(true);
     };
 
@@ -60,6 +68,7 @@ export default function App() {
     const params = new URLSearchParams(window.location.search);
     if (params.get('blog_cta') === '1' && window.location.pathname === '/') {
       trackEditorialCtaArrival();
+      setCtaLocation('blog_legado');
       setIsModalOpen(true);
     }
 
@@ -70,9 +79,13 @@ export default function App() {
     window.addEventListener('popstate', handleLocationChange);
     return () => {
       window.removeEventListener('popstate', handleLocationChange);
+      unbindClicks();
       delete window.openQualificationModal;
     };
   }, []);
+
+  const isLanding = currentPath !== '/politica-de-privacidade' && !(currentPath === '/admin' || currentPath.startsWith('/admin/'));
+  useEffect(() => (isLanding ? observeSections() : undefined), [isLanding]);
 
   if (currentPath === '/politica-de-privacidade') {
     return <PrivacyPolicy />;
@@ -112,7 +125,7 @@ export default function App() {
       </main>
       <Footer />
       <FloatingWhatsApp directToWhatsapp={isGads} />
-      <QualificationModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} />
+      <QualificationModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} ctaLocation={ctaLocation} />
     </div>
   );
 }

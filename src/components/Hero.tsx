@@ -2,7 +2,7 @@ import { Star } from 'lucide-react';
 
 export const Hero = ({ directToWhatsapp = false }: { directToWhatsapp?: boolean }) => {
   return (
-    <section 
+    <section data-ga-section="topo"
       className="relative w-full flex md:items-center bg-primary-beige overflow-hidden mt-[80px] md:min-h-[calc(100svh-80px)]"
     >
       {/* Background Image Container */}
@@ -57,13 +57,14 @@ export const Hero = ({ directToWhatsapp = false }: { directToWhatsapp?: boolean 
 
           <div className="flex flex-col sm:flex-row gap-3 md:gap-4 mb-8 md:mb-10">
             <button 
-              onClick={() => window.openQualificationModal?.()}
+              onClick={() => window.openQualificationModal?.('hero')}
               className="bg-primary-green hover:bg-secondary-green transition-colors text-primary-white px-8 py-4 rounded-full text-base font-medium shadow-sm w-full sm:w-auto"
             >
               {directToWhatsapp ? 'Falar com a equipe pelo WhatsApp' : 'Entender qual avaliação faz sentido'}
             </button>
             <a 
               href="#como-funciona"
+              data-ga-event="clique_navegacao" data-ga-destino="como-funciona" data-ga-local="hero"
               className="border border-border-gray hover:border-primary-brown text-primary-brown bg-primary-white/80 backdrop-blur-sm px-8 py-4 rounded-full text-base font-medium transition-all text-center w-full sm:w-auto hover:bg-primary-white"
             >
               Conhecer a consulta

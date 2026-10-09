@@ -18,6 +18,7 @@ export interface SheetsPayload {
   entryArticleId?: string; entrySourceId?: string; entryArticleSlug?: string;
   lastArticleId?: string; lastArticleSlug?: string; articleAssists?: unknown[];
   editorialCtaId?: string; editorialCtaDestination?: string;
+  gaClientId?: string; gaSessionId?: string;
   [key: string]: unknown;
 }
 
@@ -33,7 +34,13 @@ const cleanStep = (v: unknown): number | null => {
   return Number.isInteger(n) && n >= 1 && n <= 99 ? n : null;
 };
 
-const paidMedium = (medium: string) => /^(cpc|ppc|paid|paid_search|paid-social|paid_social|display)$/.test(medium);
+// Identificadores do GA4 são só dígitos e ponto; qualquer outra coisa é descartada.
+const cleanGaId = (v: unknown): string | null => {
+  const s = clean(v);
+  return s && /^\d{1,20}(\.\d{1,20})?$/.test(s) ? s : null;
+};
+
+const paidMedium =(medium: string) => /^(cpc|ppc|paid|paid_search|paid-social|paid_social|display)$/.test(medium);
 const normalizeHost = (value: string) => value.toLowerCase().replace(/^www\./, '');
 const hostFromUrl = (value: string) => { try { return normalizeHost(new URL(value).hostname); } catch { return ''; } };
 const isDomainOrSubdomain = (host: string, domain: string) => host === domain || host.endsWith(`.${domain}`);
@@ -131,5 +138,6 @@ export function mapPayloadToRow(p: SheetsPayload) {
     entry_article_id: clean(p.entryArticleId), entry_source_id: clean(p.entrySourceId), entry_article_slug: clean(p.entryArticleSlug),
     last_article_id: clean(p.lastArticleId), last_article_slug: clean(p.lastArticleSlug), article_assists: cleanAssists(p.articleAssists),
     editorial_cta_id: clean(p.editorialCtaId), editorial_cta_destination: clean(p.editorialCtaDestination),
+    ga_client_id: cleanGaId(p.gaClientId), ga_session_id: cleanGaId(p.gaSessionId),
   };
 }

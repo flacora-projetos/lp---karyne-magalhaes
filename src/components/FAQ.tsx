@@ -1,16 +1,18 @@
 import { useState } from 'react';
 import { ChevronDown, ChevronUp } from 'lucide-react';
 import { faqItems } from '../content/faqData';
+import { trackGa4 } from '../utils/ga4';
 
 export const FAQ = () => {
   const [openIdx, setOpenIdx] = useState<number | null>(null);
 
   const toggle = (idx: number) => {
+    if (openIdx !== idx) trackGa4('faq_aberta', { pergunta: faqItems[idx]?.q, pergunta_ordem: idx + 1 });
     setOpenIdx(openIdx === idx ? null : idx);
   };
 
   return (
-    <section id="duvidas" className="py-16 md:py-20 bg-primary-beige">
+    <section data-ga-section="duvidas" id="duvidas" className="py-16 md:py-20 bg-primary-beige">
       <div className="max-w-4xl mx-auto px-6">
         <h2 className="text-3xl md:text-5xl font-medium leading-tight text-primary-brown mb-16 text-center font-serif">
           Perguntas Frequentes

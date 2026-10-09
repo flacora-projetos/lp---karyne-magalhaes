@@ -99,6 +99,16 @@
       function gtag(){dataLayer.push(arguments);}
       gtag('js', new Date());
 
+      // Painel, testes locais/prévias e aparelhos da equipe (?ga_interno=1) viram tráfego interno no GA4.
+      (function () {
+        var internal = !/^(www\.)?tratamentodomauhalito\.com\.br$/.test(location.hostname) || location.pathname.indexOf('/admin') === 0;
+        try {
+          var flag = new URLSearchParams(location.search).get('ga_interno');
+          if (flag === '1' || flag === '0') localStorage.setItem('dacora_ga_interno', flag);
+          if (localStorage.getItem('dacora_ga_interno') === '1') internal = true;
+        } catch (e) {}
+        if (internal) gtag('set', {traffic_type: 'internal'});
+      })();
       gtag('config', 'G-3783BP5DSB');
     </script>
     <!-- Google Tag Manager -->

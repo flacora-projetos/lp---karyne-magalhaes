@@ -2,13 +2,14 @@ import React, { useState, useEffect, useRef } from 'react';
 import { X, ArrowLeft, Check, ChevronDown, Star } from 'lucide-react';
 import { trackCustomEvent, generateEventId, getFbpCookie, getFbcCookie, sendMetaCapiEvent } from '../utils/metaPixel';
 import { sendGoogleEcEvent } from '../utils/googleAds';
-import { pushDataLayerEvent } from '../utils/gtm';
+import { modalidadeLabel, pushDataLayerEvent } from '../utils/gtm';
 import { getAttributionExtras } from '../utils/acquisition';
 import { sendLeadToCrm } from '../utils/crmLead';
 
 interface QualificationModalProps {
   isOpen: boolean;
   onClose: () => void;
+  ctaLocation?: string;
 }
 
 const UF_LIST = [
@@ -72,7 +73,7 @@ export const getTrackingData = () => {
   };
 };
 
-export const QualificationModal: React.FC<QualificationModalProps> = ({ isOpen, onClose }) => {
+export const QualificationModal: React.FC<QualificationModalProps> = ({ isOpen, onClose, ctaLocation = '' }) => {
   const [step, setStep] = useState(1);
   const [leadId, setLeadId] = useState<string>('');
   const eventIds = useRef({
@@ -112,7 +113,7 @@ export const QualificationModal: React.FC<QualificationModalProps> = ({ isOpen, 
       // Fire 'Filtro aberto' event when modal opens, if we are at step 1
       if (step === 1 && !eventIds.current.eventIdFilterOpen) {
         eventIds.current.eventIdFilterOpen = generateEventId();
-        pushDataLayerEvent("filtro_aberto");
+        pushDataLayerEvent("filtro_aberto", { fluxo: "filtro", cta_location: ctaLocation });
         trackCustomEvent("FiltroAberto", { lp_event: "FiltroAberto" }, { eventID: eventIds.current.eventIdFilterOpen });
         const payload = {
           leadId: currentLeadId,
@@ -153,10 +154,24 @@ export const QualificationModal: React.FC<QualificationModalProps> = ({ isOpen, 
     };
   }, [isOpen, onClose]);
 
+  // Fechar sem chamar no WhatsApp mostra em qual etapa a pessoa desistiu.
+  const wasOpen = useRef(false);
+  useEffect(() => {
+    if (isOpen) {
+      wasOpen.current = true;
+      return;
+    }
+    if (wasOpen.current && eventIds.current.eventIdFilterOpen && !eventIds.current.eventIdContact) {
+      pushDataLayerEvent("filtro_fechado", { step, fluxo: "filtro" });
+    }
+    wasOpen.current = false;
+  }, [isOpen]);
+
   if (!isOpen) return null;
 
-  const sendDataToSheets = (statusOverride?: string, stepOverride?: number) => {
+  const sendDataToSheets = (statusOverride?: string, stepOverride?: number, source: LeadData = data) => {
     const tracking = getTrackingData();
+    const data = source;
     const payload = {
       leadId,
       createdAt: new Date().toISOString(),
@@ -199,7 +214,9 @@ export const QualificationModal: React.FC<QualificationModalProps> = ({ isOpen, 
     });
   };
 
-  const nextStep = () => {
+  // A escolha feita no próprio clique ainda não está no estado quando o passo avança.
+  const nextStep = (overrides: Partial<LeadData> = {}) => {
+    const current = { ...data, ...overrides };
     const nextS = Math.min(step + 1, TOTAL_STEPS);
     setStep(nextS);
     window.scrollTo({ top: 0, behavior: 'auto' });
@@ -225,7 +242,7 @@ export const QualificationModal: React.FC<QualificationModalProps> = ({ isOpen, 
       eventIds.current.eventIdContactCaptured = eventID;
       trackCustomEvent("FormularioIniciado", { lp_event: "FormularioIniciado" }, { eventID });
       sendMetaCapiEvent({ eventName: "FormularioIniciado", eventId: eventID, ...capiPayloadBase });
-      pushDataLayerEvent("formulario_iniciado");
+      pushDataLayerEvent("formulario_iniciado", { fluxo: "filtro" });
     } else if (nextS > 1 && nextS < TOTAL_STEPS) {
       trackCustomEvent("EtapaRespondida", { lp_event: "EtapaRespondida", step: nextS }, { eventID });
       pushDataLayerEvent("etapa_respondida", { step });
@@ -240,7 +257,7 @@ export const QualificationModal: React.FC<QualificationModalProps> = ({ isOpen, 
         phone: data.whatsapp,
         gclid: sessionStorage.getItem('gclid') || undefined,
       });
-      pushDataLayerEvent("filtro_completo");
+      pushDataLayerEvent("filtro_completo", { fluxo: "filtro", modalidade: modalidadeLabel(current.modalidade) });
     }
 
     // Ordem das etapas: 1 WhatsApp · 2 situação · 3 antibiótico · 4 período ·
@@ -252,7 +269,7 @@ export const QualificationModal: React.FC<QualificationModalProps> = ({ isOpen, 
     if (nextS === 2) status = 'Lead gerado(Lead formado)';
     if (nextS === 3) status = 'Filtro iniciado (Começou a responder)';
     if (nextS === TOTAL_STEPS) status = 'Filtro concluído(Concluiu o filtro)';
-    sendDataToSheets(status, nextS);
+    sendDataToSheets(status, nextS, current);
   };
   const prevStep = () => setStep((s) => Math.max(s - 1, 1));
 
@@ -263,7 +280,7 @@ export const QualificationModal: React.FC<QualificationModalProps> = ({ isOpen, 
   const handleWhatsApp = () => {
     if (!eventIds.current.eventIdContact) {
       eventIds.current.eventIdContact = generateEventId();
-      pushDataLayerEvent("clique_saida");
+      pushDataLayerEvent("clique_saida", { fluxo: "filtro", modalidade: modalidadeLabel(data.modalidade) });
       trackCustomEvent("CliqueSaida", { lp_event: "CliqueSaida" }, { eventID: eventIds.current.eventIdContact });
       const capiPayloadBase = {
         email: data.email,
@@ -450,7 +467,7 @@ Gostaria de receber orientação e verificar os horários disponíveis para a co
 
               <div className="mt-10">
                 <button 
-                  onClick={nextStep}
+                  onClick={() => nextStep()}
                   disabled={!data.antibioticos}
                   className="w-full bg-[#222D19] hover:bg-[#222D19]/90 disabled:bg-[#E4DFD9] disabled:text-[#2B1B0A]/40 transition-colors text-white py-4 rounded-xl font-medium text-[15px]"
                 >
@@ -500,7 +517,7 @@ Gostaria de receber orientação e verificar os horários disponíveis para a co
 
               <div className="mt-10">
                 <button 
-                  onClick={nextStep}
+                  onClick={() => nextStep()}
                   disabled={!data.periodo}
                   className="w-full bg-[#222D19] hover:bg-[#222D19]/90 disabled:bg-[#E4DFD9] disabled:text-[#2B1B0A]/40 transition-colors text-white py-4 rounded-xl font-medium text-[15px]"
                 >
@@ -648,7 +665,7 @@ Gostaria de receber orientação e verificar os horários disponíveis para a co
                     key={opcao}
                     onClick={() => {
                       handleChange('modalidade', opcao);
-                      setTimeout(nextStep, 200);
+                      setTimeout(() => nextStep({ modalidade: opcao }), 200);
                     }}
                     className={`w-full text-left p-4 rounded-xl border transition-[colors,box-shadow] duration-200 flex items-center justify-between group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#A95B21] focus-visible:ring-offset-2 ${
                       data.modalidade === opcao

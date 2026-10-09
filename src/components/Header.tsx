@@ -23,12 +23,12 @@ export const Header = ({ directToWhatsapp = false }: { directToWhatsapp?: boolea
         {/* Desktop Nav */}
         <nav className="hidden md:flex items-center gap-8">
           {links.map((link) => (
-            <a key={link.label} href={link.href} className="text-sm text-secondary-green hover:text-primary-brown transition-colors">
+            <a key={link.label} href={link.href} data-ga-event="clique_navegacao" data-ga-destino={link.href.slice(1)} data-ga-local="menu_desktop" className="text-sm text-secondary-green hover:text-primary-brown transition-colors">
               {link.label}
             </a>
           ))}
           <button 
-            onClick={() => window.openQualificationModal?.()}
+            onClick={() => window.openQualificationModal?.('menu_desktop')}
             className="bg-primary-green text-primary-white px-6 py-2.5 rounded-full text-sm font-medium hover:bg-secondary-green transition-colors"
           >
             {directToWhatsapp ? 'Falar pelo WhatsApp' : 'Fazer avaliação inicial (2 min)'}
@@ -48,6 +48,7 @@ export const Header = ({ directToWhatsapp = false }: { directToWhatsapp?: boolea
             <a 
               key={link.label} 
               href={link.href} 
+              data-ga-event="clique_navegacao" data-ga-destino={link.href.slice(1)} data-ga-local="menu_mobile"
               className="text-base text-secondary-green hover:text-primary-brown"
               onClick={() => setIsOpen(false)}
             >
@@ -56,7 +57,7 @@ export const Header = ({ directToWhatsapp = false }: { directToWhatsapp?: boolea
           ))}
           <button 
             onClick={() => {
-              window.openQualificationModal?.();
+              window.openQualificationModal?.('menu_mobile');
               setIsOpen(false);
             }}
             className="bg-primary-green text-primary-white px-6 py-3 rounded-full text-sm font-medium w-full mt-2"
