@@ -16,6 +16,7 @@ import {
 import type { Lead } from './types';
 import { computeMetrics, type BreakdownRow } from './metrics';
 import { brl, pct } from './format';
+import { BlogGscStatus } from './BlogGscStatus';
 
 interface DashboardProps {
   leads: Lead[];
@@ -175,6 +176,8 @@ export const Dashboard: React.FC<DashboardProps> = ({ leads }) => {
       <BreakdownTable title="Desempenho por plataforma" rows={m.porPlataformaDet} keyLabel="Plataforma" />
       <BreakdownTable title="Desempenho por criativo (utm_content)" rows={m.porCriativo} keyLabel="Criativo" />
       <BreakdownTable title="Desempenho por termo de pesquisa (utm_term)" rows={m.porTermo} keyLabel="Termo" />
+
+      <BlogGscStatus />
 
       {/* Motivos de perda */}
       <div className="bg-[#FEFEFE] border border-[#E4DFD9] rounded-2xl p-4 md:p-5">

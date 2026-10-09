@@ -64,12 +64,12 @@ export function publicPayload(article) {
   };
 }
 
-export function buildReleaseManifest(articles) {
-  const availableSlugs = new Set(articles.map(article => article.slug));
+export function buildReleaseManifest(articles, renderArticles = articles) {
+  const availableSlugs = new Set(renderArticles.map(article => article.slug));
   const releases = articles.map(article => {
     const payload = publicPayload(article);
     const releaseHash = payload.approval.releaseHash;
-    const relatedArticles = (article.internalLinks || []).filter(link => link.slug).map(link => articles.find(candidate => candidate.slug === link.slug)).filter(Boolean);
+    const relatedArticles = (article.internalLinks || []).filter(link => link.slug).map(link => renderArticles.find(candidate => candidate.slug === link.slug)).filter(Boolean);
     const html = renderArticle(article, {preview:false, availableSlugs, relatedArticles});
     const canonical = `${SITE_URL}/blog/${article.slug}/`;
     return {

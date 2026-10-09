@@ -1,5 +1,10 @@
 {
-  "functions": {"api/editorial-draft.ts": {"maxDuration": 300}},
+  "crons": [{"path": "/api/blog-gsc-cron", "schedule": "0 9 * * *"}],
+  "functions": {
+    "api/editorial-draft.ts": {"maxDuration": 300},
+    "api/blog-gsc.ts": {"maxDuration": 60},
+    "api/blog-gsc-cron.ts": {"maxDuration": 60}
+  },
   "headers": [
     {
       "source": "/gads",
