@@ -12,6 +12,7 @@ import {
   getEditorialVersionRecord,
   getGscState,
   getGscReport,
+  getGscAutomationControl,
   getPreparedRelease,
   listDueGscUrls,
   markPublicationVerified,
@@ -128,12 +129,13 @@ export function assertVersionApprovals(record: any, expected: { contentSha256?: 
   if (!['aprovado', 'publicado'].includes(article.status)) throw new Error('Artigo não está aprovado para publicação');
 
   for (const required of ['editorial', 'clinical']) {
-    const valid = (reviews || []).some((review: any) =>
-      review.review_type === required
-      && review.status === 'approved'
-      && review.reviewed_at
-      && review.content_sha256 === version.content_sha256
-      && review.presentation_sha256 === version.presentation_sha256);
+    const latest = (reviews || []).filter((review: any) => review.review_type === required)
+      .sort((a: any, b: any) => String(b.reviewed_at || b.created_at || '').localeCompare(String(a.reviewed_at || a.created_at || '')) || String(b.id || '').localeCompare(String(a.id || '')))[0];
+    const valid = latest
+      && latest.status === 'approved'
+      && latest.reviewed_at
+      && latest.content_sha256 === version.content_sha256
+      && latest.presentation_sha256 === version.presentation_sha256;
     if (!valid) throw new Error(`Aprovação ${required} válida não encontrada para a versão exata`);
   }
   return true;
@@ -400,9 +402,20 @@ export async function confirmPublicationInProduction(input: { operationKey: stri
   return { status: 'verified', publicationId: publication.publicationId, operationKey: prepared.operation_key, url, htmlSha256: verified.htmlSha256 };
 }
 
-export async function runBlogGscCycle(now = new Date()) {
-  const operationKey = `daily:${now.toISOString().slice(0, 10)}`;
-  const claim = await claimGscRun('daily', operationKey, { maxAttempts: 2 });
+export function gscDailyOperationKey(now = new Date()) {
+  return `daily:${now.toISOString().slice(0, 10)}`;
+}
+
+export function automationStartDecision(control: any) {
+  return control?.operator_paused ? { allowed:false, reason:'operator_paused' } : { allowed:true, reason:null };
+}
+
+export async function runBlogGscCycle(now = new Date(), trigger: { source?: 'scheduled' | 'manual'; actorUserId?: string | null } = {}) {
+  const control = await getGscAutomationControl();
+  const decision = automationStartDecision(control);
+  if (!decision.allowed) return { status:'skipped', reason:decision.reason, control };
+  const operationKey = gscDailyOperationKey(now);
+  const claim = await claimGscRun('daily', operationKey, { maxAttempts: 2, triggerSource: trigger.source || 'scheduled', triggeredByUserId: trigger.actorUserId || null });
   if (!claim.claimed) return { status: 'skipped', reason: claim.reason };
 
   try {
@@ -455,6 +468,6 @@ export async function runBlogGscCycle(now = new Date()) {
   }
 }
 
-export async function readBlogGscReport() {
-  return getGscReport(GSC_SITE_URL);
+export async function readBlogGscReport(options: { page?: number; pageSize?: number } = {}) {
+  return getGscReport(GSC_SITE_URL, options);
 }

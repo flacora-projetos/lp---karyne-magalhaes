@@ -5,6 +5,7 @@ import { isProductionEligible, readArticles } from './core.mjs';
 import { buildReleaseManifest } from './phase4-release.mjs';
 import { assertPrivateOutput } from './private-output.mjs';
 import { isPresentationReady } from './editorial.mjs';
+import { buildSnapshotRelease } from './phase6-release.mjs';
 
 export function selectReleaseArticles(articles, slugs) {
   const requested = [...new Set((slugs || []).filter(Boolean))];
@@ -16,11 +17,12 @@ export function selectReleaseArticles(articles, slugs) {
 }
 
 function parseArgs(argv = process.argv.slice(2)) {
-  const args = { input: path.resolve(process.cwd(), 'content/blog/published'), output: '', slugs: [] };
+  const args = { input: path.resolve(process.cwd(), 'content/blog/published'), output: '', slugs: [], snapshot: '' };
   for (const raw of argv) {
     if (raw.startsWith('--input=')) args.input = path.resolve(process.cwd(), raw.slice(8));
     else if (raw.startsWith('--output=')) args.output = path.resolve(process.cwd(), raw.slice(9));
     else if (raw.startsWith('--slug=')) args.slugs.push(raw.slice(7).trim());
+    else if (raw.startsWith('--snapshot=')) args.snapshot = path.resolve(process.cwd(), raw.slice(11));
     else throw new Error(`Argumento desconhecido: ${raw}`);
   }
   return args;
@@ -35,8 +37,17 @@ async function main() {
     if (!isProductionEligible(article)) throw new Error(`Contexto da fase 5 contém artigo sem aprovação válida: ${article.slug}`);
     if (!isPresentationReady(article)) throw new Error(`Contexto da fase 5 contém apresentação não revisada: ${article.slug}`);
   }
-  const selected = selectReleaseArticles(articles, args.slugs);
-  const manifest = buildReleaseManifest(selected, articles);
+  let manifest;
+  if (args.snapshot) {
+    assertPrivateOutput(args.snapshot);
+    const snapshot = JSON.parse(fs.readFileSync(args.snapshot, 'utf8'));
+    const slug = snapshot?.article?.slug;
+    if (!slug || args.slugs.length !== 1 || args.slugs[0] !== slug) throw new Error('Snapshot exige exatamente um --slug explícito igual ao artigo aprovado.');
+    manifest = buildSnapshotRelease(snapshot, articles).manifest;
+  } else {
+    const selected = selectReleaseArticles(articles, args.slugs);
+    manifest = buildReleaseManifest(selected, articles);
+  }
   fs.mkdirSync(path.dirname(args.output), { recursive: true });
   fs.writeFileSync(args.output, JSON.stringify({ ...manifest, mode: 'prepared-local-only', selected_slugs: args.slugs }, null, 2) + '\n', 'utf8');
   console.log(JSON.stringify({

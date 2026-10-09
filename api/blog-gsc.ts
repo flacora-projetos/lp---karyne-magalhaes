@@ -5,7 +5,9 @@ import {
   establishGscBaseline,
   preparePublicationRelease,
   readBlogGscReport,
+  runBlogGscCycle,
 } from '../lib/blogGsc.js';
+import { setAutomationControl } from '../lib/blogAdmin.js';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   res.setHeader('Cache-Control', 'private, no-store');
@@ -15,10 +17,22 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   try {
     if (req.method === 'GET') {
-      return res.status(200).json({ success: true, report: await readBlogGscReport() });
+      const page = Number.parseInt(String(req.query.page || '1'), 10) || 1;
+      const pageSize = Number.parseInt(String(req.query.pageSize || '20'), 10) || 20;
+      const report = await readBlogGscReport({ page, pageSize });
+      return res.status(200).json({ success: true, report: { ...report, infrastructure: { enabled: process.env.BLOG_GSC_AUTOMATION_ENABLED === 'true', configured_schedule: 'Diariamente às 06:00 (America/Sao_Paulo)', schedule_expression: '0 9 * * *' } } });
     }
 
     const action = req.body?.action;
+    if (action === 'run-now') {
+      if (process.env.BLOG_GSC_AUTOMATION_ENABLED !== 'true') return res.status(503).json({ success:false, error:'automation_disabled' });
+      const result = await runBlogGscCycle(new Date(), { source:'manual', actorUserId:user.id });
+      return res.status(200).json({ success:true, result });
+    }
+    if (action === 'set-automation') {
+      const result = await setAutomationControl(req.body, user.id);
+      return res.status(200).json({ success:true, result });
+    }
     if (action === 'baseline') {
       const expectedSitemapSha256 = String(req.body?.expectedSitemapSha256 || '');
       const minGoogleLastSubmitted = req.body?.minGoogleLastSubmitted ? String(req.body.minGoogleLastSubmitted) : undefined;

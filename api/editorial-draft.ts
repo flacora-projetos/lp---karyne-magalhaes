@@ -2,7 +2,7 @@ import type {VercelRequest, VercelResponse} from '@vercel/node';
 import {createHash} from 'node:crypto';
 import {requireAuth} from '../lib/requireAuth.js';
 import {getSupabaseAdmin} from '../lib/supabaseAdmin.js';
-import {completeEditorialJson, editorialProviders} from '../lib/editorialAi.mjs';
+import {completeEditorialJson, editorialProviders, EditorialAiError} from '../lib/editorialAi.mjs';
 import {buildPrompt, validateDraft, validateBriefing, RESPONSE_SCHEMA} from '../lib/editorialDraft.mjs';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
@@ -27,7 +27,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const requestHash = createHash('sha256').update(JSON.stringify({sourceId, briefing, references})).digest('hex');
   const {data:existing, error:lookupError} = await db.from('editorial_drafts').select('*').eq('operation_key', operationKey).maybeSingle();
   if (lookupError) return res.status(500).json({success:false, error:'Falha ao consultar operação'});
-  if (existing) return res.status(existing.request_sha256 === requestHash ? 200 : 409).json({success:existing.status === 'draft' && existing.request_sha256 === requestHash, draft:existing.request_sha256 === requestHash ? existing : undefined});
+  if (existing) {
+    if (existing.request_sha256 !== requestHash) return res.status(409).json({success:false, error:'Identificador já usado para outra geração'});
+    if (existing.status === 'draft') return res.status(200).json({success:true, draft:existing, reused:true});
+    if (existing.status === 'generating' || existing.status === 'uncertain') return res.status(202).json({success:false, draft:existing, reconciliationRequired:true});
+    return res.status(409).json({success:false, draft:existing, error:'Geração anterior falhou; confirme o estado antes de iniciar outra operação'});
+  }
   try { validateBriefing(briefing, references); }
   catch { return res.status(400).json({success:false, error:'Pauta ou referências verificadas incompletas'}); }
   try { editorialProviders(); }
@@ -41,11 +46,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const {draft, generator} = await completeEditorialJson({prompt:buildPrompt(source, briefing, references), schema:RESPONSE_SCHEMA});
     validateDraft(draft, {source, briefing, references});
     const payload = {...draft, generator, status:'draft', approval:{editorial:false, clinical:false, client:false}};
-    const {error} = await db.from('editorial_drafts').update({status:'draft', payload_json:payload}).eq('operation_key',operationKey).eq('status','generating');
+    const {error} = await db.from('editorial_drafts').update({status:'draft', payload_json:payload, last_error_code:null, updated_at:new Date().toISOString()}).eq('operation_key',operationKey).eq('status','generating');
     if (error) throw new Error('storage_failure');
     return res.status(201).json({success:true, operationKey, draft:payload});
-  } catch {
-    await db.from('editorial_drafts').update({status:'failed'}).eq('operation_key',operationKey).eq('status','generating');
-    return res.status(502).json({success:false, operationKey, error:'Geração não concluída; não repetir automaticamente a chamada'});
+  } catch (error) {
+    const uncertain = error instanceof EditorialAiError && error.code === 'transport_result_unknown';
+    const status = uncertain ? 'uncertain' : 'failed';
+    const code = error instanceof EditorialAiError ? error.code : 'generation_failed';
+    await db.from('editorial_drafts').update({status,last_error_code:code,updated_at:new Date().toISOString()}).eq('operation_key',operationKey).eq('status','generating');
+    return res.status(uncertain ? 202 : 502).json({success:false, operationKey, status, reconciliationRequired:uncertain, error:uncertain ? 'Resultado da chamada de IA ficou incerto; verifique esta operação antes de qualquer nova geração' : 'Geração não concluída; não repetir automaticamente a chamada'});
   }
 }

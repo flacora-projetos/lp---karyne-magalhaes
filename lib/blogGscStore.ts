@@ -19,7 +19,7 @@ export function canRecoverGscRun(row: any, now = new Date(), maxAttempts = 2) {
 export async function claimGscRun(
   runKind: 'daily' | 'sitemap_submit' | 'baseline',
   operationKey: string,
-  options: { now?: Date; leaseMinutes?: number; maxAttempts?: number } = {},
+  options: { now?: Date; leaseMinutes?: number; maxAttempts?: number; triggerSource?: 'scheduled' | 'manual'; triggeredByUserId?: string | null } = {},
 ) {
   const now = options.now ?? new Date();
   const leaseMinutes = options.leaseMinutes ?? 10;
@@ -35,6 +35,8 @@ export async function claimGscRun(
     attempts: 1,
     started_at: now.toISOString(),
     updated_at: now.toISOString(),
+    trigger_source: options.triggerSource || null,
+    triggered_by_user_id: options.triggeredByUserId || null,
   };
 
   const inserted = await db().from(RUNS_TABLE).insert(fresh).select('*').maybeSingle();
@@ -59,6 +61,8 @@ export async function claimGscRun(
       started_at: now.toISOString(),
       finished_at: null,
       updated_at: now.toISOString(),
+      trigger_source: options.triggerSource || current.data.trigger_source || null,
+      triggered_by_user_id: options.triggeredByUserId || current.data.triggered_by_user_id || null,
     })
     .eq('operation_key', operationKey)
     .eq('lease_token', current.data.lease_token);
@@ -155,7 +159,7 @@ export async function getEditorialVersionRecord(articleVersionId: string) {
 
   const reviews = await db()
     .from('editorial_reviews')
-    .select('review_type,status,content_sha256,presentation_sha256,reviewed_at')
+    .select('id,review_type,status,content_sha256,presentation_sha256,reviewed_at,created_at')
     .eq('article_version_id', articleVersionId);
   if (reviews.error) throw new Error(`Falha ao ler aprovações: ${reviews.error.message}`);
 
@@ -258,11 +262,22 @@ export async function markPublicationVerified(input: {
   return { publicationId: result.data as string };
 }
 
-export async function getGscReport(siteUrl: string) {
-  const [state, urls, runs] = await Promise.all([
+export async function getGscAutomationControl() {
+  const result = await db().from('editorial_automation_control').select('*').eq('automation_key','gsc').maybeSingle();
+  if (result.error) throw new Error(`Falha ao ler controle da automação GSC: ${result.error.message}`);
+  return result.data || { automation_key:'gsc', operator_paused:false, pause_reason:null, changed_by_user_id:null, changed_at:null, revision:0 };
+}
+
+export async function getGscReport(siteUrl: string, options: { page?: number; pageSize?: number } = {}) {
+  const page = Math.max(1, Number(options.page) || 1);
+  const pageSize = Math.min(50, Math.max(1, Number(options.pageSize) || 20));
+  const from = (page - 1) * pageSize;
+  const to = from + pageSize - 1;
+  const [state, urls, runs, automation] = await Promise.all([
     getGscState(siteUrl),
     db().from(URLS_TABLE).select('*').order('publication_confirmed_at', { ascending: false }),
-    db().from(RUNS_TABLE).select('operation_key,run_kind,status,attempts,started_at,finished_at,details_json,updated_at').order('updated_at', { ascending: false }).limit(20),
+    db().from(RUNS_TABLE).select('operation_key,run_kind,status,trigger_source,triggered_by_user_id,attempts,started_at,finished_at,details_json,updated_at',{count:'exact'}).order('updated_at', { ascending: false }).range(from,to),
+    getGscAutomationControl(),
   ]);
   if (urls.error) throw new Error(`Falha ao montar relatório de URLs: ${urls.error.message}`);
   if (runs.error) throw new Error(`Falha ao montar relatório de execuções: ${runs.error.message}`);
@@ -284,5 +299,5 @@ export async function getGscReport(siteUrl: string) {
       article_status: article?.status || null,
     };
   });
-  return { state, urls: enrichedUrls, runs: runs.data || [] };
+  return { state, urls: enrichedUrls, runs: runs.data || [], runsPage:{page,pageSize,total:runs.count??null}, automation };
 }

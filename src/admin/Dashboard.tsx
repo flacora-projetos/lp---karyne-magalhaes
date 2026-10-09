@@ -12,14 +12,15 @@ import {
   Percent,
   UserRoundX,
   RotateCcw,
+  BookOpen,
 } from 'lucide-react';
 import type { Lead } from './types';
 import { computeMetrics, type BreakdownRow } from './metrics';
 import { brl, pct } from './format';
-import { BlogGscStatus } from './BlogGscStatus';
 
 interface DashboardProps {
   leads: Lead[];
+  onOpenBlog?: () => void;
 }
 
 // Card de KPI com ícone e número em destaque.
@@ -110,7 +111,7 @@ const BreakdownTable: React.FC<{ title: string; rows: BreakdownRow[]; keyLabel: 
   </div>
 );
 
-export const Dashboard: React.FC<DashboardProps> = ({ leads }) => {
+export const Dashboard: React.FC<DashboardProps> = ({ leads, onOpenBlog }) => {
   const m = computeMetrics(leads);
   const plataformaEntries = Object.entries(m.porPlataforma).sort((a, b) => b[1] - a[1]);
   const motivos = Object.entries(m.motivosPerda).sort((a, b) => b[1] - a[1]);
@@ -177,7 +178,15 @@ export const Dashboard: React.FC<DashboardProps> = ({ leads }) => {
       <BreakdownTable title="Desempenho por criativo (utm_content)" rows={m.porCriativo} keyLabel="Criativo" />
       <BreakdownTable title="Desempenho por termo de pesquisa (utm_term)" rows={m.porTermo} keyLabel="Termo" />
 
-      <BlogGscStatus />
+      <button onClick={onOpenBlog} className="w-full text-left bg-[#FEFEFE] border border-[#E4DFD9] rounded-2xl p-4 md:p-5 hover:border-[#565E48]/35 transition-colors">
+        <div className="flex items-center gap-3">
+          <span className="grid place-items-center w-9 h-9 rounded-xl bg-[#565E48]/10 text-[#565E48]"><BookOpen size={17} /></span>
+          <div>
+            <div className="text-[13px] font-semibold text-[#565E48]">Central do Blog</div>
+            <div className="text-[12px] text-[#2B1B0A]/50 mt-0.5">Artigos, geração, revisão e automações ficam na aba Blog.</div>
+          </div>
+        </div>
+      </button>
 
       {/* Motivos de perda */}
       <div className="bg-[#FEFEFE] border border-[#E4DFD9] rounded-2xl p-4 md:p-5">

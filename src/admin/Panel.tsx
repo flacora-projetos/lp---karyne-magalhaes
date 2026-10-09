@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { Session } from '@supabase/supabase-js';
-import { RefreshCw, LogOut, LayoutGrid, List, BarChart3, X, Download } from 'lucide-react';
+import { RefreshCw, LogOut, LayoutGrid, List, BarChart3, X, Download, BookOpen } from 'lucide-react';
 import { supabase } from './supabaseClient';
 import { fetchLeads, updateLead, type LeadFilters } from './api';
 import type { Lead, StatusComercial } from './types';
@@ -14,17 +14,19 @@ import { KanbanBoard } from './KanbanBoard';
 import { downloadLeadsCsv } from './exportCsv';
 import { matchesCampaign } from './campaign';
 import { blogArticleTitles } from './blogArticles';
+import { BlogHub } from './BlogHub';
 
 interface PanelProps {
   session: Session;
 }
 
 const KNOWN_PLATFORMS = ['Google Ads', 'Meta Ads', 'Direto'];
-type Tab = 'kanban' | 'leads' | 'dashboard';
+type Tab = 'kanban' | 'leads' | 'dashboard' | 'blog';
 const TABS: { id: Tab; label: string; icon: React.ComponentType<{ size?: number }> }[] = [
   { id: 'kanban', label: 'Kanban', icon: LayoutGrid },
   { id: 'leads', label: 'Leads', icon: List },
   { id: 'dashboard', label: 'Dashboard', icon: BarChart3 },
+  { id: 'blog', label: 'Blog', icon: BookOpen },
 ];
 
 export const Panel: React.FC<PanelProps> = ({ session }) => {
@@ -32,7 +34,10 @@ export const Panel: React.FC<PanelProps> = ({ session }) => {
   const [leads, setLeads] = useState<Lead[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [tab, setTab] = useState<Tab>('kanban');
+  const [tab, setTab] = useState<Tab>(() => {
+    const value = new URLSearchParams(window.location.search).get('tab');
+    return TABS.some(item => item.id === value) ? value as Tab : 'kanban';
+  });
   const [selected, setSelected] = useState<Lead | null>(null);
   // Valores distintos reais para popular os filtros (calculados de um fetch base
   // não-filtrado, uma vez — não mudam ao aplicar filtros).
@@ -42,6 +47,24 @@ export const Panel: React.FC<PanelProps> = ({ session }) => {
     termos: [],
   });
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const facetsLoadedRef = useRef(false);
+
+  const changeTab = useCallback((next: Tab) => {
+    setTab(next);
+    const url = new URL(window.location.href);
+    url.searchParams.set('tab', next);
+    if (next !== 'blog') url.searchParams.delete('blogSection');
+    window.history.replaceState({}, '', url);
+  }, []);
+
+  useEffect(() => {
+    const onPopState = () => {
+      const value = new URLSearchParams(window.location.search).get('tab');
+      setTab(TABS.some(item => item.id === value) ? value as Tab : 'kanban');
+    };
+    window.addEventListener('popstate', onPopState);
+    return () => window.removeEventListener('popstate', onPopState);
+  }, []);
 
   const load = useCallback(async (f: LeadFilters) => {
     setLoading(true);
@@ -64,6 +87,7 @@ export const Panel: React.FC<PanelProps> = ({ session }) => {
 
   // Facets: uma vez, a partir de todos os leads (sem filtro).
   useEffect(() => {
+    if (tab === 'blog' || facetsLoadedRef.current) return;
     let active = true;
     fetchLeads({})
       .then((all) => {
@@ -72,6 +96,7 @@ export const Panel: React.FC<PanelProps> = ({ session }) => {
           Array.from(new Set(all.map(fn).filter((v): v is string => !!v && v.trim() !== ''))).sort((a, b) =>
             a.localeCompare(b, 'pt-BR'),
           );
+        facetsLoadedRef.current = true;
         setFacets({
           plataformas: distinct((l) => l.origem),
           criativos: distinct((l) => l.utm_content),
@@ -84,16 +109,22 @@ export const Panel: React.FC<PanelProps> = ({ session }) => {
     return () => {
       active = false;
     };
-  }, []);
+  }, [tab]);
 
-  // Recarrega com debounce sempre que os filtros mudam.
+  // Recarrega com debounce sempre que os filtros mudam, exceto na central de Blog.
+  // Assim /admin?tab=blog não depende do CRM nem dispara fetch de leads em segundo plano.
   useEffect(() => {
+    if (tab === 'blog') {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+      setLoading(false);
+      return;
+    }
     if (debounceRef.current) clearTimeout(debounceRef.current);
     debounceRef.current = setTimeout(() => load(filters), 350);
     return () => {
       if (debounceRef.current) clearTimeout(debounceRef.current);
     };
-  }, [filters, load]);
+  }, [filters, load, tab]);
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
@@ -179,18 +210,18 @@ export const Panel: React.FC<PanelProps> = ({ session }) => {
               KM
             </div>
             <div>
-              <h1 className="text-[15px] font-serif font-medium text-[#222D19] leading-none">Painel de Leads</h1>
+              <h1 className="text-[15px] font-serif font-medium text-[#222D19] leading-none">Painel Karyne</h1>
               <p className="text-[12px] text-[#2B1B0A]/50 mt-1">Dra. Karyne Magalhães</p>
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <button
+            {tab !== 'blog' && <button
               onClick={() => load(filters)}
               className="p-2 rounded-xl border border-[#E4DFD9] bg-[#FEFEFE] hover:bg-[#F0E9E0] transition-colors"
-              title="Atualizar"
+              title="Atualizar leads"
             >
               <RefreshCw size={16} className={loading ? 'animate-spin' : ''} />
-            </button>
+            </button>}
             <span className="hidden md:inline text-[12px] text-[#2B1B0A]/50 max-w-[180px] truncate">{session.user.email}</span>
             <button
               onClick={handleLogout}
@@ -208,7 +239,7 @@ export const Panel: React.FC<PanelProps> = ({ session }) => {
               return (
                 <button
                   key={t.id}
-                  onClick={() => setTab(t.id)}
+                  onClick={() => changeTab(t.id)}
                   className={`inline-flex items-center gap-2 px-3.5 md:px-4 py-2 rounded-xl text-sm font-medium transition-all ${
                     tab === t.id
                       ? 'bg-[#FEFEFE] text-[#222D19] shadow-sm'
@@ -230,8 +261,8 @@ export const Panel: React.FC<PanelProps> = ({ session }) => {
             : 'max-w-7xl mx-auto px-4 md:px-6 py-5 space-y-5'
         }
       >
-        {/* Filtros + contagem (fixos apenas no Kanban) */}
-        <div className={isKanban ? 'flex-none space-y-4' : 'space-y-5'}>
+        {/* Filtros comerciais não pertencem à operação editorial do Blog. */}
+        {tab !== 'blog' && <div className={isKanban ? 'flex-none space-y-4' : 'space-y-5'}>
         <Filters
           value={filters}
           onChange={setFilters}
@@ -277,7 +308,7 @@ export const Panel: React.FC<PanelProps> = ({ session }) => {
         {error && (
           <div className="text-[13px] text-[#8B2312] bg-[#8B2312]/10 border border-[#8B2312]/20 rounded-xl p-3">{error}</div>
         )}
-        </div>
+        </div>}
 
         {/* Kanban: rola por dentro (mantém a linha das colunas à vista).
             Leads e Dashboard: rolagem natural da página. */}
@@ -287,7 +318,8 @@ export const Panel: React.FC<PanelProps> = ({ session }) => {
           </div>
         )}
         {tab === 'leads' && <LeadsTable leads={leads} onSelect={setSelected} />}
-        {tab === 'dashboard' && <Dashboard leads={leads} />}
+        {tab === 'dashboard' && <Dashboard leads={leads} onOpenBlog={() => changeTab('blog')} />}
+        {tab === 'blog' && <BlogHub />}
       </main>
 
       {selected && (
