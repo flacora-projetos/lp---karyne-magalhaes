@@ -4,6 +4,8 @@ import type { Lead, LeadCommercialUpdate, StatusComercial } from './types';
 import { STATUS_ORDER, STATUS_LABEL } from './types';
 import { updateLead } from './api';
 import { dateTime, dateShort } from './format';
+import { blogContactArticle, campaignLabel } from './campaign';
+import { blogArticleTitles } from './blogArticles';
 
 interface LeadDetailModalProps {
   lead: Lead;
@@ -23,6 +25,7 @@ const Field: React.FC<{ label: string; value: React.ReactNode }> = ({ label, val
 );
 
 export const LeadDetailModal: React.FC<LeadDetailModalProps> = ({ lead, onClose, onSaved }) => {
+  const contactArticle = blogContactArticle(lead);
   const [form, setForm] = useState<LeadCommercialUpdate>({
     status_comercial: lead.status_comercial,
     data_consulta: lead.data_consulta,
@@ -126,6 +129,23 @@ export const LeadDetailModal: React.FC<LeadDetailModalProps> = ({ lead, onClose,
               <Field label="UTM Source" value={lead.utm_source} />
               <Field label="UTM Medium" value={lead.utm_medium} />
               <Field label="UTM Campaign" value={lead.utm_campaign} />
+              <div className="col-span-2 md:col-span-3">
+                <Field label="Campanha / artigo" value={campaignLabel(lead, blogArticleTitles)} />
+              </div>
+              {contactArticle && (
+                <div className="col-span-2 md:col-span-3">
+                  <Field label="Artigo que gerou o clique" value={
+                    <a href={`/blog/${encodeURIComponent(contactArticle)}/`} target="_blank" rel="noopener noreferrer" className="underline underline-offset-2">
+                      /blog/{contactArticle}/
+                    </a>
+                  } />
+                </div>
+              )}
+              {lead.entry_article_slug && lead.entry_article_slug !== contactArticle && (
+                <div className="col-span-2 md:col-span-3">
+                  <Field label="Primeiro artigo visitado" value={blogArticleTitles[lead.entry_article_slug] || lead.entry_article_slug} />
+                </div>
+              )}
               <Field label="UTM Content (criativo)" value={lead.utm_content} />
               <Field label="UTM Term" value={lead.utm_term} />
               <Field label="Etapa do funil" value={lead.etapa_funil} />

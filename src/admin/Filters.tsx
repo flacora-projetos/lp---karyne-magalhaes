@@ -54,7 +54,7 @@ export const Filters: React.FC<FiltersProps> = ({ value, onChange, onClear, plat
         </div>
         <div>
           <label className={labelCls}>Campanha</label>
-          <input className={inputCls} value={value.campanha || ''} onChange={(e) => set({ campanha: e.target.value })} placeholder="utm_campaign" />
+          <input className={inputCls} value={value.campanha || ''} onChange={(e) => set({ campanha: e.target.value })} placeholder="Campanha ou artigo do blog" />
         </div>
         <div>
           <label className={labelCls}>Criativo</label>
