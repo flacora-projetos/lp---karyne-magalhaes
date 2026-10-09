@@ -21,7 +21,8 @@ export async function recordBlogContact(article: {id:string; sourceId:string; sl
     entryArticleId: attribution.entryArticleId || article.id,
     entrySourceId: attribution.entrySourceId || article.sourceId,
     entryArticleSlug: attribution.entryArticleSlug || article.slug,
-    lastArticleId: article.id, lastArticleSlug: article.slug,
+    lastArticleId: article.id || attribution.lastArticleId || '',
+    lastArticleSlug: article.slug || attribution.lastArticleSlug || '',
     editorialCtaId: 'contato_whatsapp', editorialCtaDestination: 'whatsapp',
   };
   const response = await fetch('/api/leads', {
