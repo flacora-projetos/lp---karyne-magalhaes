@@ -74,27 +74,27 @@ test('gate de diff aceita só o artigo determinístico e eventual remoção lega
 });
 
 test('schema Fase 7 mantém intenção por versão, operação durável, trava global e pausa independente',()=>{
-  const sql=fs.readFileSync('supabase/migrations/20261009153732_editorial_phase7_publication.sql','utf8');
+  const sql=fs.readFileSync('supabase/migrations/20261009165851_editorial_phase7_publication.sql','utf8');
   assert.match(sql,/editorial_publication_intents/);assert.match(sql,/article_version_id uuid primary key/);assert.match(sql,/intent in \('auto','hold'\)/);
   assert.match(sql,/editorial_publication_operations/);assert.match(sql,/unique\(article_version_id, release_sha256\)/);assert.match(sql,/active_operation_id/);
   assert.match(sql,/values \('publication', true,/);assert.match(sql,/automation_key in \('gsc','publication'\)/);assert.match(sql,/enable row level security/);assert.match(sql,/revoke all .*authenticated/s);
 });
 
 test('aprovação final cria operação no mesmo RPC e somente para hashes exatos',()=>{
-  const sql=fs.readFileSync('supabase/migrations/20261009153732_editorial_phase7_publication.sql','utf8');
+  const sql=fs.readFileSync('supabase/migrations/20261009165851_editorial_phase7_publication.sql','utf8');
   const review=sql.slice(sql.indexOf('editorial_phase7_record_review'),sql.indexOf('editorial_phase7_save_version'));
   assert.match(review,/content_sha256 is distinct from p_input->>'contentSha256'/);assert.match(review,/presentation_sha256 is distinct from p_input->>'presentationSha256'/);
   assert.match(review,/v_editorial='approved' and v_clinical='approved'/);assert.match(review,/editorial_phase7_create_operation/);assert.match(review,/v_intent.intent='auto'/);
 });
 
 test('editar ou pedir correção cancela só fila pré-crítica e bloqueia reserva crítica',()=>{
-  const sql=fs.readFileSync('supabase/migrations/20261009153732_editorial_phase7_publication.sql','utf8');
+  const sql=fs.readFileSync('supabase/migrations/20261009165851_editorial_phase7_publication.sql','utf8');
   assert.match(sql,/status in \('reserved','preparing','publishing','verifying','uncertain'\)/);assert.match(sql,/status in \('queued','dispatch_pending','dispatched'\)/);
   assert.match(sql,/superseded_by_new_version/);assert.match(sql,/review_changes_requested/);assert.match(sql,/publicacao ja entrou em etapa critica/);
 });
 
 test('lease expirado após reserva vira incerto e não autoriza repetição cega',()=>{
-  const sql=fs.readFileSync('supabase/migrations/20261009153732_editorial_phase7_publication.sql','utf8');
+  const sql=fs.readFileSync('supabase/migrations/20261009165851_editorial_phase7_publication.sql','utf8');
   assert.match(sql,/lease_expired_after_reservation/);assert.match(sql,/status='uncertain'/);assert.match(sql,/reconcile_required/);
   const retry=sql.slice(sql.indexOf('editorial_phase7_retry_publication'));
   assert.match(retry,/status not in \('failed','blocked'\)/);assert.doesNotMatch(retry,/status not in \('failed','blocked','uncertain'\)/);
@@ -197,7 +197,7 @@ test('confirmação editorial não depende do ciclo GSC e falha posterior do GSC
 });
 
 test('três artigos históricos não são retroativamente enfileirados pela migration',()=>{
-  const sql=fs.readFileSync('supabase/migrations/20261009153732_editorial_phase7_publication.sql','utf8');
+  const sql=fs.readFileSync('supabase/migrations/20261009165851_editorial_phase7_publication.sql','utf8');
   const beforeFunctions=sql.slice(0,sql.indexOf('create or replace function public.editorial_phase7_create_operation'));
   assert.doesNotMatch(beforeFunctions,/insert into public\.editorial_publication_operations/i);assert.match(beforeFunctions,/insert into public\.editorial_automation_control/);
 });
