@@ -277,7 +277,7 @@ test('Fase 8: original aprovado percorre exportação, materialização e build 
 });
 
 test('Fase 8: migration é aditiva, não cria fonte fictícia e restringe a criação ao servidor (verificação estrutural)', ()=>{
-  const sql=fs.readFileSync('supabase/migrations/20261009190000_editorial_phase8_original_articles.sql','utf8');
+  const sql=fs.readFileSync('supabase/migrations/20261009174933_editorial_phase8_original_articles.sql','utf8');
   assert.doesNotMatch(sql,/insert\s+into\s+public\.editorial_sources/i);assert.doesNotMatch(sql,/insert\s+into\s+public\.editorial_article_sources/i);
   assert.doesNotMatch(sql,/update\s+public\.editorial_sources/i);assert.doesNotMatch(sql,/drop\s+table|drop\s+column|delete\s+from/i);
   assert.match(sql,/origin_kind = 'legacy_adaptation' or source_id is null/);
