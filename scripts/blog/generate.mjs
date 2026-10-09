@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
+import {build} from 'esbuild';
 import {assertUniqueSlugs, buildSitemap, isProductionEligible, PREVIEW_DRAFT_DIR, readArticles, renderArticle, renderIndex, resetGeneratedBlogDir} from './core.mjs';
 
 const args = new Set(process.argv.slice(2));
@@ -23,6 +24,7 @@ if (fixture) articles = [...articles, ...readArticles(fixtureDir)];
 assertUniqueSlugs(articles);
 
 const blogDir = resetGeneratedBlogDir(outDir);
+await build({entryPoints:['src/blog-client.js'],bundle:true,format:'iife',target:'es2020',outfile:path.join(outDir,'blog-client.js')});
 if (preview) {
   const sitemapPath = path.join(outDir, 'sitemap.xml');
   if (fs.existsSync(sitemapPath)) {
