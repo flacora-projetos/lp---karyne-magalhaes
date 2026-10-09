@@ -2,7 +2,7 @@ import fs from 'node:fs';
 
 export const editorialStyles = fs.readFileSync(new URL('./editorial.css', import.meta.url), 'utf8');
 
-const images = {
+const legacyImages = {
   'como-funciona-avaliacao-especializada-mau-halito': {
     file:'oralchroma_equipamento.jpg', width:1280, height:854, label:'A avaliação',
     alt:'Dra. Karyne junto a equipamento no consultório',
@@ -20,8 +20,61 @@ const images = {
   },
 };
 
+function explicitPresentation(article) {
+  const presentation = article?.presentation;
+  if (!presentation || presentation.reviewStatus !== 'reviewed') return null;
+  if (presentation.kind === 'none') {
+    if (!String(presentation.reason || '').trim()) return null;
+    return {
+      kind:'none',
+      reviewStatus:'reviewed',
+      subject:String(presentation.subject || 'sem-imagem-adequada'),
+      reason:String(presentation.reason),
+      image:null,
+    };
+  }
+  const image = presentation.image;
+  if (
+    presentation.kind !== 'image' ||
+    !String(presentation.subject || '').trim() ||
+    !String(image?.file || '').trim() ||
+    !Number.isInteger(image?.width) || image.width <= 0 ||
+    !Number.isInteger(image?.height) || image.height <= 0 ||
+    !String(image?.label || '').trim() ||
+    !String(image?.alt || '').trim() ||
+    !String(image?.caption || '').trim()
+  ) return null;
+  return {
+    kind:'image',
+    reviewStatus:'reviewed',
+    subject:String(presentation.subject),
+    image:{
+      file:String(image.file), width:image.width, height:image.height,
+      label:String(image.label), alt:String(image.alt), caption:String(image.caption),
+    },
+  };
+}
+
+export function presentationContract(article) {
+  const explicit = explicitPresentation(article);
+  if (explicit) return explicit;
+  const legacy = legacyImages[article?.slug];
+  if (!legacy) return null;
+  return {
+    kind:'legacy',
+    reviewStatus:'reviewed',
+    subject:`legacy:${article.slug}`,
+    source:'fase-3-visual-aprovado',
+    image:legacy,
+  };
+}
+
+export function isPresentationReady(article) {
+  return Boolean(presentationContract(article));
+}
+
 export function articleImage(article) {
-  return images[article?.slug] || null;
+  return presentationContract(article)?.image || null;
 }
 
 export function readingMinutes(article) {

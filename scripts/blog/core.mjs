@@ -1,8 +1,8 @@
-import crypto from 'node:crypto';
+﻿import crypto from 'node:crypto';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import {articleImage, contactLink, editorialArticle, editorialIndex, editorialStyles} from './editorial.mjs';
+import {articleImage, contactLink, editorialArticle, editorialIndex, editorialStyles, presentationContract} from './editorial.mjs';
 
 export const SITE_URL = 'https://tratamentodomauhalito.com.br';
 export const PREVIEW_DRAFT_DIR = path.resolve(process.cwd(), '../docs/blog-organico/etapa-2/rascunhos');
@@ -82,6 +82,21 @@ export function contentFingerprint(article) {
   return crypto.createHash('sha256').update(JSON.stringify(fingerprintPayload(article))).digest('hex');
 }
 
+export function presentationFingerprint(article) {
+  const contract = presentationContract(article);
+  if (!contract) return '';
+  return crypto.createHash('sha256').update(JSON.stringify(contract)).digest('hex');
+}
+
+export function releaseFingerprint(article) {
+  const presentationHash = presentationFingerprint(article);
+  if (!presentationHash) return '';
+  return crypto.createHash('sha256').update(JSON.stringify({
+    contentHash: contentFingerprint(article),
+    presentationHash,
+  })).digest('hex');
+}
+
 export function isProductionEligible(article) {
   return Boolean(
     article &&
@@ -105,6 +120,7 @@ export function validateArticle(article, source = 'article') {
   }
   if (!isValidSlug(article.slug)) throw new Error(`${source}: slug inválido: ${article.slug}`);
   if (!Array.isArray(article.body) || article.body.length === 0) throw new Error(`${source}: body vazio`);
+  if (article.presentation && !presentationContract(article)) throw new Error(`${source}: contrato de apresentação inválido ou não revisado`);
   for (const reference of article.references || []) {
     if (reference?.url && !isSafeExternalUrl(reference.url)) {
       throw new Error(`${source}: URL de referência inválida: ${reference.url}`);
