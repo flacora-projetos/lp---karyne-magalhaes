@@ -114,6 +114,13 @@ export function contentFingerprint(article:any){return sha256Json(contentFingerp
 export function presentationFingerprint(presentation:any){return sha256Json(canonicalPresentation(presentation));}
 export function releaseFingerprint(contentHash:string,presentationHash:string){return sha256Json({contentHash,presentationHash});}
 
+export const ARTICLE_ORIGINS = ['legacy_adaptation','original_manual','original_ai'] as const;
+// Origem registrada tem prioridade; sem registro, só uma fonte realmente vinculada caracteriza adaptação do legado.
+export function articleOrigin(article:any) {
+  if (ARTICLE_ORIGINS.includes(article?.origin_kind)) return article.origin_kind as typeof ARTICLE_ORIGINS[number];
+  return article?.source_id ? 'legacy_adaptation' : null;
+}
+
 export function latestReviews(reviews:any[], versionId:string) {
   const relevant=(reviews||[]).filter(r=>r.article_version_id===versionId).sort((a,b)=>String(b.reviewed_at||b.created_at||'').localeCompare(String(a.reviewed_at||a.created_at||'')) || String(b.id||'').localeCompare(String(a.id||'')));
   const latest:any={editorial:null,clinical:null};
@@ -143,7 +150,7 @@ async function rowsForArticles(articleIds:string[]) {
 
 export async function listArticles(params:any={}) {
   const {page,pageSize,from,to}=parsePage(params);
-  let query=db().from('editorial_articles').select('id,source_id,working_title,target_slug,topic_cluster,primary_search_intent,status,created_at,updated_at',{count:'exact'});
+  let query=db().from('editorial_articles').select('id,source_id,origin_kind,working_title,target_slug,topic_cluster,primary_search_intent,status,created_at,updated_at',{count:'exact'});
   if (params.publication === 'published') {
     const publications = await db().from('editorial_publications').select('article_id').eq('publication_status','published');
     if (publications.error) throw new Error('Falha ao listar publicações');
@@ -152,6 +159,10 @@ export async function listArticles(params:any={}) {
     query=query.in('id',ids);
   }
   const q=normalizeSearch(params.q); if(q) query=query.or(`working_title.ilike.%${q}%,topic_cluster.ilike.%${q}%`);
+  const origin=String(params.origin||'').trim();
+  if(origin==='original') query=query.in('origin_kind',['original_manual','original_ai']);
+  else if(origin==='legacy') query=query.or('origin_kind.eq.legacy_adaptation,and(origin_kind.is.null,source_id.not.is.null)');
+  else if(origin) throw new Error('Origem editorial inválida');
   const status=String(params.status||'').trim();
   if(status) {
     if (!['inventario','briefing','rascunho','revisao_editorial','revisao_clinica','aprovado','publicado','arquivado'].includes(status)) throw new Error('Status editorial inválido');
@@ -168,7 +179,7 @@ export async function listArticles(params:any={}) {
     const gsc=related.gsc.find(g=>g.article_id===article.id&&g.article_version_id===publication?.article_version_id)||null;
     const publicationIntent=latest?related.publicationIntents.find((i:any)=>i.article_version_id===latest.id)||null:null;
     const publicationOperation=latest?related.publicationOperations.find((o:any)=>o.article_version_id===latest.id)||null:null;
-    return {...article,work_version:latest?.version_number??null,work_version_id:latest?.id??null,public_version:publication?versions.find(v=>v.id===publication.article_version_id)?.version_number??null:null,public_url:publication?.canonical_url||null,approvals:{editorial:approvals.editorial,clinical:approvals.clinical},publication_intent:publicationIntent?.intent||null,publication_operation:publicationOperation,publication_state:publicationUiState(publicationOperation,Boolean(approvals.editorial&&approvals.clinical),publicationIntent?.intent),gsc:gsc?{knowledge_state:gsc.knowledge_state,action_state:gsc.action_state,last_inspected_at:gsc.last_inspected_at,next_inspection_at:gsc.next_inspection_at}:null};
+    return {...article,origin:articleOrigin(article),work_version:latest?.version_number??null,work_version_id:latest?.id??null,public_version:publication?versions.find(v=>v.id===publication.article_version_id)?.version_number??null:null,public_url:publication?.canonical_url||null,approvals:{editorial:approvals.editorial,clinical:approvals.clinical},publication_intent:publicationIntent?.intent||null,publication_operation:publicationOperation,publication_state:publicationUiState(publicationOperation,Boolean(approvals.editorial&&approvals.clinical),publicationIntent?.intent),gsc:gsc?{knowledge_state:gsc.knowledge_state,action_state:gsc.action_state,last_inspected_at:gsc.last_inspected_at,next_inspection_at:gsc.next_inspection_at}:null};
   }),page,pageSize,total:result.count??null};
 }
 
@@ -190,12 +201,12 @@ export async function getArticleDetail(articleId:string) {
   const latest=versions.data?.[0];
   const approvalState=latest?exactApprovalState(latest,reviews.data||[]):{editorial:false,clinical:false};
   const publicationState=latest?await getPublicationStateForArticle(articleId,latest.id):{intent:null,operations:[],latestOperation:null};
-  return {article:a.data,versions:versions.data||[],reviews:reviews.data||[],publications:publications.data||[],approvals:{editorial:Boolean(approvalState.editorial),clinical:Boolean(approvalState.clinical)},publication:{...publicationState,infrastructure_enabled:process.env.BLOG_PUBLICATION_AUTOMATION_ENABLED==='true',state:publicationUiState(publicationState.latestOperation,Boolean(approvalState.editorial&&approvalState.clinical),publicationState.intent?.intent)},sources:(sources.data||[]).map((s:any)=>({...s,has_text:Boolean(String(s.normalized_body_text||'').trim()),normalized_body_text:undefined,body_excerpt:String(s.normalized_body_text||'').slice(0,1200)}))};
+  return {article:{...a.data,origin:articleOrigin(a.data)},versions:versions.data||[],reviews:reviews.data||[],publications:publications.data||[],approvals:{editorial:Boolean(approvalState.editorial),clinical:Boolean(approvalState.clinical)},publication:{...publicationState,infrastructure_enabled:process.env.BLOG_PUBLICATION_AUTOMATION_ENABLED==='true',state:publicationUiState(publicationState.latestOperation,Boolean(approvalState.editorial&&approvalState.clinical),publicationState.intent?.intent)},sources:(sources.data||[]).map((s:any)=>({...s,has_text:Boolean(String(s.normalized_body_text||'').trim()),normalized_body_text:undefined,body_excerpt:String(s.normalized_body_text||'').slice(0,1200)}))};
 }
 
 export async function listDrafts(params:any={}) {
   const {page,pageSize,from,to}=parsePage(params);
-  let query=db().from('editorial_drafts').select('operation_key,status,payload_json,created_at,promoted_article_id,last_error_code',{count:'exact'});
+  let query=db().from('editorial_drafts').select('operation_key,status,draft_kind,source_id,payload_json,created_at,promoted_article_id,last_error_code',{count:'exact'});
   const q=normalizeSearch(params.q); if(q) query=query.ilike('payload_json->>workingTitle',`%${q}%`);
   const result=await query.order('created_at',{ascending:false}).range(from,to);
   if(result.error) throw new Error('Falha ao listar rascunhos');
@@ -218,8 +229,17 @@ export async function listSources(params:any={}) {
 }
 
 async function count(table:string, apply?:(q:any)=>any){let q=db().from(table).select('*',{count:'exact',head:true});if(apply)q=apply(q);const r=await q;if(r.error)throw new Error('Falha ao calcular visão geral');return r.count??null;}
+// Contagens do acervo legado não derrubam a visão geral: indisponível vira null, nunca zero.
+async function optionalCount(table:string, apply?:(q:any)=>any){try{return await count(table,apply);}catch{return null;}}
+export async function getLegacyCounts(){
+  const [total,withoutText]=await Promise.all([
+    optionalCount('editorial_sources',q=>q.eq('source_system','wordpress_karyne')),
+    optionalCount('editorial_sources',q=>q.eq('source_system','wordpress_karyne').or('normalized_body_text.is.null,normalized_body_text.eq.')),
+  ]);
+  return {legacy_sources:total,legacy_sources_without_text:total===null?null:withoutText};
+}
 export async function getBlogOverview(){
-  const [total,published,review,approved,indexed,drafts,actionPending,lastRun,lastScheduledRun,nextInspection,automation,publicationAutomation,publicationPending,publicationAttention,publicationRuns]=await Promise.all([
+  const [total,published,review,approved,indexed,drafts,actionPending,lastRun,lastScheduledRun,nextInspection,automation,publicationAutomation,publicationPending,publicationAttention,publicationRuns,legacy]=await Promise.all([
     count('editorial_articles'),count('editorial_publications',q=>q.eq('publication_status','published')),
     count('editorial_articles',q=>q.in('status',['revisao_editorial','revisao_clinica'])),count('editorial_articles',q=>q.eq('status','aprovado')),
     count('editorial_gsc_urls',q=>q.eq('knowledge_state','indexed')),
@@ -233,9 +253,10 @@ export async function getBlogOverview(){
     count('editorial_publication_operations',q=>q.in('status',['queued','dispatch_pending','dispatched','reserved','preparing','publishing','verifying'])),
     count('editorial_publication_operations',q=>q.in('status',['blocked','failed','uncertain'])),
     listPublicationOperations(8),
+    getLegacyCounts(),
   ]);
   if(lastRun.error||lastScheduledRun.error||nextInspection.error) throw new Error('Falha ao ler última automação');
-  return {counts:{articles:total,published,drafts,review_pending:review,approved_waiting_publication:approved,indexed,action_pending:actionPending,publication_pending:publicationPending,publication_attention:publicationAttention},automation:{...automation,infrastructure_enabled:process.env.BLOG_GSC_AUTOMATION_ENABLED==='true'},publication_automation:{...publicationAutomation,infrastructure_enabled:process.env.BLOG_PUBLICATION_AUTOMATION_ENABLED==='true'},publication_runs:publicationRuns,last_run:lastRun.data||null,last_scheduled_run:lastScheduledRun.data||null,next_inspection_at:nextInspection.data?.next_inspection_at||null,data_updated_at:new Date().toISOString()};
+  return {counts:{articles:total,...legacy,published,drafts,review_pending:review,approved_waiting_publication:approved,indexed,action_pending:actionPending,publication_pending:publicationPending,publication_attention:publicationAttention},automation:{...automation,infrastructure_enabled:process.env.BLOG_GSC_AUTOMATION_ENABLED==='true'},publication_automation:{...publicationAutomation,infrastructure_enabled:process.env.BLOG_PUBLICATION_AUTOMATION_ENABLED==='true'},publication_runs:publicationRuns,last_run:lastRun.data||null,last_scheduled_run:lastScheduledRun.data||null,next_inspection_at:nextInspection.data?.next_inspection_at||null,data_updated_at:new Date().toISOString()};
 }
 
 export async function getReviewQueue(params:any={}){return listArticles({...params,statuses:['revisao_editorial','revisao_clinica','aprovado'],pageSize:Math.min(Number(params.pageSize)||20,50)});}
@@ -275,17 +296,71 @@ export async function saveArticleVersion(input:any,actorUserId:string){
 export async function promoteDraft(input:any,actorUserId:string){
   if(!isUuid(actorUserId)||!isUuid(input.draftOperationKey)||!isUuid(input.operationKey)) throw new Error('Identificadores inválidos');
   const requestSha256=sha256Json({draftOperationKey:input.draftOperationKey,presentation:input.presentation??null,articleId:input.articleId??null});
+  const d=await db().from('editorial_drafts').select('*').eq('operation_key',input.draftOperationKey).maybeSingle();if(d.error||!d.data)throw new Error('Rascunho não encontrado');
+  if(d.data.draft_kind==='original') return promoteOriginalDraft(d.data,input,requestSha256,actorUserId);
   const reused=await reusedOperation(input.operationKey,requestSha256,actorUserId,'promote_draft'); if(reused) return reused;
-  const d=await db().from('editorial_drafts').select('*').eq('operation_key',input.draftOperationKey).maybeSingle();if(d.error||!d.data)throw new Error('Rascunho não encontrado');if(d.data.status!=='draft'||!d.data.payload_json)throw new Error('Rascunho ainda não está pronto');
+  if(d.data.status!=='draft'||!d.data.payload_json)throw new Error('Rascunho ainda não está pronto');
   if(d.data.promoted_version_id) return {articleId:d.data.promoted_article_id,versionId:d.data.promoted_version_id,versionNumber:1,reused:true};
   const draft=d.data.payload_json; const source=await db().from('editorial_sources').select('id,external_id').eq('id',d.data.source_id).maybeSingle();if(source.error||!source.data)throw new Error('Fonte do rascunho não encontrada');
   const articleId=String(input.articleId||crypto.randomUUID()); if(!isUuid(articleId))throw new Error('ID do artigo inválido');
-  const presentation=input.presentation || (draft.presentationSuggestion?.decision==='no_adequate_image'?{kind:'none',reviewStatus:'reviewed',subject:String(draft.presentationSuggestion.subject||'sem-imagem-adequada'),reason:String(draft.presentationSuggestion.notes||'Sem imagem adequada'),image:null}:null);
+  const presentation=draftPresentation(draft,input.presentation);
   if(!presentation) throw new Error('Escolha uma apresentação no editor antes de promover este rascunho');
   const editable=validateEditableArticle({title:draft.workingTitle,description:draft.description,slug:draft.targetSlug,body:draft.body,references:draft.references,internalLinks:draft.internalLinks,presentation,ctaLabel:'Conhecer a avaliação inicial'});
   const now=new Date().toISOString(); const article={id:articleId,source_id:d.data.source_id,target_slug:editable.slug}; const contentPayload=buildContentPayload(articleId,1,article,editable,{sourceId:source.data.external_id},now); const contentSha256=contentFingerprint(contentPayload); const presentationSha256=presentationFingerprint(editable.presentation);
   const request={draftOperationKey:input.draftOperationKey,operationKey:input.operationKey,actorUserId,articleId,requestSha256,targetSlug:editable.slug,title:editable.title,description:editable.description,body:editable.body,references:editable.references,topicCluster:cleanText(draft.editorialContribution||'',240),searchIntent:cleanText(draft.searchIntent||'',240),serviceRelation:'halitose',contentPayload,contentSha256,presentationPayload:editable.presentation,presentationSha256};
   const result=await db().rpc('editorial_phase6_promote_draft',{p_input:request});if(result.error)throw new Error(result.error.message.includes('slug ja')?'Este slug já existe no acervo editorial':'Falha ao criar versão editável');return result.data;
+}
+
+function draftPresentation(draft:any,chosen:any){
+  return chosen || (draft.presentationSuggestion?.decision==='no_adequate_image'?{kind:'none',reviewStatus:'reviewed',subject:String(draft.presentationSuggestion.subject||'sem-imagem-adequada'),reason:String(draft.presentationSuggestion.notes||'Sem imagem adequada'),image:null}:null);
+}
+
+function originalRpcError(error:any):never {
+  const message=String(error?.message||'');
+  if(error?.code==='23505'||message.includes('slug ja')) throw new Error('Este slug já existe no acervo editorial');
+  if(message.includes('reutilizada')) throw new Error('Identificador já usado para outra operação');
+  if(message.includes('nao e original')) throw new Error('Rascunho não é de pauta original');
+  if(message.includes('nao esta pronto')) throw new Error('Rascunho ainda não está pronto');
+  throw new Error('Falha ao criar artigo original');
+}
+
+// Artigo original nasce sem fonte legado: sourceId nulo no conteúdo, source_id nulo no banco e nenhum vínculo inventado.
+export function buildOriginalRequest(params:{articleId:string;operationKey:string;actorUserId:string;requestSha256:string;originKind:'original_manual'|'original_ai';editable:any;now:string;changeNote?:string;draftOperationKey?:string;topicCluster?:string;searchIntent?:string}){
+  const {articleId,editable,now}=params;
+  const contentPayload=buildContentPayload(articleId,1,{source_id:null,target_slug:editable.slug},editable,{sourceId:null},now);
+  return {operationKey:params.operationKey,actorUserId:params.actorUserId,articleId,requestSha256:params.requestSha256,originKind:params.originKind,draftOperationKey:params.draftOperationKey||null,
+    targetSlug:editable.slug,title:editable.title,description:editable.description,body:editable.body,references:editable.references,changeNote:cleanText(params.changeNote,500),
+    topicCluster:cleanText(params.topicCluster||'',240),searchIntent:cleanText(params.searchIntent||'',240),
+    contentPayload,contentSha256:contentFingerprint(contentPayload),presentationPayload:editable.presentation,presentationSha256:presentationFingerprint(editable.presentation)};
+}
+
+export function createOriginalFingerprint(editable:any,changeNote:unknown){return sha256Json({kind:'original_manual',article:editable,changeNote:cleanText(changeNote,500)});}
+
+export async function createOriginalArticle(input:any,actorUserId:string){
+  if(!isUuid(actorUserId)||!isUuid(input?.operationKey)) throw new Error('Identificadores inválidos');
+  if(input.sourceId!=null||input.article?.sourceId!=null) throw new Error('Artigo original não aceita fonte legado');
+  // Validação completa antes de qualquer acesso ao banco: conteúdo inválido não cria artigo.
+  const editable=validateEditableArticle(input.article);
+  const requestSha256=createOriginalFingerprint(editable,input.changeNote);
+  const reused=await reusedOperation(input.operationKey,requestSha256,actorUserId,'create_original'); if(reused) return {...reused,reused:true};
+  const request=buildOriginalRequest({articleId:crypto.randomUUID(),operationKey:input.operationKey,actorUserId,requestSha256,originKind:'original_manual',editable,now:new Date().toISOString(),changeNote:input.changeNote});
+  const result=await db().rpc('editorial_phase8_create_original',{p_input:request}); if(result.error) originalRpcError(result.error);
+  return result.data;
+}
+
+async function promoteOriginalDraft(row:any,input:any,requestSha256:string,actorUserId:string){
+  if(row.source_id!=null) throw new Error('Rascunho não é de pauta original');
+  const reused=await reusedOperation(input.operationKey,requestSha256,actorUserId,'create_original'); if(reused) return reused;
+  if(row.promoted_version_id) return {articleId:row.promoted_article_id,versionId:row.promoted_version_id,versionNumber:1,originKind:'original_ai',reused:true};
+  if(row.status!=='draft'||!row.payload_json) throw new Error('Rascunho ainda não está pronto');
+  const draft=row.payload_json; const presentation=draftPresentation(draft,input.presentation);
+  if(!presentation) throw new Error('Escolha uma apresentação no editor antes de promover este rascunho');
+  const editable=validateEditableArticle({title:draft.workingTitle,description:draft.description,slug:draft.targetSlug,body:draft.body,references:draft.references,internalLinks:draft.internalLinks,presentation,ctaLabel:'Conhecer a avaliação inicial'});
+  const articleId=String(input.articleId||crypto.randomUUID()); if(!isUuid(articleId)) throw new Error('ID do artigo inválido');
+  const request=buildOriginalRequest({articleId,operationKey:input.operationKey,actorUserId,requestSha256,originKind:'original_ai',editable,now:new Date().toISOString(),draftOperationKey:input.draftOperationKey,
+    topicCluster:draft.topic||draft.editorialContribution||'',searchIntent:draft.searchIntent||''});
+  const result=await db().rpc('editorial_phase8_create_original',{p_input:request}); if(result.error) originalRpcError(result.error);
+  return result.data;
 }
 
 export async function recordReview(input:any,actorUserId:string){
