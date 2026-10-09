@@ -122,4 +122,15 @@ import {recordBlogContact} from './utils/blogContact';
     el.addEventListener('click',contactClick);
     el.addEventListener('auxclick',contactClick);
   });
+  document.querySelectorAll('[data-share]').forEach((button) => {
+    button.addEventListener('click',async () => {
+      const status = document.querySelector('.share-status');
+      try {
+        await navigator.clipboard.writeText(button.dataset.share);
+        if (status) status.textContent = 'Link copiado. Você pode compartilhar este artigo.';
+      } catch {
+        if (status) status.textContent = 'Para compartilhar, copie o endereço do artigo na barra do navegador.';
+      }
+    });
+  });
 })();

@@ -43,7 +43,8 @@ fs.writeFileSync(path.join(blogDir, 'index.html'), renderIndex(articles, {previe
 for (const article of articles) {
   const dir = path.join(blogDir, article.slug);
   fs.mkdirSync(dir, {recursive:true});
-  fs.writeFileSync(path.join(dir, 'index.html'), renderArticle(article, {preview, availableSlugs}), 'utf8');
+  const relatedArticles = (article.internalLinks || []).filter(link => link.slug).map(link => articles.find(candidate => candidate.slug === link.slug)).filter(Boolean);
+  fs.writeFileSync(path.join(dir, 'index.html'), renderArticle(article, {preview, availableSlugs, relatedArticles}), 'utf8');
 }
 if (!preview) fs.writeFileSync(path.join(outDir, 'sitemap.xml'), buildSitemap(articles), 'utf8');
 

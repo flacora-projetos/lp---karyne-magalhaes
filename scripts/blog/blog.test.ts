@@ -55,7 +55,7 @@ function runBlogClient({slug='',pageType='article',search='',referrer='',preview
     cookie:'',
     title:'Teste',
     currentScript:{dataset:{blogPage:pageType,blogArticle:slug,blogSlug:slug,blogSource:slug ? `source-${slug}` : '',blogPreview:preview}},
-    querySelectorAll:() => pageType === 'article' ? [cta] : [],
+    querySelectorAll:(selector:string) => selector === 'a.cta' ? [cta] : [],
   };
   const window = {location,gtag:(...args:any[]) => gtagCalls.push(args)};
   vm.runInNewContext(blogClientSource,{document,window,location,sessionStorage:session,localStorage:local,URLSearchParams,URL,Date,
@@ -163,6 +163,22 @@ test('índice carrega cliente editorial, emite page_view e fica noindex enquanto
   const result = runBlogClient({pageType:'index',preview:'0'});
   const pageView = result.gtagCalls.find((args) => args[0] === 'event' && args[1] === 'page_view');
   assert.equal(pageView?.[2]?.content_type,'blog_index');
+});
+
+test('contato no índice preserva entrada e último artigo sem fabricar contexto editorial', () => {
+  const session = new MemoryStorage();
+  runBlogClient({slug:'artigo-a',preview:'0',session});
+  const index = runBlogClient({pageType:'index',preview:'0',session});
+  index.click();
+  const row = mapPayloadToRow(index.crmCalls[0].payload);
+  assert.equal(row.entry_article_slug,'artigo-a');
+  assert.equal(row.last_article_slug,'artigo-a');
+  assert.equal(row.editorial_cta_destination,'whatsapp');
+  const directIndex = runBlogClient({pageType:'index',preview:'0'});
+  directIndex.click();
+  const directRow = mapPayloadToRow(directIndex.crmCalls[0].payload);
+  assert.equal(directRow.entry_article_slug,null);
+  assert.equal(directRow.last_article_slug,null);
 });
 
 test('links internos só aparecem para destinos disponíveis', () => {
