@@ -1,8 +1,9 @@
-import fs from 'node:fs';
+﻿import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import {build} from 'esbuild';
 import {assertUniqueSlugs, buildSitemap, isProductionEligible, PREVIEW_DRAFT_DIR, readArticles, renderArticle, renderIndex, resetGeneratedBlogDir} from './core.mjs';
+import {isPresentationReady} from './editorial.mjs';
 
 const args = new Set(process.argv.slice(2));
 const preview = args.has('--preview');
@@ -17,6 +18,7 @@ const candidates = preview ? readArticles(PREVIEW_DRAFT_DIR) : readArticles(publ
 if (!preview) {
   for (const article of candidates) {
     if (!isProductionEligible(article)) throw new Error(`Publicação sem aprovação válida: ${article.slug}`);
+    if (!isPresentationReady(article)) throw new Error(`Publicação sem apresentação revisada: ${article.slug}`);
   }
 }
 let articles = candidates;
