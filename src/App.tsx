@@ -25,6 +25,7 @@ import { PrivacyPolicy } from './components/PrivacyPolicy';
 import { preserveFbclid } from './utils/metaPixel';
 import { createGadsDirectHandler } from './utils/gadsDirect';
 import { captureFirstAcquisition } from './utils/acquisition';
+import { trackEditorialCtaArrival } from './utils/gtm';
 
 // Painel administrativo (mini CRM) — carregado sob demanda, fora do bundle da LP.
 const AdminApp = lazy(() => import('./admin/AdminApp'));
@@ -58,6 +59,7 @@ export default function App() {
     // CTA editorial volta ao funil já existente. Nenhum segundo formulário é criado.
     const params = new URLSearchParams(window.location.search);
     if (params.get('blog_cta') === '1' && window.location.pathname === '/') {
+      trackEditorialCtaArrival();
       setIsModalOpen(true);
     }
 

@@ -59,21 +59,17 @@ function runBlogClient({slug='',pageType='article',search='',referrer='',preview
   return {local,session,gtagCalls,navigations,timers,click:(event?:unknown)=>(listeners.get('click') as any)?.(event)};
 }
 
-test('CTA aguarda envio e navega uma vez, com limite mesmo sem resposta da tag', () => {
+test('CTA normal conserva o clique para chegada, sem duplicar no artigo', () => {
   const result = runBlogClient({slug:'artigo-a',preview:'0',ctaHref:'/?blog_cta=1'});
-  let prevented=false;
-  result.click({button:0,preventDefault:()=>{prevented=true;}});
-  assert.equal(prevented,true);
-  assert.equal(result.navigations.length,0);
-  const ctaEvent=result.gtagCalls.find(args=>args[1]==='blog_cta_click');
-  assert.equal(ctaEvent?.[2].send_to,'G-3783BP5DSB');
-  ctaEvent?.[2].event_callback();
-  result.timers[0]();
-  assert.deepEqual(result.navigations,['/?blog_cta=1']);
-  const withoutCallback=runBlogClient({slug:'artigo-a',preview:'0',ctaHref:'/?blog_cta=1'});
-  withoutCallback.click({button:0,preventDefault:()=>{}});
-  withoutCallback.timers[0]();
-  assert.deepEqual(withoutCallback.navigations,['/?blog_cta=1']);
+  result.click({button:0});
+  assert.equal(result.gtagCalls.filter(args=>args[1]==='blog_cta_click').length,0);
+  const pending=JSON.parse(result.session.getItem('dacora_editorial_cta_pending_v1')!);
+  assert.equal(pending.slug,'artigo-a');
+  assert.equal(pending.articleId,'artigo-a');
+  const modified=runBlogClient({slug:'artigo-a',preview:'0'});
+  modified.click({button:0,ctrlKey:true});
+  assert.equal(modified.session.getItem('dacora_editorial_cta_pending_v1'),null);
+  assert.equal(modified.gtagCalls.filter(args=>args[1]==='blog_cta_click').length,1);
 });
 
 test('produção exige revisão exata, hash do conteúdo, autoria e data', () => {

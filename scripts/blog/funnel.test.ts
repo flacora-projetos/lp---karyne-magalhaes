@@ -1,6 +1,23 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {pushDataLayerEvent} from '../../src/utils/gtm';
+import {pushDataLayerEvent,trackEditorialCtaArrival} from '../../src/utils/gtm';
+
+test('chegada editorial emite clique uma vez e recusa contexto antigo ou URL incompatível', () => {
+  const calls:unknown[][]=[];
+  const store=new Map<string,string>();
+  const key='dacora_editorial_cta_pending_v1';
+  (globalThis as any).sessionStorage={getItem:(key:string)=>store.get(key)||null,removeItem:(key:string)=>store.delete(key)};
+  (globalThis as any).window={location:{pathname:'/',search:'?blog_cta=1&article=artigo-a'},gtag:(...args:unknown[])=>calls.push(args)};
+  store.set(key,JSON.stringify({articleId:'a1',slug:'artigo-a',at:Date.now()}));
+  trackEditorialCtaArrival();
+  trackEditorialCtaArrival();
+  assert.deepEqual(calls,[['event','blog_cta_click',{send_to:'G-3783BP5DSB',article_id:'a1',article_slug:'artigo-a',cta_id:'avaliacao_inicial',cta_destination:'home_filter'}]]);
+  store.set(key,JSON.stringify({articleId:'a1',slug:'artigo-a',at:Date.now()-61000}));
+  trackEditorialCtaArrival();
+  store.set(key,JSON.stringify({articleId:'b1',slug:'artigo-b',at:Date.now()}));
+  trackEditorialCtaArrival();
+  assert.equal(calls.length,1);
+});
 
 test('funil emite uma vez no GA4, preserva Ads e exclui dados de contato e respostas', () => {
   const events: unknown[][] = [];
