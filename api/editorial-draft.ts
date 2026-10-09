@@ -3,7 +3,7 @@ import {createHash} from 'node:crypto';
 import {requireAuth} from '../lib/requireAuth.js';
 import {getSupabaseAdmin} from '../lib/supabaseAdmin.js';
 import {completeEditorialJson, editorialProviders, EditorialAiError} from '../lib/editorialAi.mjs';
-import {buildPrompt, validateDraft, validateBriefing, RESPONSE_SCHEMA} from '../lib/editorialDraft.mjs';
+import {buildPrompt, validateDraft, validateBriefing, RESPONSE_SCHEMA, buildOriginalPrompt, validateOriginalBriefing, validateOriginalDraft, ORIGINAL_RESPONSE_SCHEMA} from '../lib/editorialDraft.mjs';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   res.setHeader('Cache-Control', 'private, no-store');
@@ -20,11 +20,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     try { return res.status(200).json({success:true, providers:editorialProviders().map(p => ({provider:p.name, model:p.model})), mode:'human_review_required'}); }
     catch { return res.status(503).json({success:false, error:'Configuração editorial incompleta'}); }
   }
-  const {sourceId, briefing, references, operationKey} = req.body || {};
-  if (typeof sourceId !== 'string' || !/^\d+$/.test(sourceId) || typeof operationKey !== 'string' || !/^[0-9a-f-]{36}$/i.test(operationKey) || !briefing || !Array.isArray(references) || !references.length || JSON.stringify(req.body).length > 40000) {
+  const {sourceId, briefing, references, operationKey, mode} = req.body || {};
+  const original = mode === 'original';
+  const validKey = typeof operationKey === 'string' && /^[0-9a-f-]{36}$/i.test(operationKey);
+  const validTarget = original ? sourceId === undefined : (mode === undefined || mode === 'legacy') && typeof sourceId === 'string' && /^\d+$/.test(sourceId);
+  if (!validTarget || !validKey || !briefing || !Array.isArray(references) || !references.length || JSON.stringify(req.body).length > 40000) {
     return res.status(400).json({success:false, generationNotStarted:true, error:'Pauta, referências e identificador da operação são obrigatórios'});
   }
-  const requestHash = createHash('sha256').update(JSON.stringify({sourceId, briefing, references})).digest('hex');
+  // A pauta original não carrega fonte; o hash separa as duas modalidades sem alterar o hash histórico da adaptação.
+  const requestHash = createHash('sha256').update(JSON.stringify(original ? {mode:'original', briefing, references} : {sourceId, briefing, references})).digest('hex');
   const {data:existing, error:lookupError} = await db.from('editorial_drafts').select('*').eq('operation_key', operationKey).maybeSingle();
   if (lookupError) return res.status(500).json({success:false, generationNotStarted:true, error:'Falha ao consultar operação'});
   if (existing) {
@@ -33,19 +37,32 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (existing.status === 'generating' || existing.status === 'uncertain') return res.status(202).json({success:false, draft:existing, reconciliationRequired:true});
     return res.status(409).json({success:false, draft:existing, error:'Geração anterior falhou; confirme o estado antes de iniciar outra operação'});
   }
-  try { validateBriefing(briefing, references); }
+  try { if (original) validateOriginalBriefing(briefing, references); else validateBriefing(briefing, references); }
   catch { return res.status(400).json({success:false, generationNotStarted:true, error:'Pauta ou referências verificadas incompletas'}); }
   try { editorialProviders(); }
   catch { return res.status(503).json({success:false, generationNotStarted:true, error:'Configuração editorial incompleta'}); }
-  const {data:row, error:sourceError} = await db.from('editorial_sources').select('id,external_id,source_url,source_title,normalized_excerpt,normalized_body_text,published_at_source,modified_at_source').eq('source_system','wordpress_karyne').eq('external_id',sourceId).maybeSingle();
-  if (sourceError || !String(row?.normalized_body_text||'').trim()) return res.status(422).json({success:false, generationNotStarted:true, error:'Fonte sem conteúdo disponível'});
-  const {error:claimError} = await db.from('editorial_drafts').insert({operation_key:operationKey, source_id:row.id, request_sha256:requestHash, status:'generating', created_by:user.id});
-  if (claimError) return res.status(claimError.code === '23505' ? 409 : 500).json({success:false, ...(claimError.code==='23505'?{generationNotStarted:true}:{}), error:'Esta fonte já possui geração pendente ou a operação está indisponível; consulte os rascunhos antes de repetir'});
+  let row: any = null;
+  if (!original) {
+    const lookup = await db.from('editorial_sources').select('id,external_id,source_url,source_title,normalized_excerpt,normalized_body_text,published_at_source,modified_at_source').eq('source_system','wordpress_karyne').eq('external_id',sourceId).maybeSingle();
+    row = lookup.data;
+    if (lookup.error || !String(row?.normalized_body_text||'').trim()) return res.status(422).json({success:false, generationNotStarted:true, error:'Fonte sem conteúdo disponível'});
+  }
+  const claim: Record<string, unknown> = original
+    ? {operation_key:operationKey, source_id:null, draft_kind:'original', request_sha256:requestHash, status:'generating', created_by:user.id}
+    : {operation_key:operationKey, source_id:row.id, request_sha256:requestHash, status:'generating', created_by:user.id};
+  const {error:claimError} = await db.from('editorial_drafts').insert(claim);
+  if (claimError) return res.status(claimError.code === '23505' ? 409 : 500).json({success:false, ...(claimError.code==='23505'?{generationNotStarted:true}:{}), error:original?'Esta pauta já possui geração pendente ou a operação está indisponível; consulte os rascunhos antes de repetir':'Esta fonte já possui geração pendente ou a operação está indisponível; consulte os rascunhos antes de repetir'});
   try {
-    const source = {sourceId:row.external_id, sourceUrl:row.source_url, title:row.source_title, excerpt:row.normalized_excerpt, contentText:row.normalized_body_text, publishedAt:row.published_at_source, modifiedAt:row.modified_at_source};
-    const {draft, generator} = await completeEditorialJson({prompt:buildPrompt(source, briefing, references), schema:RESPONSE_SCHEMA});
-    validateDraft(draft, {source, briefing, references});
-    const payload = {...draft, generator, status:'draft', approval:{editorial:false, clinical:false, client:false}};
+    let draft: any, generator: any;
+    if (original) {
+      ({draft, generator} = await completeEditorialJson({prompt:buildOriginalPrompt(briefing, references), schema:ORIGINAL_RESPONSE_SCHEMA}));
+      validateOriginalDraft(draft, {briefing, references});
+    } else {
+      const source = {sourceId:row.external_id, sourceUrl:row.source_url, title:row.source_title, excerpt:row.normalized_excerpt, contentText:row.normalized_body_text, publishedAt:row.published_at_source, modifiedAt:row.modified_at_source};
+      ({draft, generator} = await completeEditorialJson({prompt:buildPrompt(source, briefing, references), schema:RESPONSE_SCHEMA}));
+      validateDraft(draft, {source, briefing, references});
+    }
+    const payload = {...draft, ...(original ? {origin:'original', topic:briefing.topic} : {}), generator, status:'draft', approval:{editorial:false, clinical:false, client:false}};
     const {data:saved,error} = await db.from('editorial_drafts').update({status:'draft', payload_json:payload, last_error_code:null, updated_at:new Date().toISOString()}).eq('operation_key',operationKey).eq('status','generating').select('operation_key').maybeSingle();
     if (error||!saved) throw new Error('storage_result_unknown');
     return res.status(201).json({success:true, operationKey, draft:payload});
