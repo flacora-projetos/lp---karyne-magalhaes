@@ -1,3 +1,4 @@
+import { getGaIds } from './ga4';
 export type RawAcquisition = {
   utmSource: string;
   utmMedium: string;
@@ -206,5 +207,7 @@ export function getAttributionExtras() {
     articleAssists: editorial?.articleAssists || [],
     editorialCtaId: editorial?.ctaId || '',
     editorialCtaDestination: editorial?.ctaDestination || '',
+    gaClientId: getGaIds().gaClientId,
+    gaSessionId: getGaIds().gaSessionId,
   };
 }

@@ -462,12 +462,15 @@ test('consulta realizada preserva matching Google separado sem enviar conversõe
   const code = ts.transpileModule(source.slice(start,end), {compilerOptions:{target:ts.ScriptTarget.ES2022}}).outputText;
   const google:any[] = [];
   const meta:any[] = [];
+  const ga4:any[] = [];
   const context = vm.createContext({
     crypto:{randomUUID:()=> 'qa-evento'},
     process:{env:{GOOGLE_ADS_CONVERSION_ACTION_ID_QUALIFICADO:'qa-action'}},
     splitName:()=>({firstName:undefined,lastName:undefined}),
     sendGoogleEcEvent:async (p:any)=> {google.push(p); return {success:true};},
     sendMetaEvent:async (p:any)=> {meta.push(p); return {success:true};},
+    sendGa4ServerEvent:async (p:any)=> {ga4.push(p); return {success:true,linkedVisitor:Boolean(p.clientId)};},
+    getSupabaseAdmin:()=>({from:()=>({update:()=>({eq:async()=>({error:null})})})}),
     console:{error:()=>assert.fail('dispatcher não deveria falhar')},
   });
   vm.runInContext(code,context);
@@ -479,6 +482,10 @@ test('consulta realizada preserva matching Google separado sem enviar conversõe
   assert.deepEqual(google.map(p=>p.gclid), ['clique-preservado','clique-atual','clique-legado',undefined]);
   assert.equal(meta.length,4);
   assert.ok(google.every((p,i)=>p.eventId===meta[i].eventId));
+  assert.equal(ga4.length,4);
+  assert.ok(ga4.every((p)=>p.eventName==='close_convert_lead' && p.params.lead_status==='consulta_realizada' && p.params.currency==='BRL'));
+  await dispatch({lead_id:'lead-ga',ga_client_id:'123.456',ga_session_id:'789',valor_fechado:'1090.00'});
+  assert.deepEqual([ga4[4].clientId,ga4[4].sessionId,ga4[4].fallbackId,ga4[4].params.value],['123.456','789','lead-ga',1090]);
 });
 
 test('eventos editoriais não carregam PII clínica ou de contato', () => {

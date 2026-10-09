@@ -2,7 +2,7 @@ import { Star } from "lucide-react";
 
 export const Modalidades = ({ directToWhatsapp = false }: { directToWhatsapp?: boolean }) => {
   return (
-    <section className="py-16 md:py-20 bg-primary-white">
+    <section data-ga-section="modalidades" className="py-16 md:py-20 bg-primary-white">
       <div className="max-w-7xl mx-auto px-6">
         <div className="grid lg:grid-cols-2 gap-16 items-center">
 
@@ -50,7 +50,7 @@ export const Modalidades = ({ directToWhatsapp = false }: { directToWhatsapp?: b
 
             <div className="pt-4">
               <button
-                onClick={() => window.openQualificationModal?.()}
+                onClick={() => window.openQualificationModal?.('modalidades')}
                 className="bg-primary-green hover:bg-secondary-green text-primary-white px-8 py-4 rounded-full text-base font-medium transition-colors w-full sm:w-auto focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-copper focus-visible:ring-offset-2 focus-visible:ring-offset-primary-white"
               >
                 {directToWhatsapp ? 'Agendar pelo WhatsApp' : 'Ver as opções e agendar'}

@@ -73,7 +73,7 @@ export const createGadsDirectHandler = () => {
     tracked: false,
   };
 
-  return () => {
+  return (ctaLocation = '') => {
     const tracking = trackingData();
 
     if (!state.tracked) {
@@ -90,7 +90,7 @@ export const createGadsDirectHandler = () => {
         ...tracking,
       });
 
-      pushDataLayerEvent('filtro_completo');
+      pushDataLayerEvent('filtro_completo', { fluxo: 'gads_direto', cta_location: ctaLocation });
       sendGoogleEcEvent({
         eventName: 'FiltroCompleto',
         eventId: state.googleEventId,
@@ -98,7 +98,7 @@ export const createGadsDirectHandler = () => {
         pageUrl: tracking.pageUrl,
       });
 
-      pushDataLayerEvent('clique_saida');
+      pushDataLayerEvent('clique_saida', { fluxo: 'gads_direto', cta_location: ctaLocation });
       trackCustomEvent('CliqueSaida', { lp_event: 'CliqueSaida' }, { eventID: state.contactEventId });
       sendMetaCapiEvent({
         eventName: 'CliqueSaida',

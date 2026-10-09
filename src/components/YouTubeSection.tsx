@@ -3,7 +3,7 @@ import { Youtube } from 'lucide-react';
 
 export const YouTubeSection = () => {
   return (
-    <section className="py-16 md:py-24 bg-primary-beige/30 border-t border-border-gray/30">
+    <section data-ga-section="youtube" className="py-16 md:py-24 bg-primary-beige/30 border-t border-border-gray/30">
       <div className="max-w-6xl mx-auto px-6 grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-16 items-center">
         <div className="flex flex-col items-center lg:items-start text-center lg:text-left">
           <div className="inline-flex items-center justify-center w-14 h-14 rounded-full bg-primary-beige border border-border-gray/50 mb-6 shadow-sm">
@@ -24,6 +24,7 @@ export const YouTubeSection = () => {
           
           <a 
             href="https://www.youtube.com/@KaryneMagalhaes"
+            data-ga-event="clique_rede_social" data-ga-rede="youtube" data-ga-local="secao_youtube"
             target="_blank"
             rel="noopener noreferrer"
             className="inline-flex items-center justify-center gap-2 px-8 py-3.5 rounded-full border border-primary-brown/20 bg-primary-white text-primary-brown font-medium hover:bg-primary-beige hover:border-primary-brown/30 transition-all shadow-sm w-full sm:w-auto"
@@ -36,7 +37,7 @@ export const YouTubeSection = () => {
         <div className="w-full aspect-video rounded-2xl overflow-hidden shadow-lg border border-border-gray/50">
           <iframe 
             className="w-full h-full"
-            src="https://www.youtube.com/embed/w4e5FCo5y5A?si=11Do_eAVhqxV0upa" 
+            src="https://www.youtube.com/embed/w4e5FCo5y5A?si=11Do_eAVhqxV0upa&enablejsapi=1"
             title="YouTube video player" 
             frameBorder="0" 
             allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" 

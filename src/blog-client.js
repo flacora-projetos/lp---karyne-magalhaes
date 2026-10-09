@@ -91,6 +91,12 @@ import {recordBlogContact} from './utils/blogContact';
   } catch {}
 
   if (!preview && typeof window.gtag === 'function') {
+    try {
+      const flag = params.get('ga_interno');
+      if (flag === '1' || flag === '0') localStorage.setItem('dacora_ga_interno', flag);
+      const internalHost = !/^(www\.)?tratamentodomauhalito\.com\.br$/.test(location.hostname);
+      if (internalHost || localStorage.getItem('dacora_ga_interno') === '1') window.gtag('set', {traffic_type:'internal'});
+    } catch {}
     const event = {page_location:location.href,page_title:document.title,content_type:pageType === 'index' ? 'blog_index' : 'blog_article'};
     if (pageType === 'article') Object.assign(event,{article_id:articleId,source_id:sourceId,article_slug:slug});
     window.gtag('event','page_view',event);
@@ -125,6 +131,9 @@ import {recordBlogContact} from './utils/blogContact';
   document.querySelectorAll('[data-share]').forEach((button) => {
     button.addEventListener('click',async () => {
       const status = document.querySelector('.share-status');
+      if (!preview && typeof window.gtag === 'function') {
+        window.gtag('event','share',{send_to:'G-3783BP5DSB',method:'copiar_link',content_type:'blog_article',item_id:slug,article_id:articleId});
+      }
       try {
         await navigator.clipboard.writeText(button.dataset.share);
         if (status) status.textContent = 'Link copiado. Você pode compartilhar este artigo.';
