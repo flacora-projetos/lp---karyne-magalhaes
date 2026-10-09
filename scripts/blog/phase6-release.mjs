@@ -31,6 +31,9 @@ export function buildSnapshotRelease(snapshot, publishedArticles) {
   else context.push(selected);
   const manifest = buildReleaseManifest([selected], context);
   const release = manifest.releases[0];
+  if (!/^[0-9a-f-]{36}$/i.test(snapshot.articleId) || !/^[0-9a-f-]{36}$/i.test(snapshot.articleVersionId)) throw new Error('Identidade editorial do snapshot inválida');
+  release.operation_key=`publish:${snapshot.articleId}:v${selected.version}:${snapshot.release_sha256}`;
+  manifest.manifest_sha256=sha256(JSON.stringify({schemaVersion:manifest.schemaVersion,mode:manifest.mode,count:manifest.count,releases:manifest.releases}));
   const relatedArticles = (selected.internalLinks || []).filter(link => link.slug).map(link => context.find(article => article.slug === link.slug)).filter(Boolean);
   const finalHtml = renderArticle(selected, { preview:false, availableSlugs:new Set(context.map(article=>article.slug)), relatedArticles });
   if (sha256(finalHtml) !== release.html_sha256 || finalHtml !== release.html) throw new Error('HTML do manifest não corresponde ao renderer final');

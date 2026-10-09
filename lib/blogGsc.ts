@@ -122,6 +122,7 @@ export function assertVersionApprovals(record: any, expected: { contentSha256?: 
   const { version, reviews, article } = record || {};
   if (!version || !article) throw new Error('Versão sem artigo correspondente');
   if (version.article_id !== article.id) throw new Error('Versão aponta para artigo incompatível');
+  if (record.latestVersionId && record.latestVersionId!==version.id) throw new Error('Versão de trabalho superada');
   if (!version.content_sha256) throw new Error('Versão sem hash clínico');
   if (!version.presentation_sha256) throw new Error('Versão sem apresentação revisada');
   if (expected.contentSha256 && version.content_sha256 !== expected.contentSha256) throw new Error('Hash clínico da versão não corresponde ao pacote preparado');
@@ -221,9 +222,9 @@ export async function establishGscBaseline(input: { expectedSitemapSha256: strin
   }
 }
 
-const sitemapDependencies = { getGscSitemap, upsertGscState, claimGscRun, finishGscRun, submitGscSitemap };
+const sitemapDependencies = { getGscSitemap, upsertGscState, claimGscRun, finishGscRun, submitGscSitemap, shouldPause:async()=>Boolean((await getGscAutomationControl()).operator_paused) };
 
-async function reconcileUncertainSitemap(state: any, currentSha256: string, deps = sitemapDependencies) {
+async function reconcileUncertainSitemap(state: any, currentSha256: string, deps: Omit<typeof sitemapDependencies,'shouldPause'> & {shouldPause?:()=>Promise<boolean>} = sitemapDependencies) {
   if (state?.last_submit_status !== 'uncertain' || state?.last_submit_attempt_sha256 !== currentSha256 || !state?.last_submit_attempt_at) return false;
   const sitemap = await deps.getGscSitemap(GSC_SITE_URL, GSC_SITEMAP_URL);
   if (!sitemap.lastSubmitted) return false;
@@ -246,8 +247,9 @@ export function sitemapOperationKey(state: any, currentSha256: string) {
   return `sitemap:${sha256Text(JSON.stringify([state.last_confirmed_sitemap_sha256, state.last_submit_confirmed_at, currentSha256]))}`;
 }
 
-export async function ensureSitemapCurrent(state: any, currentSha256: string, now: Date, deps = sitemapDependencies) {
+export async function ensureSitemapCurrent(state: any, currentSha256: string, now: Date, deps: Omit<typeof sitemapDependencies,'shouldPause'> & {shouldPause?:()=>Promise<boolean>} = sitemapDependencies) {
   const { upsertGscState, claimGscRun, finishGscRun, submitGscSitemap, getGscSitemap } = deps;
+  if(await deps.shouldPause?.()) return {status:'operator_paused'};
   if (!state) return { status: 'baseline_required' };
   if (state.last_confirmed_sitemap_sha256 === currentSha256) {
     await upsertGscState({ ...state, last_submit_status: 'unchanged' });
@@ -259,6 +261,10 @@ export async function ensureSitemapCurrent(state: any, currentSha256: string, no
   const operationKey = sitemapOperationKey(state, currentSha256);
   const claim = await claimGscRun('sitemap_submit', operationKey, { maxAttempts: 2 });
   if (!claim.claimed) return { status: claim.reason || 'skipped' };
+  if(await deps.shouldPause?.()) {
+    await finishGscRun(operationKey,claim.leaseToken!,'skipped',{reason:'operator_paused_before_submit'});
+    return {status:'operator_paused'};
+  }
 
   await upsertGscState({
     ...state,
@@ -411,6 +417,7 @@ export function automationStartDecision(control: any) {
 }
 
 export async function runBlogGscCycle(now = new Date(), trigger: { source?: 'scheduled' | 'manual'; actorUserId?: string | null } = {}) {
+  const startedAt=Date.now();
   const control = await getGscAutomationControl();
   const decision = automationStartDecision(control);
   if (!decision.allowed) return { status:'skipped', reason:decision.reason, control };
@@ -432,7 +439,12 @@ export async function runBlogGscCycle(now = new Date(), trigger: { source?: 'sch
     const sitemap = await ensureSitemapCurrent(state, sitemapSha256, now);
 
     const due = await listDueGscUrls(now, getInspectionLimit());
-    const inspectionResults = await Promise.all(due.map(async (row) => {
+    const inspectionResults:boolean[]=[];
+    let stoppedReason:string|null=sitemap.status==='operator_paused'?'operator_paused':null;
+    for(let index=0;index<due.length&&!stoppedReason;index+=2) {
+      if((await getGscAutomationControl()).operator_paused) {stoppedReason='operator_paused';break;}
+      if(Date.now()-startedAt>40_000) {stoppedReason='execution_window_reached';break;}
+      const batch=await Promise.all(due.slice(index,index+2).map(async (row) => {
       try {
         const payload = await inspectGscUrl(GSC_SITE_URL, row.url);
         const classified = classifyInspection(payload, row.publication_confirmed_at, now);
@@ -455,13 +467,16 @@ export async function runBlogGscCycle(now = new Date(), trigger: { source?: 'sch
         });
         return false;
       }
-    }));
+      }));
+      inspectionResults.push(...batch);
+    }
     const inspected = inspectionResults.filter(Boolean).length;
     const inspectionErrors = inspectionResults.length - inspected;
 
-    const details = { tracked, sitemap: sitemap.status, inspected, inspection_errors: inspectionErrors, inspection_limit: getInspectionLimit() };
-    await finishGscRun(operationKey, claim.leaseToken!, 'succeeded', details);
-    return { status: 'succeeded', ...details };
+    const details = { tracked, sitemap: sitemap.status, inspected, inspection_errors: inspectionErrors, inspection_limit: getInspectionLimit(),...(stoppedReason?{reason:stoppedReason}: {}) };
+    const status=stoppedReason?'skipped':'succeeded';
+    await finishGscRun(operationKey, claim.leaseToken!, status, details);
+    return { status, ...details };
   } catch (error) {
     await finishGscRun(operationKey, claim.leaseToken!, 'failed', { error: error instanceof Error ? error.message : 'unknown' }, 6);
     throw error;

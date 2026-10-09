@@ -61,6 +61,7 @@ export function validateEditableArticle(input: any) {
   if (input.internalLinks != null && (!Array.isArray(input.internalLinks) || input.internalLinks.length > 20)) throw new Error('Link interno inválido');
   const references=(input.references||[]).map((ref:any)=>{
     const url=cleanText(ref?.url,1000,true); if(!externalUrl(url)) throw new Error('Referência externa inválida');
+    if(ref?.verifiedAt && !/^\d{4}-\d{2}-\d{2}$/.test(String(ref.verifiedAt))) throw new Error('Referência externa inválida');
     return {title:cleanText(ref?.title,300,true),url,...(ref?.supports?{supports:cleanText(ref.supports,1000)}:{}),...(ref?.verifiedAt?{verifiedAt:cleanText(ref.verifiedAt,10)}:{})};
   });
   const internalLinks=(input.internalLinks||[]).map((link:any)=>{
@@ -85,13 +86,31 @@ export function validateEditableArticle(input: any) {
   return {title,description,slug:String(input.slug),body,references,internalLinks,presentation,ctaLabel:cleanText(input.ctaLabel||'Conhecer a avaliação inicial',120,true)};
 }
 
-export function contentFingerprintPayload(article:any) {
+export function canonicalContentPayload(article:any) {
+  // JSONB reordena chaves; o pacote precisa recuperar a ordem usada pelo renderer e pelas aprovações.
+  return {...article,
+    body:article?.body?.map((b:any)=>['ul','ol'].includes(b.type)?{type:b.type,items:b.items}:{type:b.type,text:b.text}),
+    internalLinks:article?.internalLinks?.map((l:any)=>l.slug?{label:l.label,slug:l.slug}:{label:l.label,url:l.url}),
+    references:article?.references?.map((r:any)=>({title:r.title,url:r.url,...(r.supports?{supports:r.supports}:{}),...(r.verifiedAt?{verifiedAt:r.verifiedAt}:{})})),
+  };
+}
+
+export function canonicalPresentation(p:any) {
+  if(!p) return p;
+  const image=p.image?{file:p.image.file,width:p.image.width,height:p.image.height,label:p.image.label,alt:p.image.alt,caption:p.image.caption}:null;
+  if(p.kind==='none') return {kind:'none',reviewStatus:p.reviewStatus,subject:p.subject,reason:p.reason,image:null};
+  if(p.kind==='legacy') return {kind:'legacy',reviewStatus:p.reviewStatus,subject:p.subject,source:p.source,image};
+  return {kind:'image',reviewStatus:p.reviewStatus,subject:p.subject,image};
+}
+
+export function contentFingerprintPayload(input:any) {
+  const article=canonicalContentPayload(input);
   return {id:article?.id??null,version:article?.version??null,slug:article?.slug??null,title:article?.title??null,description:article?.description??null,
     body:article?.body??null,ctaLabel:article?.ctaLabel??null,internalLinks:article?.internalLinks??null,references:article?.references??null,
     author:article?.author??null,datePublished:article?.datePublished??null,dateModified:article?.dateModified??null};
 }
 export function contentFingerprint(article:any){return sha256Json(contentFingerprintPayload(article));}
-export function presentationFingerprint(presentation:any){return sha256Json(presentation);}
+export function presentationFingerprint(presentation:any){return sha256Json(canonicalPresentation(presentation));}
 export function releaseFingerprint(contentHash:string,presentationHash:string){return sha256Json({contentHash,presentationHash});}
 
 export function latestReviews(reviews:any[], versionId:string) {
@@ -216,46 +235,84 @@ function buildContentPayload(articleId:string,versionNumber:number,article:any,e
   author:previous?.author||'Dra. Karyne Magalhães',datePublished:previous?.datePublished||now,dateModified:now,
 };}
 
+async function reusedOperation(operationKey:string, requestSha256:string, actorUserId:string, operationType:string) {
+  const result=await db().from('editorial_admin_audit').select('request_sha256,actor_user_id,operation_type,result_json').eq('operation_key',operationKey).maybeSingle();
+  if(result.error) throw new Error('Falha ao consultar operação editorial');
+  if(!result.data) return null;
+  if(result.data.request_sha256!==requestSha256 || result.data.actor_user_id!==actorUserId || result.data.operation_type!==operationType) throw new Error('Identificador já usado para outra operação');
+  return result.data.result_json;
+}
+
+export function saveRequestFingerprint(input:any, editable:any) {
+  return sha256Json({articleId:input.articleId,expectedVersionId:input.expectedVersionId,expectedVersionNumber:Number(input.expectedVersionNumber),article:editable,changeNote:cleanText(input.changeNote,500)});
+}
+
 export async function saveArticleVersion(input:any,actorUserId:string){
   if(!isUuid(actorUserId)||!isUuid(input.articleId)||!isUuid(input.expectedVersionId)||!isUuid(input.operationKey)) throw new Error('Identificadores inválidos');
+  const requested=validateEditableArticle(input.article);
+  const requestSha256=saveRequestFingerprint(input,requested);
+  const reused=await reusedOperation(input.operationKey,requestSha256,actorUserId,'save_version'); if(reused) return reused;
   const detail=await getArticleDetail(input.articleId); const latest=detail.versions[0]; if(!latest||latest.id!==input.expectedVersionId||latest.version_number!==Number(input.expectedVersionNumber)) throw new Error('Conflito de versão; recarregue antes de salvar');
+  if(requested.slug!==detail.article.target_slug) throw new Error('Slug de artigo existente deve ser preservado');
   const editable=validateEditableArticle({...input.article,slug:detail.article.target_slug}); const now=new Date().toISOString(); const next=latest.version_number+1;
   const previous=latest.content_payload_json||{}; const contentPayload=buildContentPayload(detail.article.id,next,detail.article,editable,previous,now);
   const contentSha256=contentFingerprint(contentPayload); const presentationPayload=editable.presentation; const presentationSha256=presentationFingerprint(presentationPayload);
   const request={articleId:detail.article.id,expectedVersionId:latest.id,expectedVersionNumber:latest.version_number,operationKey:input.operationKey,actorUserId,requestSha256:'',targetSlug:detail.article.target_slug,title:editable.title,description:editable.description,body:editable.body,references:editable.references,changeNote:cleanText(input.changeNote,500),contentPayload,contentSha256,presentationPayload,presentationSha256};
-  request.requestSha256=sha256Json({...request,requestSha256:undefined,actorUserId:undefined});
+  request.requestSha256=requestSha256;
   const result=await db().rpc('editorial_phase6_save_version',{p_input:request}); if(result.error) throw new Error(result.error.message.includes('conflito de versao')?'Conflito de versão; recarregue antes de salvar':'Falha ao salvar nova versão'); return result.data;
 }
 
 export async function promoteDraft(input:any,actorUserId:string){
   if(!isUuid(actorUserId)||!isUuid(input.draftOperationKey)||!isUuid(input.operationKey)) throw new Error('Identificadores inválidos');
+  const requestSha256=sha256Json({draftOperationKey:input.draftOperationKey,presentation:input.presentation??null,articleId:input.articleId??null});
+  const reused=await reusedOperation(input.operationKey,requestSha256,actorUserId,'promote_draft'); if(reused) return reused;
   const d=await db().from('editorial_drafts').select('*').eq('operation_key',input.draftOperationKey).maybeSingle();if(d.error||!d.data)throw new Error('Rascunho não encontrado');if(d.data.status!=='draft'||!d.data.payload_json)throw new Error('Rascunho ainda não está pronto');
+  if(d.data.promoted_version_id) return {articleId:d.data.promoted_article_id,versionId:d.data.promoted_version_id,versionNumber:1,reused:true};
   const draft=d.data.payload_json; const source=await db().from('editorial_sources').select('id,external_id').eq('id',d.data.source_id).maybeSingle();if(source.error||!source.data)throw new Error('Fonte do rascunho não encontrada');
   const articleId=String(input.articleId||crypto.randomUUID()); if(!isUuid(articleId))throw new Error('ID do artigo inválido');
   const presentation=input.presentation || (draft.presentationSuggestion?.decision==='no_adequate_image'?{kind:'none',reviewStatus:'reviewed',subject:String(draft.presentationSuggestion.subject||'sem-imagem-adequada'),reason:String(draft.presentationSuggestion.notes||'Sem imagem adequada'),image:null}:null);
   if(!presentation) throw new Error('Escolha uma apresentação no editor antes de promover este rascunho');
   const editable=validateEditableArticle({title:draft.workingTitle,description:draft.description,slug:draft.targetSlug,body:draft.body,references:draft.references,internalLinks:draft.internalLinks,presentation,ctaLabel:'Conhecer a avaliação inicial'});
   const now=new Date().toISOString(); const article={id:articleId,source_id:d.data.source_id,target_slug:editable.slug}; const contentPayload=buildContentPayload(articleId,1,article,editable,{sourceId:source.data.external_id},now); const contentSha256=contentFingerprint(contentPayload); const presentationSha256=presentationFingerprint(editable.presentation);
-  const request={draftOperationKey:input.draftOperationKey,operationKey:input.operationKey,actorUserId,articleId,requestSha256:'',targetSlug:editable.slug,title:editable.title,description:editable.description,body:editable.body,references:editable.references,topicCluster:cleanText(draft.editorialContribution||'',240),searchIntent:cleanText(draft.searchIntent||'',240),serviceRelation:'halitose',contentPayload,contentSha256,presentationPayload:editable.presentation,presentationSha256};request.requestSha256=sha256Json({...request,requestSha256:undefined,actorUserId:undefined});
+  const request={draftOperationKey:input.draftOperationKey,operationKey:input.operationKey,actorUserId,articleId,requestSha256,targetSlug:editable.slug,title:editable.title,description:editable.description,body:editable.body,references:editable.references,topicCluster:cleanText(draft.editorialContribution||'',240),searchIntent:cleanText(draft.searchIntent||'',240),serviceRelation:'halitose',contentPayload,contentSha256,presentationPayload:editable.presentation,presentationSha256};
   const result=await db().rpc('editorial_phase6_promote_draft',{p_input:request});if(result.error)throw new Error(result.error.message.includes('slug ja')?'Este slug já existe no acervo editorial':'Falha ao criar versão editável');return result.data;
 }
 
 export async function recordReview(input:any,actorUserId:string){
   if(!isUuid(actorUserId)||!isUuid(input.versionId)||!isUuid(input.operationKey)||!isSha(input.contentSha256)||!isSha(input.presentationSha256))throw new Error('Dados da revisão inválidos');
   if(!['editorial','clinical'].includes(input.reviewType)||!['approved','changes_requested'].includes(input.decision))throw new Error('Decisão de revisão inválida');
+  if(input.decision==='changes_requested' && cleanText(input.notes,1200).length<3) throw new Error('Informe a correção solicitada');
+  if(input.reviewType==='clinical' && input.decision==='approved' && cleanText(input.reviewerName,180).length<3) throw new Error('Identifique o responsável clínico');
+  if(input.evidence && (Array.isArray(input.evidence)||typeof input.evidence!=='object'||JSON.stringify(input.evidence).length>4000)) throw new Error('Evidência da revisão inválida');
   const request={operationKey:input.operationKey,actorUserId,versionId:input.versionId,requestSha256:'',reviewType:input.reviewType,decision:input.decision,contentSha256:input.contentSha256,presentationSha256:input.presentationSha256,reviewerName:cleanText(input.reviewerName,180),notes:cleanText(input.notes,1200),evidence:input.evidence&&typeof input.evidence==='object'?input.evidence:{}};request.requestSha256=sha256Json({...request,requestSha256:undefined,actorUserId:undefined});
   const result=await db().rpc('editorial_phase6_record_review',{p_input:request});if(result.error)throw new Error(result.error.message.includes('versao de trabalho')?'A revisão ficou desatualizada; recarregue a fila':'Falha ao registrar revisão');return result.data;
 }
 
-export async function exportApprovedSnapshot(articleId:string,versionId:string){
-  const detail=await getArticleDetail(articleId);const version=detail.versions.find((v:any)=>v.id===versionId);if(!version)throw new Error('Versão não encontrada');if(detail.versions[0]?.id!==version.id)throw new Error('Somente a versão de trabalho atual pode ser exportada');
-  const approvals=exactApprovalState(version,detail.reviews);if(!approvals.editorial||!approvals.clinical)throw new Error('Aprovações editorial e clínica atuais são obrigatórias');
+export async function exportApprovedSnapshot(articleId:string,versionId:string,actorUserId:string){
+  if(!isUuid(articleId)||!isUuid(versionId)||!isUuid(actorUserId)) throw new Error('Identificadores inválidos');
+  const result=await db().rpc('editorial_phase6_export_snapshot',{p_input:{articleId,versionId,actorUserId}});
+  if(result.error) throw new Error('Aprovações editorial e clínica atuais são obrigatórias');
+  const version=result.data.version;
+  const approvals=exactApprovalState(version,result.data.reviews);if(!approvals.editorial||!approvals.clinical)throw new Error('Aprovações editorial e clínica atuais são obrigatórias');
   if(!version.content_payload_json||!version.presentation_payload_json||!isSha(version.content_sha256)||!isSha(version.presentation_sha256))throw new Error('Versão sem payload/hash exportável');
-  const content={...version.content_payload_json,status:'approved',presentation:version.presentation_payload_json}; const contentHash=contentFingerprint(content);const presentationHash=presentationFingerprint(version.presentation_payload_json);
+  const content={...canonicalContentPayload(version.content_payload_json),status:'approved',presentation:canonicalPresentation(version.presentation_payload_json)}; const contentHash=contentFingerprint(content);const presentationHash=presentationFingerprint(version.presentation_payload_json);
   if(contentHash!==version.content_sha256||presentationHash!==version.presentation_sha256)throw new Error('Hashes persistidos não correspondem ao conteúdo exportado');
   const releaseHash=releaseFingerprint(contentHash,presentationHash);const article={...content,approval:{version:version.version_number,editorial:true,clinical:true,contentHash,presentationHash,releaseHash}};
   return {schemaVersion:1,kind:'karyne-blog-approved-snapshot',exportedAt:new Date().toISOString(),articleId,articleVersionId:version.id,content_sha256:contentHash,presentation_sha256:presentationHash,release_sha256:releaseHash,article,reviews:{editorial:{reviewed_at:approvals.latest.editorial.reviewed_at,recorded_by_user_id:approvals.latest.editorial.recorded_by_user_id||null},clinical:{reviewed_at:approvals.latest.clinical.reviewed_at,reviewer_name:approvals.latest.clinical.reviewer_name||null,recorded_by_user_id:approvals.latest.clinical.recorded_by_user_id||null}}};
 }
 
 export async function getAutomationControl(){const r=await db().from('editorial_automation_control').select('*').eq('automation_key','gsc').maybeSingle();if(r.error)throw new Error('Falha ao ler controle de automação');return r.data||{automation_key:'gsc',operator_paused:false,pause_reason:null,changed_at:null,revision:0};}
-export async function setAutomationControl(input:any,actorUserId:string){if(!isUuid(input.operationKey)||!isUuid(actorUserId))throw new Error('Operação inválida');const request={operationKey:input.operationKey,actorUserId,requestSha256:'',expectedRevision:Number(input.expectedRevision),paused:Boolean(input.paused),reason:cleanText(input.reason,600)};request.requestSha256=sha256Json({...request,requestSha256:undefined,actorUserId:undefined});const r=await db().rpc('editorial_phase6_set_automation',{p_input:request});if(r.error)throw new Error(r.error.message.includes('mudou')?'Controle mudou; atualize antes de tentar novamente':'Falha ao alterar automação');return r.data;}
+export async function setAutomationControl(input:any,actorUserId:string){if(!isUuid(input.operationKey)||!isUuid(actorUserId)||typeof input.paused!=='boolean'||!Number.isInteger(input.expectedRevision)||input.expectedRevision<1)throw new Error('Operação inválida');const request={operationKey:input.operationKey,actorUserId,requestSha256:'',expectedRevision:input.expectedRevision,paused:input.paused,reason:cleanText(input.reason,600)};if(request.paused&&request.reason.length<3)throw new Error('Informe o motivo da pausa');request.requestSha256=sha256Json({...request,requestSha256:undefined,actorUserId:undefined});const r=await db().rpc('editorial_phase6_set_automation',{p_input:request});if(r.error)throw new Error(r.error.message.includes('mudou')?'Controle mudou; atualize antes de tentar novamente':'Falha ao alterar automação');return r.data;}
+
+export async function renderPrivatePreview(input:any) {
+  const editable=validateEditableArticle({...input.article,presentation:input.presentation??input.article?.presentation,slug:input.article?.slug||'previa-privada'});
+  const {renderArticle}=await import('../scripts/blog/core.mjs');
+  const publications=await db().from('editorial_publications').select('article_id').eq('publication_status','published');
+  if(publications.error) throw new Error('Falha ao carregar links da prévia');
+  const ids=(publications.data||[]).map(p=>p.article_id);
+  const result=ids.length?await db().from('editorial_articles').select('target_slug').in('id',ids):{data:[],error:null};
+  if(result.error) throw new Error('Falha ao carregar links da prévia');
+  const article={...editable,id:'private-preview',version:1,status:'draft',author:'Dra. Karyne Magalhães'};
+  return renderArticle(article,{preview:true,availableSlugs:new Set((result.data||[]).map(a=>a.target_slug)),relatedArticles:[]})
+    .replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi,'');
+}

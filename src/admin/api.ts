@@ -107,5 +107,12 @@ export async function generateEditorialDraft(payload: Record<string,unknown>): P
     const json = await res.json().catch(() => ({}));
     return { ...json, pending:true };
   }
-  return parsePrivateResponse(res,'Falha ao gerar rascunho editorial');
+  if (res.status === 401) throw new Error('unauthorized');
+  const json = await res.json().catch(() => ({}));
+  if (!res.ok || !json.success) {
+    const error = new Error(json.error || 'Falha ao gerar rascunho editorial') as Error & { generationNotStarted?: boolean };
+    if (json.generationNotStarted === true) error.generationNotStarted = true;
+    throw error;
+  }
+  return json;
 }

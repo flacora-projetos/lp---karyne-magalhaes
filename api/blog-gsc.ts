@@ -11,6 +11,7 @@ import { setAutomationControl } from '../lib/blogAdmin.js';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   res.setHeader('Cache-Control', 'private, no-store');
+  res.setHeader('X-Robots-Tag','noindex, nofollow');
   if (!['GET', 'POST'].includes(req.method || '')) return res.status(405).json({ success: false, error: 'Método não permitido' });
   const user = await requireAuth(req, res);
   if (!user) return;
@@ -58,7 +59,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
     return res.status(400).json({ success: false, error: 'Ação administrativa inválida' });
   } catch (error) {
-    console.error('[Blog GSC] operação administrativa falhou:', error instanceof Error ? error.message : 'erro desconhecido');
-    return res.status(500).json({ success: false, error: 'Operação Blog/GSC falhou' });
+    console.error('[Blog GSC] operação administrativa não concluída');
+    const message=error instanceof Error?error.message:'';
+    const allowed=['Controle mudou; atualize antes de tentar novamente','Informe o motivo da pausa','Operação inválida'];
+    return res.status(allowed.includes(message)?409:500).json({ success: false, error: allowed.includes(message)?message:'Operação Blog/GSC falhou' });
   }
 }

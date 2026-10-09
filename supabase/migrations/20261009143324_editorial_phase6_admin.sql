@@ -1,6 +1,5 @@
 begin;
 
--- Fase 6: operacao editorial privada no admin. Tudo permanece server-only.
 alter table public.editorial_drafts
   add column if not exists updated_at timestamptz not null default now(),
   add column if not exists last_error_code text,
@@ -10,6 +9,9 @@ alter table public.editorial_drafts
 alter table public.editorial_drafts drop constraint if exists editorial_drafts_status_check;
 alter table public.editorial_drafts
   add constraint editorial_drafts_status_check check (status in ('generating','draft','failed','uncertain'));
+
+create unique index if not exists editorial_drafts_active_source
+  on public.editorial_drafts(source_id) where status in ('generating','uncertain');
 
 alter table public.editorial_reviews
   add column if not exists created_at timestamptz not null default now(),
@@ -22,7 +24,7 @@ alter table public.editorial_gsc_runs
 create table if not exists public.editorial_admin_audit (
   id uuid primary key default gen_random_uuid(),
   operation_key uuid not null unique,
-  operation_type text not null check (operation_type in ('promote_draft','save_version','record_review','automation_control')),
+  operation_type text not null check (operation_type in ('promote_draft','save_version','record_review','automation_control','export_snapshot')),
   request_sha256 text not null check (request_sha256 ~ '^[0-9a-f]{64}$'),
   actor_user_id uuid not null references auth.users(id) on delete restrict,
   target_type text not null,
@@ -61,9 +63,10 @@ declare
   v_draft public.editorial_drafts%rowtype;
   v_version uuid;
 begin
+  perform pg_advisory_xact_lock(hashtextextended(v_operation::text,6));
   select * into v_existing from public.editorial_admin_audit where operation_key=v_operation;
   if v_existing.id is not null then
-    if v_existing.request_sha256 <> v_request_sha then raise exception 'operation_key reutilizada com outra requisicao'; end if;
+    if v_existing.request_sha256 <> v_request_sha or v_existing.actor_user_id <> v_actor or v_existing.operation_type <> 'promote_draft' then raise exception 'operation_key reutilizada com outra requisicao'; end if;
     return v_existing.result_json;
   end if;
 
@@ -114,9 +117,10 @@ declare
   v_version uuid;
   v_next integer;
 begin
+  perform pg_advisory_xact_lock(hashtextextended(v_operation::text,6));
   select * into v_existing from public.editorial_admin_audit where operation_key=v_operation;
   if v_existing.id is not null then
-    if v_existing.request_sha256 <> v_request_sha then raise exception 'operation_key reutilizada com outra requisicao'; end if;
+    if v_existing.request_sha256 <> v_request_sha or v_existing.actor_user_id <> v_actor or v_existing.operation_type <> 'save_version' then raise exception 'operation_key reutilizada com outra requisicao'; end if;
     return v_existing.result_json;
   end if;
 
@@ -158,17 +162,19 @@ declare
   v_clinical text;
   v_article_status text;
 begin
+  perform pg_advisory_xact_lock(hashtextextended(v_operation::text,6));
   select * into v_existing from public.editorial_admin_audit where operation_key=v_operation;
   if v_existing.id is not null then
-    if v_existing.request_sha256 <> v_request_sha then raise exception 'operation_key reutilizada com outra requisicao'; end if;
+    if v_existing.request_sha256 <> v_request_sha or v_existing.actor_user_id <> v_actor or v_existing.operation_type <> 'record_review' then raise exception 'operation_key reutilizada com outra requisicao'; end if;
     return v_existing.result_json;
   end if;
 
-  select * into v_version from public.editorial_versions where id=v_version_id for update;
+  select * into v_version from public.editorial_versions where id=v_version_id;
   if v_version.id is null then raise exception 'versao nao encontrada'; end if;
-  select * into v_latest from public.editorial_versions where article_id=v_version.article_id order by version_number desc limit 1;
+  perform 1 from public.editorial_articles where id=v_version.article_id for update;
+  select * into v_latest from public.editorial_versions where article_id=v_version.article_id order by version_number desc limit 1 for update;
   if v_latest.id <> v_version.id then raise exception 'somente a versao de trabalho atual pode ser revisada'; end if;
-  if v_version.content_sha256 <> p_input->>'contentSha256' or v_version.presentation_sha256 <> p_input->>'presentationSha256' then
+  if v_version.content_sha256 is null or v_version.presentation_sha256 is null or v_version.content_sha256 is distinct from p_input->>'contentSha256' or v_version.presentation_sha256 is distinct from p_input->>'presentationSha256' then
     raise exception 'hashes da revisao nao correspondem a versao atual';
   end if;
   if p_input->>'reviewType' not in ('editorial','clinical') then raise exception 'tipo de revisao invalido'; end if;
@@ -209,9 +215,10 @@ declare
   v_existing public.editorial_admin_audit%rowtype;
   v_control public.editorial_automation_control%rowtype;
 begin
+  perform pg_advisory_xact_lock(hashtextextended(v_operation::text,6));
   select * into v_existing from public.editorial_admin_audit where operation_key=v_operation;
   if v_existing.id is not null then
-    if v_existing.request_sha256 <> v_request_sha then raise exception 'operation_key reutilizada com outra requisicao'; end if;
+    if v_existing.request_sha256 <> v_request_sha or v_existing.actor_user_id <> v_actor or v_existing.operation_type <> 'automation_control' then raise exception 'operation_key reutilizada com outra requisicao'; end if;
     return v_existing.result_json;
   end if;
   select * into v_control from public.editorial_automation_control where automation_key='gsc' for update;
@@ -230,8 +237,32 @@ begin
   return jsonb_build_object('automationKey','gsc','operatorPaused',v_control.operator_paused,'pauseReason',v_control.pause_reason,'changedAt',v_control.changed_at,'revision',v_control.revision);
 end $$;
 
--- A confirmacao da Fase 5 passa a considerar a decisao MAIS RECENTE de cada tipo.
--- Assim, uma solicitacao posterior de correcao revoga elegibilidade sem apagar historico.
+create or replace function public.editorial_phase6_export_snapshot(p_input jsonb)
+returns jsonb language plpgsql security invoker set search_path = '' as $$
+declare
+  v_article_id uuid := (p_input->>'articleId')::uuid;
+  v_version public.editorial_versions%rowtype;
+  v_reviews jsonb;
+  v_status text;
+  v_kind text;
+begin
+  perform 1 from public.editorial_articles where id=v_article_id for update;
+  select * into v_version from public.editorial_versions where article_id=v_article_id order by version_number desc limit 1 for update;
+  if v_version.id is distinct from (p_input->>'versionId')::uuid then raise exception 'versao de trabalho superada'; end if;
+  foreach v_kind in array array['editorial','clinical'] loop
+    select r.status into v_status from public.editorial_reviews r
+      where r.article_version_id=v_version.id and r.review_type=v_kind
+        and r.content_sha256=v_version.content_sha256 and r.presentation_sha256=v_version.presentation_sha256
+        and r.reviewed_at is not null
+      order by r.reviewed_at desc,r.created_at desc,r.id desc limit 1;
+    if v_status is distinct from 'approved' then raise exception 'aprovacoes atuais ausentes'; end if;
+  end loop;
+  select coalesce(jsonb_agg(to_jsonb(r)),'[]'::jsonb) into v_reviews from public.editorial_reviews r where r.article_version_id=v_version.id;
+  insert into public.editorial_admin_audit(operation_key,operation_type,request_sha256,actor_user_id,target_type,target_id,result_json)
+  values(gen_random_uuid(),'export_snapshot',v_version.content_sha256,(p_input->>'actorUserId')::uuid,'article_version',v_version.id::text,jsonb_build_object('versionId',v_version.id));
+  return jsonb_build_object('version',to_jsonb(v_version),'reviews',v_reviews);
+end $$;
+
 create or replace function public.editorial_confirm_gsc_publication(p_input jsonb)
 returns uuid language plpgsql security invoker set search_path = '' as $$
 declare
@@ -242,20 +273,26 @@ declare
   editorial_status text;
   clinical_status text;
 begin
+  perform 1 from public.editorial_articles where id=article_uuid for update;
   perform pg_advisory_xact_lock(hashtextextended(p_input->>'url',0));
   select r.status into editorial_status from public.editorial_reviews r
     where r.article_version_id=version_uuid and r.review_type='editorial'
       and r.content_sha256=p_input->>'contentSha256' and r.presentation_sha256=p_input->>'presentationSha256'
+      and r.reviewed_at is not null
     order by r.reviewed_at desc,r.created_at desc,r.id desc limit 1;
   select r.status into clinical_status from public.editorial_reviews r
     where r.article_version_id=version_uuid and r.review_type='clinical'
       and r.content_sha256=p_input->>'contentSha256' and r.presentation_sha256=p_input->>'presentationSha256'
+      and r.reviewed_at is not null
     order by r.reviewed_at desc,r.created_at desc,r.id desc limit 1;
-  if editorial_status <> 'approved' or clinical_status <> 'approved' then raise exception 'Aprovacoes atuais da versao exata ausentes'; end if;
+  if editorial_status is distinct from 'approved' or clinical_status is distinct from 'approved' then raise exception 'Aprovacoes atuais da versao exata ausentes'; end if;
   if not exists(select 1 from public.editorial_versions v join public.editorial_articles a on a.id=v.article_id
     where v.id=version_uuid and a.id=article_uuid and a.status in ('aprovado','publicado')
       and v.content_sha256=p_input->>'contentSha256' and v.presentation_sha256=p_input->>'presentationSha256') then
     raise exception 'Versao/artigo nao elegivel para publicacao';
+  end if;
+  if version_uuid is distinct from (select id from public.editorial_versions where article_id=article_uuid order by version_number desc limit 1) then
+    raise exception 'Versao de trabalho superada';
   end if;
 
   select * into publication from public.editorial_publications where url=p_input->>'url' for update;
@@ -290,8 +327,8 @@ begin
 end $$;
 
 revoke all on function public.editorial_phase6_promote_draft(jsonb), public.editorial_phase6_save_version(jsonb),
-  public.editorial_phase6_record_review(jsonb), public.editorial_phase6_set_automation(jsonb) from public, anon, authenticated;
+  public.editorial_phase6_record_review(jsonb), public.editorial_phase6_set_automation(jsonb), public.editorial_phase6_export_snapshot(jsonb), public.editorial_confirm_gsc_publication(jsonb) from public, anon, authenticated;
 grant execute on function public.editorial_phase6_promote_draft(jsonb), public.editorial_phase6_save_version(jsonb),
-  public.editorial_phase6_record_review(jsonb), public.editorial_phase6_set_automation(jsonb) to service_role;
+  public.editorial_phase6_record_review(jsonb), public.editorial_phase6_set_automation(jsonb), public.editorial_phase6_export_snapshot(jsonb), public.editorial_confirm_gsc_publication(jsonb) to service_role;
 
 commit;
