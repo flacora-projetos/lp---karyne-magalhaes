@@ -169,11 +169,19 @@ async function githubPr(op:any){
   return {configured:true,pr};
 }
 
-async function vercelDeployment(mergeSha:string){
+export async function vercelDeployment(mergeSha:string){
   const token=process.env.BLOG_PUBLISH_VERCEL_TOKEN;if(!token)return null;
   const qs=new URLSearchParams({projectId:BLOG_PUBLICATION_VERCEL_PROJECT,target:'production',limit:'20',teamId:BLOG_PUBLICATION_VERCEL_TEAM});
   const response=await fetch(`https://api.vercel.com/v6/deployments?${qs}`,{headers:{Authorization:`Bearer ${token}`}});if(!response.ok)throw new Error(`vercel_deployments_${response.status}`);
-  const data:any=await response.json();return (data.deployments||[]).find((item:any)=>item?.meta?.githubCommitSha===mergeSha&&item.readyState==='READY'&&item.target==='production'&&Array.isArray(item.alias)&&item.alias.includes(BLOG_PUBLICATION_PRODUCTION_ALIAS))||null;
+  const data:any=await response.json();
+  const candidate=(data.deployments||[]).find((item:any)=>item?.meta?.githubCommitSha===mergeSha&&item.readyState==='READY'&&item.target==='production');
+  const id=candidate?.uid||candidate?.id;
+  if(!id||!/^dpl_[a-zA-Z0-9]+$/.test(id))return null;
+  // A listagem não inclui os aliases; a confirmação usa os detalhes da implantação exata.
+  const detailResponse=await fetch(`https://api.vercel.com/v13/deployments/${id}?teamId=${BLOG_PUBLICATION_VERCEL_TEAM}`,{headers:{Authorization:`Bearer ${token}`}});
+  if(!detailResponse.ok)throw new Error(`vercel_deployment_${detailResponse.status}`);
+  const detail:any=await detailResponse.json();
+  return detail.id===id&&detail.project?.id===BLOG_PUBLICATION_VERCEL_PROJECT&&detail.meta?.githubCommitSha===mergeSha&&detail.readyState==='READY'&&detail.target==='production'&&Array.isArray(detail.alias)&&detail.alias.includes(BLOG_PUBLICATION_PRODUCTION_ALIAS)?detail:null;
 }
 
 function canonicalFromHtml(html:string){return html.match(/<link\s+rel=["']canonical["']\s+href=["']([^"']+)["']/i)?.[1]||html.match(/<link\s+href=["']([^"']+)["']\s+rel=["']canonical["']/i)?.[1]||'';}

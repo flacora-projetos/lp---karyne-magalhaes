@@ -7,7 +7,7 @@ import crypto from 'node:crypto';
 import {contentFingerprint,presentationFingerprint,readArticles} from './core.mjs';
 import {assertContentOnlyPaths,assertNoPrivateFields,materializePublicationSnapshot,normalizedPublicationSnapshot} from './phase7-publish.mjs';
 import integrationHandler from '../../api/blog-publish-integration.ts';
-import {dispatchPublicationOperation,publicationUiState,selectPublicationPullRequest,validIntegrationSecret} from '../../lib/blogPublisher.ts';
+import {dispatchPublicationOperation,publicationUiState,selectPublicationPullRequest,validIntegrationSecret,vercelDeployment} from '../../lib/blogPublisher.ts';
 import {assertPreparedBase,classifyExternalFailure,evaluateRemoteChecks,isConfirmedProgressResponse,validatePullRequestIdentity} from './phase7-workflow.mjs';
 
 const ROOT=process.cwd();
@@ -118,6 +118,21 @@ test('confirmação exige merge, projeto/target/alias Vercel, HTML, canonical e 
   const source=fs.readFileSync('lib/blogPublisher.ts','utf8');
   assert.match(source,/githubCommitSha===mergeSha/);assert.match(source,/readyState==='READY'/);assert.match(source,/target==='production'/);assert.match(source,/BLOG_PUBLICATION_PRODUCTION_ALIAS/);assert.match(source,/alias\.includes\(BLOG_PUBLICATION_PRODUCTION_ALIAS\)/);
   assert.match(source,/html_hash_mismatch/);assert.match(source,/canonical_mismatch/);assert.match(source,/sitemap_missing_url/);assert.match(source,/editorial_confirm_gsc_publication/);assert.match(source,/editorial_phase7_mark_published/);
+});
+
+test('implantação é confirmada pelos detalhes mesmo quando a listagem omite aliases',async()=>{
+  const savedToken=process.env.BLOG_PUBLISH_VERCEL_TOKEN;const original=globalThis.fetch;
+  process.env.BLOG_PUBLISH_VERCEL_TOKEN='fake-vercel-token';
+  const mergeSha='a'.repeat(40);const id='dpl_test123';const urls:string[]=[];
+  let detail:any={id,project:{id:'prj_x5aS2Lns4FevJzp6EgPGnYZE9h8B'},meta:{githubCommitSha:mergeSha},readyState:'READY',target:'production',alias:['tratamentodomauhalito.com.br']};
+  let detailStatus=200;
+  globalThis.fetch=(async(url:any)=>{const u=String(url);urls.push(u);return new Response(JSON.stringify(u.includes('/v6/deployments?')?{deployments:[{uid:id,meta:{githubCommitSha:mergeSha},readyState:'READY',target:'production'}]}:detail),{status:u.includes('/v13/')?detailStatus:200,headers:{'Content-Type':'application/json'}});}) as any;
+  try{
+    assert.equal((await vercelDeployment(mergeSha))?.id,id);assert.ok(urls.some(u=>u.includes(`/v13/deployments/${id}?`)));
+    const valid={...detail};
+    for(const invalid of [{project:{id:'outro-projeto'}},{alias:['outro-dominio.com']},{target:'preview'},{meta:{githubCommitSha:'b'.repeat(40)}},{id:'dpl_other'}]){detail={...valid,...invalid};assert.equal(await vercelDeployment(mergeSha),null);}
+    detailStatus=403;await assert.rejects(()=>vercelDeployment(mergeSha),/vercel_deployment_403/);
+  }finally{globalThis.fetch=original;if(savedToken===undefined)delete process.env.BLOG_PUBLISH_VERCEL_TOKEN;else process.env.BLOG_PUBLISH_VERCEL_TOKEN=savedToken;}
 });
 
 test('GSC e publicação têm chaves de ativação e controles separados; cron mantém recuperação hospedada',()=>{
