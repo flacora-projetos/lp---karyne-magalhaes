@@ -2,6 +2,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import {fileURLToPath} from 'node:url';
+import {assertPrivateOutput} from './private-output.mjs';
 
 const SOURCE_SYSTEM = 'wordpress_karyne';
 const SNAPSHOT_RUN_ID = '2026-10-08T17-03-22-763Z';
@@ -20,6 +21,7 @@ function parseArgs(argv = process.argv.slice(2)) {
     else if (raw.startsWith('--output=')) args.output = path.resolve(process.cwd(), raw.slice(9));
     else if (raw === '--apply') args.apply = true;
     else if (raw.startsWith('--confirm=')) args.confirm = raw.slice(10);
+    else if (raw.startsWith('--plan-hash=')) args.planHash = raw.slice(12);
     else throw new Error(`Argumento desconhecido: ${raw}`);
   }
   return args;
@@ -100,8 +102,9 @@ export function mergeMetadata(before = {}, desired = {}) {
   return {...before, ...desired};
 }
 
-async function applyPlan(plan, confirm) {
+async function applyPlan(plan, confirm, planHash) {
   if (confirm !== `IMPORT_${plan.count}_SOURCES`) throw new Error(`Aplicação bloqueada. Use --confirm=IMPORT_${plan.count}_SOURCES somente após aprovação da Fase 4 e aplicação da migration.`);
+  if (planHash !== plan.plan_sha256) throw new Error('Hash do plano aprovado não corresponde ao acervo atual.');
   const {createClient} = await import('@supabase/supabase-js');
   const url = String(process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || '').trim();
   const key = String(process.env.SUPABASE_SERVICE_ROLE_KEY || '').trim();
@@ -110,8 +113,8 @@ async function applyPlan(plan, confirm) {
   for (const op of plan.operations) {
     const desired = op.desired;
     let metadata = desired.metadata_json;
-    if (op.existing_id) {
-      const {data, error} = await supabase.from('editorial_sources').select('metadata_json').eq('id', op.existing_id).single();
+    {
+      const {data, error} = await supabase.from('editorial_sources').select('metadata_json').eq('source_system', desired.source_system).eq('external_id', desired.external_id).maybeSingle();
       if (error) throw error;
       metadata = mergeMetadata(data?.metadata_json || {}, desired.metadata_json);
     }
@@ -123,10 +126,11 @@ async function applyPlan(plan, confirm) {
 
 async function main() {
   const args = parseArgs();
+  if (args.output) assertPrivateOutput(args.output);
   const rows = readNdjson(args.snapshot);
   const existingRows = fs.existsSync(args.existing) ? JSON.parse(fs.readFileSync(args.existing, 'utf8')) : [];
   const plan = buildImportPlan(rows, existingRows);
-  const result = args.apply ? await applyPlan(plan, args.confirm) : {mode:'dry-run', ...plan};
+  const result = args.apply ? await applyPlan(plan, args.confirm, args.planHash) : {mode:'dry-run', ...plan};
   const text = JSON.stringify(result, null, 2) + '\n';
   if (args.output) {
     fs.mkdirSync(path.dirname(args.output), {recursive:true});

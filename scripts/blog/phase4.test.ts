@@ -86,8 +86,10 @@ test('validador do rascunho bloqueia fonte, referência e link inventados', () =
   const references = [{url:'https://pubmed.ncbi.nlm.nih.gov/41678945/'}];
   const valid:any = {
     sourceId:'12059', targetSlug:'oralchroma-exame-mau-halito-como-funciona', clinicalReviewPending:true,
+    workingTitle:'Avaliação do hálito', description:'Avaliação profissional.', searchIntent:'informacional', editorialContribution:'Contextualizar o exame sem promessas.',
+    presentationSuggestion:{subject:'OralChroma',decision:'manual_review_required',notes:'Selecionar imagem real.'},
     reviewPending:['revisão clínica da Dra. Karyne'],
-    body:[{type:'p', text:'Rascunho para revisão.'}],
+    body:Array.from({length:6}, () => ({type:'p', text:'Rascunho para revisão.'})),
     references:[{title:'Guideline',url:references[0].url,supports:'diagnóstico'}],
     internalLinks:[{label:'Avaliação',url:briefing.allowedInternalLinks[0]}],
   };

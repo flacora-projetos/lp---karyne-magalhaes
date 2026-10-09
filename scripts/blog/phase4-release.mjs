@@ -2,6 +2,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import {fileURLToPath} from 'node:url';
+import {assertPrivateOutput} from './private-output.mjs';
 import {contentFingerprint, isProductionEligible, presentationFingerprint, readArticles, releaseFingerprint, renderArticle, SITE_URL} from './core.mjs';
 import {isPresentationReady, presentationContract} from './editorial.mjs';
 
@@ -91,6 +92,7 @@ export function buildReleaseManifest(articles) {
 
 async function main() {
   const args = parseArgs();
+  if (args.output) assertPrivateOutput(args.output);
   const articles = readArticles(args.input);
   const manifest = buildReleaseManifest(articles);
   if (args.prepare) {
