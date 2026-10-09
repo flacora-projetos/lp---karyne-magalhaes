@@ -19,7 +19,7 @@ export function canRecoverGscRun(row: any, now = new Date(), maxAttempts = 2) {
 export async function claimGscRun(
   runKind: 'daily' | 'sitemap_submit' | 'baseline',
   operationKey: string,
-  options: { now?: Date; leaseMinutes?: number; maxAttempts?: number } = {},
+  options: { now?: Date; leaseMinutes?: number; maxAttempts?: number; triggerSource?: 'scheduled' | 'manual'; triggeredByUserId?: string | null } = {},
 ) {
   const now = options.now ?? new Date();
   const leaseMinutes = options.leaseMinutes ?? 10;
@@ -35,6 +35,8 @@ export async function claimGscRun(
     attempts: 1,
     started_at: now.toISOString(),
     updated_at: now.toISOString(),
+    trigger_source: options.triggerSource || null,
+    triggered_by_user_id: options.triggeredByUserId || null,
   };
 
   const inserted = await db().from(RUNS_TABLE).insert(fresh).select('*').maybeSingle();
@@ -59,6 +61,8 @@ export async function claimGscRun(
       started_at: now.toISOString(),
       finished_at: null,
       updated_at: now.toISOString(),
+      trigger_source: options.triggerSource || current.data.trigger_source || null,
+      triggered_by_user_id: options.triggeredByUserId || current.data.triggered_by_user_id || null,
     })
     .eq('operation_key', operationKey)
     .eq('lease_token', current.data.lease_token);
@@ -155,7 +159,7 @@ export async function getEditorialVersionRecord(articleVersionId: string) {
 
   const reviews = await db()
     .from('editorial_reviews')
-    .select('review_type,status,content_sha256,presentation_sha256,reviewed_at')
+    .select('id,review_type,status,content_sha256,presentation_sha256,reviewed_at,created_at')
     .eq('article_version_id', articleVersionId);
   if (reviews.error) throw new Error(`Falha ao ler aprovações: ${reviews.error.message}`);
 
@@ -166,7 +170,9 @@ export async function getEditorialVersionRecord(articleVersionId: string) {
     .maybeSingle();
   if (article.error) throw new Error(`Falha ao ler artigo: ${article.error.message}`);
   if (!article.data) return null;
-  return { version: version.data, reviews: reviews.data || [], article: article.data };
+  const latest=await db().from('editorial_versions').select('id').eq('article_id',version.data.article_id).order('version_number',{ascending:false}).limit(1).single();
+  if(latest.error) throw new Error('Falha ao ler versão de trabalho');
+  return { version: version.data, reviews: reviews.data || [], article: article.data, latestVersionId:latest.data.id };
 }
 
 function preparedEventMatches(row: any, input: {
@@ -258,14 +264,31 @@ export async function markPublicationVerified(input: {
   return { publicationId: result.data as string };
 }
 
-export async function getGscReport(siteUrl: string) {
-  const [state, urls, runs] = await Promise.all([
+export async function getGscAutomationControl() {
+  const result = await db().from('editorial_automation_control').select('*').eq('automation_key','gsc').maybeSingle();
+  if (result.error) throw new Error(`Falha ao ler controle da automação GSC: ${result.error.message}`);
+  return result.data || { automation_key:'gsc', operator_paused:false, pause_reason:null, changed_by_user_id:null, changed_at:null, revision:0 };
+}
+
+export async function getGscReport(siteUrl: string, options: { page?: number; pageSize?: number } = {}) {
+  const page = Math.max(1, Number(options.page) || 1);
+  const pageSize = Math.min(50, Math.max(1, Number(options.pageSize) || 20));
+  const from = (page - 1) * pageSize;
+  const to = from + pageSize - 1;
+  const summaryColumns='operation_key,run_kind,status,trigger_source,triggered_by_user_id,attempts,started_at,finished_at,details_json,updated_at';
+  const [state, urls, runs, automation, lastRun, lastScheduledRun, activeRun, prepared] = await Promise.all([
     getGscState(siteUrl),
     db().from(URLS_TABLE).select('*').order('publication_confirmed_at', { ascending: false }),
-    db().from(RUNS_TABLE).select('operation_key,run_kind,status,attempts,started_at,finished_at,details_json,updated_at').order('updated_at', { ascending: false }).limit(20),
+    db().from(RUNS_TABLE).select('operation_key,run_kind,status,trigger_source,triggered_by_user_id,attempts,started_at,finished_at,details_json,updated_at',{count:'exact'}).order('updated_at', { ascending: false }).range(from,to),
+    getGscAutomationControl(),
+    db().from(RUNS_TABLE).select(summaryColumns).order('updated_at',{ascending:false}).limit(1).maybeSingle(),
+    db().from(RUNS_TABLE).select(summaryColumns).eq('trigger_source','scheduled').order('updated_at',{ascending:false}).limit(1).maybeSingle(),
+    db().from(RUNS_TABLE).select(summaryColumns).eq('status','running').gt('lease_until',new Date().toISOString()).order('started_at',{ascending:false}).limit(1).maybeSingle(),
+    db().from('editorial_publication_events').select('operation_key,article_id,article_version_id,url,details_json,content_sha256,presentation_sha256').eq('event_type','prepared').order('created_at',{ascending:false}).limit(30),
   ]);
   if (urls.error) throw new Error(`Falha ao montar relatório de URLs: ${urls.error.message}`);
   if (runs.error) throw new Error(`Falha ao montar relatório de execuções: ${runs.error.message}`);
+  if(lastRun.error||lastScheduledRun.error||activeRun.error||prepared.error) throw new Error('Falha ao montar resumo da automação');
 
   const articleIds = [...new Set((urls.data || []).map((row: any) => row.article_id).filter(Boolean))];
   let articles: any[] = [];
@@ -284,5 +307,17 @@ export async function getGscReport(siteUrl: string) {
       article_status: article?.status || null,
     };
   });
-  return { state, urls: enrichedUrls, runs: runs.data || [] };
+  const preparedReleases=[];
+  for(const event of prepared.data||[]) {
+    const record=await getEditorialVersionRecord(event.article_version_id);
+    if(!record || record.latestVersionId!==event.article_version_id || !['aprovado','publicado'].includes(record.article.status)) continue;
+    const current=urls.data?.find(u=>u.article_id===event.article_id);
+    if(current?.article_version_id===event.article_version_id) continue;
+    const approved=['editorial','clinical'].every(kind=>{
+      const latest=record.reviews.filter(r=>r.review_type===kind).sort((a,b)=>String(b.reviewed_at||b.created_at||'').localeCompare(String(a.reviewed_at||a.created_at||'')))[0];
+      return latest?.status==='approved'&&latest.reviewed_at&&latest.content_sha256===event.content_sha256&&latest.presentation_sha256===event.presentation_sha256;
+    });
+    if(approved) preparedReleases.push(event);
+  }
+  return { state, urls: enrichedUrls, runs: runs.data || [], runsPage:{page,pageSize,total:runs.count??null}, automation,lastRun:lastRun.data,lastScheduledRun:lastScheduledRun.data,activeRun:activeRun.data,preparedReleases };
 }
