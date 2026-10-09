@@ -3,7 +3,8 @@
   "functions": {
     "api/editorial-draft.ts": {"maxDuration": 300},
     "api/blog-gsc.ts": {"maxDuration": 60},
-    "api/blog-gsc-cron.ts": {"maxDuration": 60}
+    "api/blog-gsc-cron.ts": {"maxDuration": 60},
+    "api/blog-publish-integration.ts": {"maxDuration": 60}
   },
   "headers": [
     {

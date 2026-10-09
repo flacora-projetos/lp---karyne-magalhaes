@@ -1,6 +1,7 @@
 import crypto from 'crypto';
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { runBlogGscCycle } from '../lib/blogGsc.js';
+import { recoverPublicationQueue } from '../lib/blogPublisher.js';
 
 export function validCronSecret(header: string | undefined, secret: string | undefined) {
   if (!header || !secret || !header.startsWith('Bearer ')) return false;
@@ -12,7 +13,9 @@ export function validCronSecret(header: string | undefined, secret: string | und
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   res.setHeader('Cache-Control', 'private, no-store');
   if (req.method !== 'GET') return res.status(405).json({ success: false, error: 'Método não permitido' });
-  if (process.env.BLOG_GSC_AUTOMATION_ENABLED !== 'true') {
+  const gscEnabled=process.env.BLOG_GSC_AUTOMATION_ENABLED==='true';
+  const publicationEnabled=process.env.BLOG_PUBLICATION_AUTOMATION_ENABLED==='true';
+  if (!gscEnabled && !publicationEnabled) {
     return res.status(503).json({ success: false, error: 'automation_disabled' });
   }
   if (!validCronSecret(req.headers.authorization, process.env.CRON_SECRET)) {
@@ -20,8 +23,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   try {
-    const result = await runBlogGscCycle();
-    return res.status(200).json({ success: true, result });
+    // Falha na recuperação da fila de publicação não pode impedir a verificação diária do Google.
+    let publication: unknown = {status:'disabled',attempted:0};
+    if (publicationEnabled) {
+      try { publication = await recoverPublicationQueue(2); }
+      catch { console.error('[Blog Publish] recuperação da fila não concluída'); publication = {status:'error',attempted:0}; }
+    }
+    const gsc = gscEnabled ? await runBlogGscCycle() : {status:'disabled'};
+    return res.status(200).json({ success: true, result: gsc, publication });
   } catch (error) {
     console.error('[Blog GSC] rotina automática falhou:', error instanceof Error ? error.message : 'erro desconhecido');
     return res.status(500).json({ success: false, error: 'blog_gsc_cycle_failed' });
