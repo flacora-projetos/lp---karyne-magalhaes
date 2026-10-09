@@ -1,0 +1,196 @@
+name: Blog automatic publication
+
+on:
+  workflow_dispatch:
+    inputs:
+      operation_id:
+        description: Durable publication operation UUID
+        required: true
+        type: string
+
+concurrency:
+  group: blog-production-publication
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  publish:
+    if: ${{ vars.BLOG_PUBLICATION_WORKFLOW_ENABLED == 'true' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    env:
+      OPERATION_ID: ${{ inputs.operation_id }}
+      INTEGRATION_URL: https://tratamentodomauhalito.com.br/api/blog-publish-integration
+      INTEGRATION_SECRET: ${{ secrets.BLOG_PUBLISH_INTEGRATION_SECRET }}
+      GH_TOKEN: ${{ secrets.BLOG_PUBLISH_GITHUB_PR_TOKEN }}
+    steps:
+      - name: Validate operation id
+        run: node -e "if(!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(process.env.OPERATION_ID||''))process.exit(2)"
+
+      - name: Checkout trusted main
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          ref: main
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Require supported Node and install locked dependencies
+        run: |
+          node -e "const m=Number(process.versions.node.split('.')[0]); if(m<20) throw new Error('Node >=20 required')"
+          npm ci
+
+      - name: Claim durable operation
+        env:
+          EXECUTOR_RUN_ID: gha-${{ github.run_id }}-${{ github.run_attempt }}
+          CLAIM_FILE: ${{ runner.temp }}/claim.json
+          SNAPSHOT_FILE: ${{ runner.temp }}/snapshot.json
+        run: |
+          node --input-type=module - <<'NODE'
+          import fs from 'node:fs';
+          const response=await fetch(process.env.INTEGRATION_URL,{method:'POST',headers:{Authorization:`Bearer ${process.env.INTEGRATION_SECRET}`,'Content-Type':'application/json'},body:JSON.stringify({action:'claim',operationId:process.env.OPERATION_ID,executorRunId:process.env.EXECUTOR_RUN_ID})});
+          const json=await response.json();if(!response.ok||!json.success)throw new Error('claim_failed');
+          fs.writeFileSync(process.env.CLAIM_FILE,JSON.stringify(json.result));
+          if(!json.result?.claimed){console.log(`claim skipped: ${json.result?.reason||'unknown'}`);fs.appendFileSync(process.env.GITHUB_ENV,'CLAIMED=false\n');process.exit(0);}
+          fs.writeFileSync(process.env.SNAPSHOT_FILE,JSON.stringify(json.result.operation.snapshot,null,2));
+          fs.appendFileSync(process.env.GITHUB_ENV,`CLAIMED=true\nLEASE_TOKEN=${json.result.leaseToken}\nATTEMPT=${json.result.operation.attempts}\n`);
+          NODE
+
+      - name: Materialize exact approved version
+        if: env.CLAIMED == 'true'
+        env:
+          SNAPSHOT_FILE: ${{ runner.temp }}/snapshot.json
+          RELEASE_FILE: ${{ runner.temp }}/release.json
+        run: |
+          node scripts/blog/phase7-publish.mjs --snapshot="$SNAPSHOT_FILE" --input=content/blog/published --output="$RELEASE_FILE"
+          node --input-type=module - <<'NODE'
+          import fs from 'node:fs';
+          const data=JSON.parse(fs.readFileSync(process.env.RELEASE_FILE,'utf8'));
+          for(const [k,v] of Object.entries({ARTICLE_SLUG:data.slug,EXPECTED_HTML_SHA256:data.html_sha256,TARGET_FILE:data.target,LEGACY_SOURCE:data.legacy_source||''}))fs.appendFileSync(process.env.GITHUB_ENV,`${k}=${v}\n`);
+          NODE
+
+      - name: Validate article-only diff and full static build
+        if: env.CLAIMED == 'true'
+        run: |
+          node --input-type=module - <<'NODE'
+          import {execFileSync} from 'node:child_process';
+          import {assertContentOnlyPaths} from './scripts/blog/phase7-publish.mjs';
+          const files=execFileSync('git',['diff','--name-only'],{encoding:'utf8'}).trim().split(/\r?\n/).filter(Boolean);
+          assertContentOnlyPaths(files,process.env.ARTICLE_SLUG,process.env.LEGACY_SOURCE||'');
+          NODE
+          npm run lint
+          npm run test:blog
+          npm run build
+          npm run verify:build
+
+      - name: Record prepared state
+        if: env.CLAIMED == 'true'
+        run: |
+          node --input-type=module - <<'NODE'
+          const base=(await (await fetch('https://api.github.com/repos/flacora-projetos/lp---karyne-magalhaes/commits/main',{headers:{Authorization:`Bearer ${process.env.GH_TOKEN}`,Accept:'application/vnd.github+json'}})).json()).sha;
+          if(!/^[0-9a-f]{40}$/.test(base))throw new Error('base_sha_unavailable');
+          const body={action:'progress',operationId:process.env.OPERATION_ID,leaseToken:process.env.LEASE_TOKEN,status:'preparing',githubBaseSha:base,expectedHtmlSha256:process.env.EXPECTED_HTML_SHA256};
+          const r=await fetch(process.env.INTEGRATION_URL,{method:'POST',headers:{Authorization:`Bearer ${process.env.INTEGRATION_SECRET}`,'Content-Type':'application/json'},body:JSON.stringify(body)});if(!r.ok)throw new Error('progress_failed');
+          import fs from 'node:fs';fs.appendFileSync(process.env.GITHUB_ENV,`BASE_SHA=${base}\n`);
+          NODE
+
+      - name: Authorize first external effect
+        if: env.CLAIMED == 'true'
+        run: |
+          node --input-type=module - <<'NODE'
+          const body={action:'progress',operationId:process.env.OPERATION_ID,leaseToken:process.env.LEASE_TOKEN,status:'publishing',expectedHtmlSha256:process.env.EXPECTED_HTML_SHA256};
+          const r=await fetch(process.env.INTEGRATION_URL,{method:'POST',headers:{Authorization:`Bearer ${process.env.INTEGRATION_SECRET}`,'Content-Type':'application/json'},body:JSON.stringify(body)});
+          const j=await r.json();if(!r.ok||j.result?.status!=='publishing')throw new Error(j.result?.reason||'publication_effect_not_authorized');
+          NODE
+
+      - name: Create content-only branch and pull request
+        if: env.CLAIMED == 'true'
+        run: |
+          BRANCH="blog-publish/$OPERATION_ID-a$ATTEMPT"
+          git config user.name "karyne-blog-publisher"
+          git config user.email "blog-publisher@users.noreply.github.com"
+          git checkout -b "$BRANCH"
+          git add -- "$TARGET_FILE"
+          if [ -n "${LEGACY_SOURCE:-}" ]; then git add -u -- "$LEGACY_SOURCE"; fi
+          git commit -m "publish(blog): $ARTICLE_SLUG"
+          gh auth setup-git
+          git push --set-upstream origin "$BRANCH"
+          PR_URL=$(gh pr create --repo flacora-projetos/lp---karyne-magalhaes --base main --head "$BRANCH" --title "publish(blog): $ARTICLE_SLUG" --body "Publicação automática de versão editorial já aprovada. Operação: $OPERATION_ID")
+          PR_NUMBER=$(gh pr view "$PR_URL" --repo flacora-projetos/lp---karyne-magalhaes --json number --jq .number)
+          HEAD_SHA=$(git rev-parse HEAD)
+          echo "BRANCH=$BRANCH" >> "$GITHUB_ENV"
+          echo "PR_URL=$PR_URL" >> "$GITHUB_ENV"
+          echo "PR_NUMBER=$PR_NUMBER" >> "$GITHUB_ENV"
+          echo "HEAD_SHA=$HEAD_SHA" >> "$GITHUB_ENV"
+
+      - name: Record PR and wait for checks
+        if: env.CLAIMED == 'true'
+        run: |
+          node --input-type=module - <<'NODE'
+          const body={action:'progress',operationId:process.env.OPERATION_ID,leaseToken:process.env.LEASE_TOKEN,status:'publishing',githubBaseSha:process.env.BASE_SHA,githubHeadSha:process.env.HEAD_SHA,githubBranch:process.env.BRANCH,githubPrNumber:Number(process.env.PR_NUMBER),expectedHtmlSha256:process.env.EXPECTED_HTML_SHA256};
+          const r=await fetch(process.env.INTEGRATION_URL,{method:'POST',headers:{Authorization:`Bearer ${process.env.INTEGRATION_SECRET}`,'Content-Type':'application/json'},body:JSON.stringify(body)});if(!r.ok)throw new Error('progress_failed');
+          NODE
+          CHECK_COUNT=$(gh api "repos/flacora-projetos/lp---karyne-magalhaes/commits/$HEAD_SHA/check-runs" --jq '.total_count')
+          if [ "$CHECK_COUNT" -gt 0 ]; then
+            gh pr checks "$PR_NUMBER" --repo flacora-projetos/lp---karyne-magalhaes --watch --fail-fast
+          else
+            echo "Nenhum check remoto registrado; validações locais obrigatórias já passaram."
+          fi
+
+      - name: Revalidate main and merge without bypass
+        if: env.CLAIMED == 'true'
+        run: |
+          git fetch origin main
+          CURRENT_MAIN=$(git rev-parse origin/main)
+          if [ "$CURRENT_MAIN" != "$BASE_SHA" ]; then
+            node --input-type=module - <<'NODE'
+            const body={action:'progress',operationId:process.env.OPERATION_ID,leaseToken:process.env.LEASE_TOKEN,status:'blocked',errorCode:'main_advanced',errorDetail:'main avançou após a preparação; nova tentativa explícita é necessária'};
+            await fetch(process.env.INTEGRATION_URL,{method:'POST',headers:{Authorization:`Bearer ${process.env.INTEGRATION_SECRET}`,'Content-Type':'application/json'},body:JSON.stringify(body)});
+            NODE
+            echo "TERMINAL_RECORDED=true" >> "$GITHUB_ENV"
+            exit 12
+          fi
+          gh pr merge "$PR_NUMBER" --repo flacora-projetos/lp---karyne-magalhaes --squash --delete-branch
+          MERGE_SHA=$(gh pr view "$PR_NUMBER" --repo flacora-projetos/lp---karyne-magalhaes --json mergeCommit --jq .mergeCommit.oid)
+          echo "MERGE_SHA=$MERGE_SHA" >> "$GITHUB_ENV"
+
+      - name: Record merge as effect and reconcile production
+        if: env.CLAIMED == 'true'
+        run: |
+          node --input-type=module - <<'NODE'
+          const progress={action:'progress',operationId:process.env.OPERATION_ID,leaseToken:process.env.LEASE_TOKEN,status:'verifying',githubMergeSha:process.env.MERGE_SHA,expectedHtmlSha256:process.env.EXPECTED_HTML_SHA256};
+          const p=await fetch(process.env.INTEGRATION_URL,{method:'POST',headers:{Authorization:`Bearer ${process.env.INTEGRATION_SECRET}`,'Content-Type':'application/json'},body:JSON.stringify(progress)});if(!p.ok)throw new Error('merge_progress_failed');
+          for(let i=0;i<30;i++){
+            const r=await fetch(process.env.INTEGRATION_URL,{method:'POST',headers:{Authorization:`Bearer ${process.env.INTEGRATION_SECRET}`,'Content-Type':'application/json'},body:JSON.stringify({action:'reconcile',operationId:process.env.OPERATION_ID})});
+            const j=await r.json();if(r.ok&&j.result?.status==='published'){console.log('publication confirmed');process.exit(0);}
+            if(r.ok&&['failed','blocked','cancelled'].includes(j.result?.status)){throw new Error(`terminal_${j.result.status}`);}
+            await new Promise(resolve=>setTimeout(resolve,20000));
+          }
+          throw new Error('production_confirmation_timeout');
+          NODE
+
+      - name: Reconcile failure without repeating uncertain effects
+        if: failure() && env.CLAIMED == 'true' && env.TERMINAL_RECORDED != 'true'
+        env:
+          SAFE_FAILURE_FILE: ${{ runner.temp }}/phase7-safe-failure
+        run: |
+          node --input-type=module - <<'NODE'
+          import fs from 'node:fs';
+          const post=async body=>{const r=await fetch(process.env.INTEGRATION_URL,{method:'POST',headers:{Authorization:`Bearer ${process.env.INTEGRATION_SECRET}`,'Content-Type':'application/json'},body:JSON.stringify(body)});return {r,j:await r.json().catch(()=>({}))};};
+          let safeFailure=!process.env.PR_NUMBER;
+          if(process.env.PR_NUMBER){
+            try{
+              const {r,j}=await post({action:'reconcile',operationId:process.env.OPERATION_ID});
+              if(r.ok&&j.result?.status==='published'){console.log('Falha aparente reconciliada como publicação confirmada.');process.exit(0);}
+              if(r.ok&&j.result?.reason==='pr_not_merged')safeFailure=true;
+            }catch{}
+          }
+          if(safeFailure){
+            await post({action:'progress',operationId:process.env.OPERATION_ID,leaseToken:process.env.LEASE_TOKEN,status:'failed',errorCode:'hosted_worker_failed_before_merge',errorDetail:'Falha confirmada antes de merge em produção'});
+            fs.writeFileSync(process.env.SAFE_FAILURE_FILE,'safe-before-merge');
+            process.exit(0);
+          }
+          await post({action:'progress',operationId:process.env.OPERATION_ID,leaseToken:process.env.LEASE_TOKEN,status:'uncertain',errorCode:'hosted_worker_result_uncertain',errorDetail:'O executor falhou após iniciar efeito externo; reconciliação é obrigatória antes de repetir'});
+          NODE
+          if [ -f "$SAFE_FAILURE_FILE" ] && [ -n "${PR_NUMBER:-}" ]; then gh pr close "$PR_NUMBER" --repo flacora-projetos/lp---karyne-magalhaes --delete-branch || true; fi
