@@ -130,10 +130,43 @@ export async function progressPublication(input:any){
   const r=await db().rpc('editorial_phase7_progress_publication',{p_input:payload});if(r.error)throw new Error('Falha ao registrar progresso da publicação');return r.data;
 }
 
-async function githubPr(op:any){
-  const token=process.env.BLOG_PUBLISH_GITHUB_READ_TOKEN||process.env.BLOG_PUBLISH_GITHUB_DISPATCH_TOKEN;if(!token||!op.github_pr_number)return null;
-  const response=await fetch(`https://api.github.com/repos/${BLOG_PUBLICATION_REPO}/pulls/${op.github_pr_number}`,{headers:{Authorization:`Bearer ${token}`,Accept:'application/vnd.github+json','X-GitHub-Api-Version':'2022-11-28'}});
+export function selectPublicationPullRequest(candidates:any[],expectedHeadSha?:string|null){
+  if(!Array.isArray(candidates))return null;
+  const expected=clean(expectedHeadSha,80);
+  if(expected)return candidates.find(item=>String(item?.head?.sha||item?.headRefOid||'')===expected)||null;
+  return candidates.length===1?candidates[0]:null;
+}
+
+async function githubJson(url:string,token:string){
+  const response=await fetch(url,{headers:{Authorization:`Bearer ${token}`,Accept:'application/vnd.github+json','X-GitHub-Api-Version':'2022-11-28'}});
   if(!response.ok)throw new Error(`github_pr_read_${response.status}`);return response.json();
+}
+
+async function githubPr(op:any){
+  const token=process.env.BLOG_PUBLISH_GITHUB_READ_TOKEN||process.env.BLOG_PUBLISH_GITHUB_DISPATCH_TOKEN;
+  if(!token)return {configured:false,pr:null};
+  if(op.github_pr_number){
+    const pr=await githubJson(`https://api.github.com/repos/${BLOG_PUBLICATION_REPO}/pulls/${op.github_pr_number}`,token);
+    return {configured:true,pr};
+  }
+  if(!op.github_branch||!op.github_head_sha)return {configured:true,pr:null};
+  const owner=BLOG_PUBLICATION_REPO.split('/')[0];
+  const params=new URLSearchParams({state:'all',head:`${owner}:${op.github_branch}`,per_page:'20'});
+  const candidates:any=await githubJson(`https://api.github.com/repos/${BLOG_PUBLICATION_REPO}/pulls?${params}`,token);
+  let pr=selectPublicationPullRequest(candidates,op.github_head_sha);
+  if(!pr){
+    const search=new URLSearchParams({q:`repo:${BLOG_PUBLICATION_REPO} is:pr \"${op.id}\"`,per_page:'10'});
+    const found:any=await githubJson(`https://api.github.com/search/issues?${search}`,token);
+    for(const item of found?.items||[]){
+      const candidate=await githubJson(`https://api.github.com/repos/${BLOG_PUBLICATION_REPO}/pulls/${item.number}`,token);
+      if(selectPublicationPullRequest([candidate],op.github_head_sha)){pr=candidate;break;}
+    }
+  }
+  if(pr?.number){
+    const persisted=await db().from('editorial_publication_operations').update({github_pr_number:pr.number,github_merge_sha:pr.merged_at?(pr.merge_commit_sha||op.github_merge_sha||null):(op.github_merge_sha||null),updated_at:new Date().toISOString()}).eq('id',op.id).is('github_pr_number',null);
+    if(persisted.error)throw new Error('github_pr_reconciliation_persist_failed');
+  }
+  return {configured:true,pr};
 }
 
 async function vercelDeployment(mergeSha:string){
@@ -150,13 +183,13 @@ export async function reconcilePublicationOperation(operationId:string){
   if(!uuid(operationId))throw new Error('Operação de publicação inválida');
   const row=await db().from('editorial_publication_operations').select('*').eq('id',operationId).maybeSingle();if(row.error||!row.data)throw new Error('Operação de publicação não encontrada');
   const op=row.data;if(op.status==='published')return {status:'published',reused:true};if(op.status==='cancelled')return {status:'cancelled'};
-  if(!op.github_pr_number)return {status:op.status,reason:'pr_not_recorded'};
-  const pr:any=await githubPr(op);if(!pr)return {status:op.status,reason:'github_read_not_configured'};
+  const lookup:any=await githubPr(op);if(!lookup.configured)return {status:op.status,reason:'github_read_not_configured'};
+  const pr:any=lookup.pr;if(!pr)return {status:op.status,reason:op.github_branch?'pr_not_found':'pr_not_recorded'};
   if(pr.state==='closed'&&!pr.merged_at){
     if(op.lease_token)await progressPublication({operationId:op.id,leaseToken:op.lease_token,status:'failed',errorCode:'pr_closed_unmerged',errorDetail:'PR editorial foi fechado sem merge'});
-    return {status:'failed',reason:'pr_closed_unmerged'};
+    return {status:'failed',reason:'pr_closed_unmerged',prNumber:pr.number};
   }
-  if(!pr.merged_at||!pr.merge_commit_sha)return {status:'publishing',reason:'pr_not_merged'};
+  if(!pr.merged_at||!pr.merge_commit_sha)return {status:'publishing',reason:'pr_not_merged',prNumber:pr.number};
   const mergeSha=String(pr.merge_commit_sha);if(op.github_merge_sha&&op.github_merge_sha!==mergeSha)throw new Error('github_merge_sha_mismatch');
   const deployment:any=await vercelDeployment(mergeSha);if(!deployment)return {status:'verifying',reason:'production_deployment_not_confirmed'};
   const snapshot=op.snapshot_json;const slug=snapshot?.article?.slug;if(!slug||!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug))throw new Error('snapshot_slug_invalid');
@@ -164,7 +197,7 @@ export async function reconcilePublicationOperation(operationId:string){
   if(!sha(op.expected_html_sha256)||actualHtml!==op.expected_html_sha256)return {status:'verifying',reason:'html_hash_mismatch',actualHtmlSha256:actualHtml};
   if(canonicalFromHtml(html)!==canonical)return {status:'verifying',reason:'canonical_mismatch'};
   const sitemap=await fetchText(`${BLOG_PUBLICATION_ORIGIN}/sitemap.xml`);if(!extractSitemapLocs(sitemap).includes(canonical))return {status:'verifying',reason:'sitemap_missing_url'};
-  const confirm=await db().rpc('editorial_confirm_gsc_publication',{p_input:{articleId:op.article_id,articleVersionId:op.article_version_id,operationKey:op.operation_key,url:canonical,contentSha256:op.content_sha256,presentationSha256:op.presentation_sha256,releaseSha256:op.release_sha256,htmlSha256:actualHtml,verification:{canonical_url:canonical,sitemap_present:true,github_pr_number:op.github_pr_number,github_merge_sha:mergeSha,vercel_deployment_id:deployment.uid||deployment.id||null,vercel_deployment_url:deployment.url||null}}});
+  const confirm=await db().rpc('editorial_confirm_gsc_publication',{p_input:{articleId:op.article_id,articleVersionId:op.article_version_id,operationKey:op.operation_key,url:canonical,contentSha256:op.content_sha256,presentationSha256:op.presentation_sha256,releaseSha256:op.release_sha256,htmlSha256:actualHtml,verification:{canonical_url:canonical,sitemap_present:true,github_pr_number:pr.number,github_merge_sha:mergeSha,vercel_deployment_id:deployment.uid||deployment.id||null,vercel_deployment_url:deployment.url||null}}});
   if(confirm.error)throw new Error('publication_confirmation_failed');
   const done=await db().rpc('editorial_phase7_mark_published',{p_input:{operationId:op.id,vercelDeploymentId:deployment.uid||deployment.id||'',vercelDeploymentUrl:deployment.url||'',verification:{html_sha256:actualHtml,canonical_url:canonical,sitemap_present:true,github_merge_sha:mergeSha}}});
   if(done.error)throw new Error('publication_operation_completion_failed');

@@ -7,7 +7,8 @@ import crypto from 'node:crypto';
 import {contentFingerprint,presentationFingerprint,readArticles} from './core.mjs';
 import {assertContentOnlyPaths,assertNoPrivateFields,materializePublicationSnapshot,normalizedPublicationSnapshot} from './phase7-publish.mjs';
 import integrationHandler from '../../api/blog-publish-integration.ts';
-import {dispatchPublicationOperation,publicationUiState,validIntegrationSecret} from '../../lib/blogPublisher.ts';
+import {dispatchPublicationOperation,publicationUiState,selectPublicationPullRequest,validIntegrationSecret} from '../../lib/blogPublisher.ts';
+import {assertPreparedBase,classifyExternalFailure,evaluateRemoteChecks,isConfirmedProgressResponse,validatePullRequestIdentity} from './phase7-workflow.mjs';
 
 const ROOT=process.cwd();
 function sha(value:string){return crypto.createHash('sha256').update(value).digest('hex');}
@@ -125,10 +126,68 @@ test('GSC e publicação têm chaves de ativação e controles separados; cron m
   assert.match(source,/automation_key','publication'/);assert.match(source,/\['queued','dispatch_pending','dispatched'\]/);assert.match(source,/operator_paused_before_effect/);assert.doesNotMatch(source,/Indexing API/i);
 });
 
-test('falha hospedada só fecha PR quando a ausência de merge foi reconciliada',()=>{
+test('base preparada é a identidade do checkout e avanço de main exige nova preparação',()=>{
+  const a='a'.repeat(40),b='b'.repeat(40);
+  assert.equal(assertPreparedBase(a,a),a);
+  assert.throws(()=>assertPreparedBase(a,b),/main_advanced_during_prepare/);
+  assert.throws(()=>assertPreparedBase('main',a),/base_sha_unavailable/);
+});
+
+test('checks remotos distinguem descoberta, nenhum obrigatório, pendência, falha e consulta indisponível',()=>{
+  assert.deepEqual(evaluateRemoteChecks({requiredChecks:[],rollup:[],mergeStateStatus:'CLEAN',elapsedMs:10000}),{state:'wait',code:'check_discovery_grace'});
+  assert.deepEqual(evaluateRemoteChecks({requiredChecks:[],rollup:[],mergeStateStatus:'CLEAN',elapsedMs:70000}),{state:'pass',code:'no_required_checks'});
+  assert.deepEqual(evaluateRemoteChecks({requiredChecks:[{bucket:'pending'}],mergeStateStatus:'BLOCKED',elapsedMs:70000}),{state:'wait',code:'required_checks_pending'});
+  assert.deepEqual(evaluateRemoteChecks({requiredChecks:[{bucket:'fail'}],elapsedMs:1000}),{state:'block',code:'required_check_failed'});
+  assert.deepEqual(evaluateRemoteChecks({queryAvailable:false,elapsedMs:600000}),{state:'block',code:'remote_checks_unavailable'});
+  assert.deepEqual(evaluateRemoteChecks({requiredChecks:[{bucket:'pending'}],elapsedMs:600000}),{state:'block',code:'required_checks_timeout'});
+});
+
+test('status rollup cobre checks e status contexts, não apenas check-runs',()=>{
+  const pendingContext={__typename:'StatusContext',state:'PENDING'};
+  const failedContext={__typename:'StatusContext',state:'ERROR'};
+  assert.equal(evaluateRemoteChecks({requiredChecks:[pendingContext],elapsedMs:70000}).state,'wait');
+  assert.deepEqual(evaluateRemoteChecks({requiredChecks:[failedContext],elapsedMs:70000}),{state:'block',code:'required_check_failed'});
+});
+
+test('pré-merge exige HEAD, base, estado e diff exatos',()=>{
+  const head='a'.repeat(40),base='b'.repeat(40);const target='content/blog/published/artigo.json';
+  const pr={state:'OPEN',isDraft:false,headRefOid:head,baseRefOid:base,mergeable:'MERGEABLE',files:[{path:target}]};
+  assert.equal(validatePullRequestIdentity(pr,{expectedHeadSha:head,expectedBaseSha:base,expectedPaths:[target]}),true);
+  assert.throws(()=>validatePullRequestIdentity({...pr,headRefOid:'c'.repeat(40)},{expectedHeadSha:head,expectedBaseSha:base,expectedPaths:[target]}),/pr_head_changed/);
+  assert.throws(()=>validatePullRequestIdentity({...pr,files:[{path:target},{path:'src/App.tsx'}]},{expectedHeadSha:head,expectedBaseSha:base,expectedPaths:[target]}),/pr_diff_outside_allowlist/);
+});
+
+test('estado terminal só é aceito depois de resposta HTTP e payload válidos',()=>{
+  const blocked={success:true,result:{status:'blocked'}};
+  assert.equal(isConfirmedProgressResponse(true,blocked,'blocked'),true);
+  assert.equal(isConfirmedProgressResponse(false,blocked,'blocked'),false);
+  assert.equal(isConfirmedProgressResponse(true,{success:false,result:{status:'blocked'}},'blocked'),false);
+  assert.equal(isConfirmedProgressResponse(true,{success:true,result:{status:'publishing'}},'blocked'),false);
+});
+
+test('falha após efeito externo nunca presume ausência de merge só porque faltou PR_NUMBER local',()=>{
+  const head='a'.repeat(40);
+  assert.deepEqual(classifyExternalFailure({externalEffectStarted:false}),{state:'safe-before-effect',code:'external_effect_not_started'});
+  assert.deepEqual(classifyExternalFailure({externalEffectStarted:true,queryAvailable:false,expectedHeadSha:head}),{state:'uncertain',code:'github_reconciliation_unavailable'});
+  assert.deepEqual(classifyExternalFailure({externalEffectStarted:true,queryAvailable:true,pr:null,expectedHeadSha:head}),{state:'uncertain',code:'pull_request_not_confirmed'});
+  assert.deepEqual(classifyExternalFailure({externalEffectStarted:true,queryAvailable:true,pr:{state:'OPEN',headRefOid:head},expectedHeadSha:head}),{state:'safe-before-merge',code:'pull_request_confirmed_unmerged'});
+  assert.deepEqual(classifyExternalFailure({externalEffectStarted:true,queryAvailable:true,pr:{state:'MERGED',headRefOid:head,mergedAt:'2026-10-09T16:00:00Z'},expectedHeadSha:head}),{state:'reconcile-merge',code:'merge_detected'});
+});
+
+test('reconciliação seleciona somente PR que conserva o HEAD persistido',()=>{
+  const head='a'.repeat(40);const other='b'.repeat(40);
+  const selected=selectPublicationPullRequest([{number:1,head:{sha:other}},{number:2,head:{sha:head}}],head);
+  assert.equal(selected?.number,2);assert.equal(selectPublicationPullRequest([{number:1,head:{sha:other}}],head),null);
+  const source=fs.readFileSync('lib/blogPublisher.ts','utf8');
+  assert.match(source,/head:`\$\{owner\}:\$\{op\.github_branch\}`/);assert.match(source,/search\/issues/);assert.doesNotMatch(source,/if\(!op\.github_pr_number\)return \{status:op\.status,reason:'pr_not_recorded'\}/);
+});
+
+test('workflow liga as proteções comportamentais ao caminho real de merge e falha',()=>{
   const yml=fs.readFileSync('.github/workflows/blog-auto-publish.yml','utf8');
-  assert.match(yml,/hosted_worker_result_uncertain/);assert.match(yml,/SAFE_FAILURE_FILE/);assert.match(yml,/reason==='pr_not_merged'/);
-  assert.match(yml,/if \[ -f "\$SAFE_FAILURE_FILE" \].*gh pr close/);assert.doesNotMatch(yml,/--admin/);
+  assert.match(yml,/Capture exact prepared base/);assert.match(yml,/main_advanced_during_prepare/);assert.match(yml,/statusCheckRollup/);assert.match(yml,/--required/);
+  assert.match(yml,/--match-head-commit "\$HEAD_SHA"/);assert.match(yml,/EXTERNAL_EFFECT_STARTED=true/);assert.match(yml,/failure_terminal_state_unconfirmed/);
+  assert.match(yml,/hosted_worker_result_uncertain/);assert.doesNotMatch(yml,/SAFE_FAILURE_FILE/);assert.doesNotMatch(yml,/gh pr close/);assert.doesNotMatch(yml,/--admin/);
+  const jobEnv=yml.slice(yml.indexOf('    env:'),yml.indexOf('    steps:'));assert.doesNotMatch(jobEnv,/secrets\./);
 });
 
 test('confirmação editorial não depende do ciclo GSC e falha posterior do GSC não desfaz publicação',()=>{
