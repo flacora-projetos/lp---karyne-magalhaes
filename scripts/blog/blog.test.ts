@@ -218,6 +218,10 @@ test('sitemap contém apenas seção com conteúdo, lastmod real e nunca admin/g
   assert.ok(xml.includes('/blog/'));
   assert.ok(xml.includes('/blog/artigo-teste/'));
   assert.ok(xml.includes('<lastmod>2026-10-08</lastmod>'));
+  assert.ok(xml.includes('https://tratamentodomauhalito.com.br/</loc><lastmod>2026-10-09</lastmod>'));
+  assert.ok(xml.includes('/blog/artigo-teste/</loc><lastmod>2026-10-09</lastmod>'));
+  const newerXml = buildSitemap([approvedArticle({dateModified:'2026-10-10T12:00:00Z'})]);
+  assert.ok(newerXml.includes('/blog/artigo-teste/</loc><lastmod>2026-10-10</lastmod>'));
   assert.ok(xml.includes('/politica-de-privacidade</loc><lastmod>2026-06-22</lastmod>'));
   assert.ok(!xml.includes('/admin'));
   assert.ok(!xml.includes('/gads'));

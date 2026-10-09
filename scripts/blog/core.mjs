@@ -6,6 +6,8 @@ import {articleImage, contactLink, editorialArticle, editorialIndex, editorialSt
 
 export const SITE_URL = 'https://tratamentodomauhalito.com.br';
 export const PREVIEW_DRAFT_DIR = path.resolve(process.cwd(), '../docs/blog-organico/etapa-2/rascunhos');
+// A identidade do autor mudou no JSON-LD sem alterar a revisão clínica dos textos.
+const ARTICLE_SCHEMA_LAST_MODIFIED = '2026-10-09';
 
 export function escapeHtml(value = '') {
   return String(value)
@@ -252,10 +254,10 @@ function dateOnly(value) {
 export function buildSitemap(articles) {
   const articleDates = articles.map((a) => dateOnly(a.dateModified || a.datePublished)).filter(Boolean).sort();
   const entries = [
-    {loc:`${SITE_URL}/`},
+    {loc:`${SITE_URL}/`, lastmod:'2026-10-09'},
     {loc:`${SITE_URL}/politica-de-privacidade`, lastmod:'2026-06-22'},
     ...(articles.length ? [{loc:`${SITE_URL}/blog/`, lastmod:articleDates.at(-1) || ''}] : []),
-    ...articles.map((a) => ({loc:`${SITE_URL}/blog/${a.slug}/`, lastmod:dateOnly(a.dateModified || a.datePublished)})),
+    ...articles.map((a) => ({loc:`${SITE_URL}/blog/${a.slug}/`, lastmod:[ARTICLE_SCHEMA_LAST_MODIFIED,dateOnly(a.dateModified || a.datePublished)].sort().at(-1)})),
   ];
   return `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${entries.map(({loc,lastmod}) => `  <url><loc>${escapeHtml(loc)}</loc>${lastmod ? `<lastmod>${escapeHtml(lastmod)}</lastmod>` : ''}</url>`).join('\n')}\n</urlset>\n`;
 }
