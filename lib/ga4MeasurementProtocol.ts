@@ -38,7 +38,7 @@ export function buildGa4Payload(input: Ga4ServerEventInput) {
   if (input.sessionId && /^\d+$/.test(input.sessionId)) params.session_id = input.sessionId;
   // Sem tempo de engajamento o GA4 não associa o evento a uma sessão ativa.
   params.engagement_time_msec = 1;
-  params.ga_vinculo = linkedVisitor ? 'visitante_do_site' : 'sem_visitante';
+  params.vinculo_visitante = linkedVisitor ? 'visitante_do_site' : 'sem_visitante';
   return {
     linkedVisitor,
     body: {

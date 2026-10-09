@@ -63,13 +63,13 @@ test('consulta realizada vai ao GA4 no visitante do site, sem dado pessoal', () 
     client_id: '123.456',
     events: [{name: 'close_convert_lead', params: {
       lead_status: 'consulta_realizada', currency: 'BRL', value: 1090,
-      session_id: '1696000000', engagement_time_msec: 1, ga_vinculo: 'visitante_do_site',
+      session_id: '1696000000', engagement_time_msec: 1, vinculo_visitante: 'visitante_do_site',
     }}],
   });
   const orphan = buildGa4Payload({eventName: 'close_convert_lead', clientId: null, sessionId: 'abc', fallbackId: 'lead-2'});
   assert.equal(orphan.linkedVisitor, false);
   assert.equal(orphan.body.client_id, 'crm.lead-2');
-  assert.deepEqual(orphan.body.events[0].params, {engagement_time_msec: 1, ga_vinculo: 'sem_visitante'});
+  assert.deepEqual(orphan.body.events[0].params, {engagement_time_msec: 1, vinculo_visitante: 'sem_visitante'});
 });
 
 test('lead guarda só identificadores GA4 válidos', () => {
