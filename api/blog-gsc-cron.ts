@@ -23,7 +23,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   try {
-    const publication = publicationEnabled ? await recoverPublicationQueue(2) : {status:'disabled',attempted:0};
+    // Falha na recuperação da fila de publicação não pode impedir a verificação diária do Google.
+    let publication: unknown = {status:'disabled',attempted:0};
+    if (publicationEnabled) {
+      try { publication = await recoverPublicationQueue(2); }
+      catch { console.error('[Blog Publish] recuperação da fila não concluída'); publication = {status:'error',attempted:0}; }
+    }
     const gsc = gscEnabled ? await runBlogGscCycle() : {status:'disabled'};
     return res.status(200).json({ success: true, result: gsc, publication });
   } catch (error) {

@@ -190,7 +190,7 @@ export async function getArticleDetail(articleId:string) {
   const latest=versions.data?.[0];
   const approvalState=latest?exactApprovalState(latest,reviews.data||[]):{editorial:false,clinical:false};
   const publicationState=latest?await getPublicationStateForArticle(articleId,latest.id):{intent:null,operations:[],latestOperation:null};
-  return {article:a.data,versions:versions.data||[],reviews:reviews.data||[],publications:publications.data||[],approvals:{editorial:Boolean(approvalState.editorial),clinical:Boolean(approvalState.clinical)},publication:{...publicationState,state:publicationUiState(publicationState.latestOperation,Boolean(approvalState.editorial&&approvalState.clinical),publicationState.intent?.intent)},sources:(sources.data||[]).map((s:any)=>({...s,has_text:Boolean(String(s.normalized_body_text||'').trim()),normalized_body_text:undefined,body_excerpt:String(s.normalized_body_text||'').slice(0,1200)}))};
+  return {article:a.data,versions:versions.data||[],reviews:reviews.data||[],publications:publications.data||[],approvals:{editorial:Boolean(approvalState.editorial),clinical:Boolean(approvalState.clinical)},publication:{...publicationState,infrastructure_enabled:process.env.BLOG_PUBLICATION_AUTOMATION_ENABLED==='true',state:publicationUiState(publicationState.latestOperation,Boolean(approvalState.editorial&&approvalState.clinical),publicationState.intent?.intent)},sources:(sources.data||[]).map((s:any)=>({...s,has_text:Boolean(String(s.normalized_body_text||'').trim()),normalized_body_text:undefined,body_excerpt:String(s.normalized_body_text||'').slice(0,1200)}))};
 }
 
 export async function listDrafts(params:any={}) {
@@ -269,7 +269,7 @@ export async function saveArticleVersion(input:any,actorUserId:string){
   const contentSha256=contentFingerprint(contentPayload); const presentationPayload=editable.presentation; const presentationSha256=presentationFingerprint(presentationPayload);
   const request={articleId:detail.article.id,expectedVersionId:latest.id,expectedVersionNumber:latest.version_number,operationKey:input.operationKey,actorUserId,requestSha256:'',targetSlug:detail.article.target_slug,title:editable.title,description:editable.description,body:editable.body,references:editable.references,changeNote:cleanText(input.changeNote,500),contentPayload,contentSha256,presentationPayload,presentationSha256};
   request.requestSha256=requestSha256;
-  const result=await db().rpc('editorial_phase7_save_version',{p_input:request}); if(result.error) throw new Error(result.error.message.includes('conflito de versao')?'Conflito de versão; recarregue antes de salvar':result.error.message.includes('etapa critica')?'A publicação já entrou em etapa crítica; não é seguro editar esta versão agora':'Falha ao salvar nova versão'); return result.data;
+  const result=await db().rpc('editorial_phase7_save_version',{p_input:request}); if(result.error) throw new Error(result.error.message.includes('conflito de versao')?'Conflito de versão; recarregue antes de salvar':result.error.message.includes('etapa critica')?'A publicação desta versão já começou; espere terminar antes de editar':'Falha ao salvar nova versão'); return result.data;
 }
 
 export async function promoteDraft(input:any,actorUserId:string){
@@ -296,7 +296,7 @@ export async function recordReview(input:any,actorUserId:string){
   if(input.evidence && (Array.isArray(input.evidence)||typeof input.evidence!=='object'||JSON.stringify(input.evidence).length>4000)) throw new Error('Evidência da revisão inválida');
   const releaseSha256=releaseFingerprint(input.contentSha256,input.presentationSha256);
   const request={operationKey:input.operationKey,actorUserId,versionId:input.versionId,requestSha256:'',reviewType:input.reviewType,decision:input.decision,contentSha256:input.contentSha256,presentationSha256:input.presentationSha256,releaseSha256,reviewerName:cleanText(input.reviewerName,180),notes:cleanText(input.notes,1200),evidence:input.evidence&&typeof input.evidence==='object'?input.evidence:{}};request.requestSha256=sha256Json({...request,requestSha256:undefined,actorUserId:undefined});
-  const result=await db().rpc('editorial_phase7_record_review',{p_input:request});if(result.error)throw new Error(result.error.message.includes('versao de trabalho')?'A revisão ficou desatualizada; recarregue a fila':result.error.message.includes('etapa critica')?'A publicação já entrou em etapa crítica; a revisão não pode ser alterada agora':'Falha ao registrar revisão');
+  const result=await db().rpc('editorial_phase7_record_review',{p_input:request});if(result.error)throw new Error(result.error.message.includes('versao de trabalho')?'A revisão ficou desatualizada; recarregue a fila':result.error.message.includes('etapa critica')?'A publicação desta versão já começou; espere terminar antes de mudar a revisão':'Falha ao registrar revisão');
   const value=result.data;if(value?.publicationOperationId)value.dispatch=await dispatchPublicationOperation(value.publicationOperationId);return value;
 }
 
@@ -306,9 +306,9 @@ export async function exportApprovedSnapshot(articleId:string,versionId:string,a
   if(result.error) throw new Error('Aprovações editorial e clínica atuais são obrigatórias');
   const version=result.data.version;
   const approvals=exactApprovalState(version,result.data.reviews);if(!approvals.editorial||!approvals.clinical)throw new Error('Aprovações editorial e clínica atuais são obrigatórias');
-  if(!version.content_payload_json||!version.presentation_payload_json||!isSha(version.content_sha256)||!isSha(version.presentation_sha256))throw new Error('Versão sem payload/hash exportável');
+  if(!version.content_payload_json||!version.presentation_payload_json||!isSha(version.content_sha256)||!isSha(version.presentation_sha256))throw new Error('Esta versão não tem dados completos para baixar');
   const content={...canonicalContentPayload(version.content_payload_json),status:'approved',presentation:canonicalPresentation(version.presentation_payload_json)}; const contentHash=contentFingerprint(content);const presentationHash=presentationFingerprint(version.presentation_payload_json);
-  if(contentHash!==version.content_sha256||presentationHash!==version.presentation_sha256)throw new Error('Hashes persistidos não correspondem ao conteúdo exportado');
+  if(contentHash!==version.content_sha256||presentationHash!==version.presentation_sha256)throw new Error('A versão salva não confere com o conteúdo baixado; recarregue o artigo');
   const releaseHash=releaseFingerprint(contentHash,presentationHash);const article={...content,approval:{version:version.version_number,editorial:true,clinical:true,contentHash,presentationHash,releaseHash}};
   return {schemaVersion:1,kind:'karyne-blog-approved-snapshot',exportedAt:new Date().toISOString(),articleId,articleVersionId:version.id,content_sha256:contentHash,presentation_sha256:presentationHash,release_sha256:releaseHash,article,reviews:{editorial:{reviewed_at:approvals.latest.editorial.reviewed_at,recorded_by_user_id:approvals.latest.editorial.recorded_by_user_id||null},clinical:{reviewed_at:approvals.latest.clinical.reviewed_at,reviewer_name:approvals.latest.clinical.reviewer_name||null,recorded_by_user_id:approvals.latest.clinical.recorded_by_user_id||null}}};
 }
@@ -322,7 +322,7 @@ export async function setPublishIntent(input:any,actorUserId:string){
   const request={operationKey:input.operationKey,actorUserId,versionId:input.versionId,contentSha256:input.contentSha256,presentationSha256:input.presentationSha256,releaseSha256,intent:input.intent,requestSha256:''};
   request.requestSha256=sha256Json({...request,requestSha256:undefined,actorUserId:undefined});
   const result=await db().rpc('editorial_phase7_set_publish_intent',{p_input:request});
-  if(result.error)throw new Error(result.error.message.includes('etapa critica')?'A publicação já entrou em etapa crítica; a intenção não pode ser alterada agora':result.error.message.includes('superada')?'A versão mudou; recarregue antes de escolher a publicação':'Falha ao salvar intenção de publicação');
+  if(result.error)throw new Error(result.error.message.includes('etapa critica')?'A publicação desta versão já começou; espere terminar antes de mudar a escolha':result.error.message.includes('superada')?'A versão mudou; recarregue antes de escolher a publicação':'Falha ao salvar intenção de publicação');
   const value=result.data;if(value?.publicationOperationId)value.dispatch=await dispatchPublicationOperation(value.publicationOperationId);return value;
 }
 
@@ -340,7 +340,7 @@ export async function retryArticlePublication(input:any,actorUserId:string){
   if(!isUuid(actorUserId)||!isUuid(input.operationKey)||!isUuid(input.publicationOperationId))throw new Error('Nova tentativa de publicação inválida');
   const request={operationKey:input.operationKey,actorUserId,publicationOperationId:input.publicationOperationId,requestSha256:''};request.requestSha256=sha256Json({...request,requestSha256:undefined,actorUserId:undefined});
   const result=await db().rpc('editorial_phase7_retry_publication',{p_input:request});
-  if(result.error)throw new Error(result.error.message.includes('limite')?'Limite de tentativas de publicação atingido':result.error.message.includes('falha conhecida')?'Só falhas confirmadas podem ser repetidas; estado incerto exige reconciliação':'Falha ao preparar nova tentativa de publicação');
+  if(result.error)throw new Error(result.error.message.includes('limite')?'Limite de tentativas de publicação atingido':result.error.message.includes('falha conhecida')?'Só dá para tentar de novo depois de uma falha confirmada; este resultado ainda precisa ser conferido':'Falha ao preparar nova tentativa de publicação');
   const value=result.data;if(value?.publicationOperationId)value.dispatch=await dispatchPublicationOperation(value.publicationOperationId);return value;
 }
 
