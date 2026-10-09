@@ -12,6 +12,8 @@ import { LeadDetailModal } from './LeadDetailModal';
 import { Dashboard } from './Dashboard';
 import { KanbanBoard } from './KanbanBoard';
 import { downloadLeadsCsv } from './exportCsv';
+import { matchesCampaign } from './campaign';
+import { blogArticleTitles } from './blogArticles';
 
 interface PanelProps {
   session: Session;
@@ -45,8 +47,9 @@ export const Panel: React.FC<PanelProps> = ({ session }) => {
     setLoading(true);
     setError('');
     try {
-      const data = await fetchLeads(f);
-      setLeads(data);
+      // O rótulo editorial é apresentação; não substitui a campanha de aquisição armazenada.
+      const data = await fetchLeads({ ...f, campanha: undefined });
+      setLeads(f.campanha ? data.filter(lead => matchesCampaign(lead, f.campanha!, blogArticleTitles)) : data);
     } catch (e) {
       const msg = e instanceof Error ? e.message : 'erro';
       if (msg === 'unauthorized') {

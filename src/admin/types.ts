@@ -106,6 +106,10 @@ export interface Lead {
   fbclid: string | null;
   gclid: string | null;
   origem: string | null;
+  entry_article_slug?: string | null;
+  last_article_slug?: string | null;
+  editorial_cta_id?: string | null;
+  editorial_cta_destination?: string | null;
   page_url: string | null;
   referrer: string | null;
   user_agent: string | null;

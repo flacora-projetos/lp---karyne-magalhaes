@@ -2,6 +2,8 @@ import React from 'react';
 import type { Lead } from './types';
 import { STATUS_LABEL, STATUS_STYLE, ORIGEM_AVATAR } from './types';
 import { dateTime, initials } from './format';
+import { campaignLabel } from './campaign';
+import { blogArticleTitles } from './blogArticles';
 
 interface LeadsTableProps {
   leads: Lead[];
@@ -64,7 +66,9 @@ export const LeadsTable: React.FC<LeadsTableProps> = ({ leads, onSelect }) => {
                   {[l.cidade, l.estado].filter(Boolean).join('/') || '—'}
                 </td>
                 <td className="px-4 py-3 whitespace-nowrap text-[#2B1B0A]/80">{l.origem || '—'}</td>
-                <td className="px-4 py-3 max-w-[160px] truncate text-[#2B1B0A]/70" title={l.utm_campaign || ''}>{l.utm_campaign || '—'}</td>
+                <td className="px-4 py-3 max-w-[280px] text-[#2B1B0A]/70" title={campaignLabel(l, blogArticleTitles)}>
+                  <span className="line-clamp-2">{campaignLabel(l, blogArticleTitles) || '—'}</span>
+                </td>
                 <td className="px-4 py-3 max-w-[160px] truncate text-[#2B1B0A]/70" title={l.utm_content || ''}>{l.utm_content || '—'}</td>
                 <td className="px-4 py-3 max-w-[160px] truncate text-[#2B1B0A]/70" title={l.utm_term || ''}>{l.utm_term || '—'}</td>
                 <td className="px-4 py-3 whitespace-nowrap text-[#2B1B0A]/70">{dateTime(l.criado_em)}</td>

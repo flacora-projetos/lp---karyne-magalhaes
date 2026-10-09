@@ -1,6 +1,8 @@
 import type { Lead } from './types';
 import { STATUS_LABEL } from './types';
 import { dateTime, dateOnly } from './format';
+import { campaignLabel } from './campaign';
+import { blogArticleTitles } from './blogArticles';
 
 // Colunas exportadas, na ordem em que aparecem no CSV. `id` (uuid interno)
 // fica de fora — não é útil pro time comercial.
@@ -42,6 +44,8 @@ const COLUMNS: [keyof Lead, string][] = [
   ['page_url', 'URL da Página'],
   ['referrer', 'Referrer'],
   ['user_agent', 'User Agent'],
+  ['entry_article_slug', 'Primeiro artigo visitado'],
+  ['last_article_slug', 'Último artigo visitado'],
 ];
 
 // Escapa um valor pro formato CSV (separador ';', usado pelo Excel pt-BR).
@@ -82,9 +86,9 @@ function formatField(lead: Lead, key: keyof Lead): string {
 }
 
 export function leadsToCsv(leads: Lead[]): string {
-  const header = COLUMNS.map(([, label]) => escapeCsvValue(label)).join(';');
+  const header = [...COLUMNS.map(([, label]) => escapeCsvValue(label)), 'Campanha / artigo'].join(';');
   const rows = leads.map((lead) =>
-    COLUMNS.map(([key]) => escapeCsvValue(formatField(lead, key))).join(';')
+    [...COLUMNS.map(([key]) => escapeCsvValue(formatField(lead, key))), escapeCsvValue(campaignLabel(lead, blogArticleTitles))].join(';')
   );
   return [header, ...rows].join('\r\n');
 }
