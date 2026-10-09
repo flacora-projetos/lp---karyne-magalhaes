@@ -64,3 +64,11 @@ export async function updateLead(
   }
   return json.lead as Lead;
 }
+
+export async function fetchBlogGscReport(): Promise<any> {
+  const res = await fetch('/api/blog-gsc', { headers: { ...(await authHeader()) } });
+  if (res.status === 401) throw new Error('unauthorized');
+  const json = await res.json();
+  if (!res.ok || !json.success) throw new Error(json.error || 'Falha ao carregar status Blog/GSC');
+  return json.report;
+}
