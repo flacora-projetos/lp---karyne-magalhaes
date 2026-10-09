@@ -23,6 +23,8 @@ for (const article of articles) {
   assert.ok(html.includes('rel="canonical" href="'+SITE_URL+'/blog/'+article.slug+'/"'));
   assert.ok(!html.includes('noindex') && html.includes('BlogPosting'));
   assert.ok(html.includes('CRO-GO 7954'));
+  assert.ok(html.includes('href="https://wa.me/5562999320675?text='));
+  assert.ok(!html.includes('href="/?blog_cta='));
   assert.ok(!/este rascunho|antes da publicação|antes de publicar|revisão deste texto|precisam ser confirmados/i.test(html));
 }
 console.log(JSON.stringify({passed:true, approvedArticles:articles.length, slugs:dirs},null,2));

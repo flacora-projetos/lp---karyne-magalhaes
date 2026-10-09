@@ -6,6 +6,7 @@ import path from 'node:path';
 import vm from 'node:vm';
 import {spawnSync} from 'node:child_process';
 import ts from 'typescript';
+import {buildSync} from 'esbuild';
 import {buildSitemap, contentFingerprint, isProductionEligible, renderArticle, renderIndex, resetGeneratedBlogDir, validateArticle} from './core.mjs';
 import {captureFirstAcquisition, deriveChannel, getAttributionExtras} from '../../src/utils/acquisition';
 import {derivarCanal, derivarOrigem, mapPayloadToRow} from '../../lib/mapLead';
@@ -39,7 +40,7 @@ function setBrowser({search='',href='https://tratamentodomauhalito.com.br/',refe
   return {local,session};
 }
 
-const blogClientSource = fs.readFileSync('public/blog-client.js','utf8');
+const blogClientSource = buildSync({entryPoints:['src/blog-client.js'],bundle:true,format:'iife',write:false}).outputFiles[0].text;
 function runBlogClient({slug='',pageType='article',search='',referrer='',preview='1',ctaHref='',local=new MemoryStorage(),session=new MemoryStorage()}={}) {
   const listeners = new Map<string,()=>void>();
   const cta = {getAttribute:()=>ctaHref,addEventListener:(name:string, fn:()=>void) => listeners.set(name,fn)};
@@ -48,28 +49,72 @@ function runBlogClient({slug='',pageType='article',search='',referrer='',preview
   const timers:Array<()=>void> = [];
   const location = {href,search,hostname:'tratamentodomauhalito.com.br',assign:(url:string)=>navigations.push(url)};
   const gtagCalls:any[] = [];
+  const crmCalls:any[] = [];
   const document = {
     referrer,
+    cookie:'',
     title:'Teste',
     currentScript:{dataset:{blogPage:pageType,blogArticle:slug,blogSlug:slug,blogSource:slug ? `source-${slug}` : '',blogPreview:preview}},
     querySelectorAll:() => pageType === 'article' ? [cta] : [],
   };
   const window = {location,gtag:(...args:any[]) => gtagCalls.push(args)};
-  vm.runInNewContext(blogClientSource,{document,window,location,sessionStorage:session,localStorage:local,URLSearchParams,URL,Date,setTimeout:(fn:()=>void)=>timers.push(fn)});
-  return {local,session,gtagCalls,navigations,timers,click:(event?:unknown)=>(listeners.get('click') as any)?.(event)};
+  vm.runInNewContext(blogClientSource,{document,window,location,sessionStorage:session,localStorage:local,URLSearchParams,URL,Date,
+    navigator:{userAgent:'blog-test'},crypto:{randomUUID:()=> 'test-blog-contact'},
+    fetch:(url:string,init:any)=>{crmCalls.push({url,...init,payload:JSON.parse(init.body)});return Promise.resolve({ok:true,json:async()=>({success:true})});},
+    setTimeout:(fn:()=>void)=>timers.push(fn)});
+  return {local,session,gtagCalls,crmCalls,navigations,timers,
+    click:(event:unknown={type:'click',button:0})=>(listeners.get('click') as any)?.(event),
+    auxclick:(button:number)=>(listeners.get('auxclick') as any)?.({type:'auxclick',button})};
 }
 
-test('CTA normal conserva o clique para chegada, sem duplicar no artigo', () => {
-  const result = runBlogClient({slug:'artigo-a',preview:'0',ctaHref:'/?blog_cta=1'});
+test('WhatsApp editorial registra intenção uma vez sem disparar qualificação ou conversão paga', () => {
+  const result = runBlogClient({slug:'artigo-a',preview:'0',search:'?utm_source=google&utm_medium=organic',referrer:'https://www.google.com/'});
+  assert.equal(result.crmCalls.length,0);
   result.click({button:0});
-  assert.equal(result.gtagCalls.filter(args=>args[1]==='blog_cta_click').length,0);
-  const pending=JSON.parse(result.session.getItem('dacora_editorial_cta_pending_v1')!);
-  assert.equal(pending.slug,'artigo-a');
-  assert.equal(pending.articleId,'artigo-a');
-  const modified=runBlogClient({slug:'artigo-a',preview:'0'});
+  result.click({button:0});
+  assert.equal(result.session.getItem('dacora_editorial_cta_pending_v1'),null);
+  assert.equal(result.gtagCalls.filter(args=>args[1]==='blog_cta_click').length,1);
+  assert.equal(result.gtagCalls.at(-1)[2].cta_destination,'whatsapp');
+  assert.ok(!result.gtagCalls.some(args=>['filtro_aberto','filtro_completo','generate_lead'].includes(args[1])));
+  assert.equal(result.crmCalls.length,1);
+  assert.equal(result.crmCalls[0].url,'/api/leads');
+  assert.equal(result.crmCalls[0].keepalive,true);
+  const row = mapPayloadToRow(result.crmCalls[0].payload);
+  assert.equal(row.channel_derived,'Organic Search');
+  assert.equal(row.entry_article_slug,'artigo-a');
+  assert.equal(row.editorial_cta_destination,'whatsapp');
+  assert.equal(row.etapa_funil,'Clique para WhatsApp (blog)');
+  assert.equal(row.etapa_atual,null);
+  assert.equal(row.nome,null);
+  assert.equal(row.whatsapp,null);
+});
+
+test('CTA em nova aba funciona com modificadores e botão do meio, sem contar botão direito', () => {
+  const modified = runBlogClient({slug:'artigo-a',preview:'0'});
   modified.click({button:0,ctrlKey:true});
-  assert.equal(modified.session.getItem('dacora_editorial_cta_pending_v1'),null);
-  assert.equal(modified.gtagCalls.filter(args=>args[1]==='blog_cta_click').length,1);
+  assert.equal(modified.crmCalls.length,1);
+  const middle = runBlogClient({slug:'artigo-b',preview:'0'});
+  middle.auxclick(2);
+  assert.equal(middle.crmCalls.length,0);
+  middle.auxclick(1);
+  assert.equal(middle.crmCalls.length,1);
+});
+
+test('prévia não abre atendimento, não grava CRM nem envia clique GA4', () => {
+  const result = runBlogClient({slug:'artigo-a',preview:'1'});
+  let prevented = false;
+  result.click({button:0,preventDefault:()=>{prevented=true;}});
+  assert.equal(prevented,true);
+  assert.equal(result.crmCalls.length,0);
+  assert.equal(result.gtagCalls.length,0);
+  assert.ok(!renderArticle(approvedArticle(),{preview:true}).includes('href="https://wa.me/'));
+});
+
+test('contato publicado vai direto ao número existente com contexto e sem depender de JS', () => {
+  const html = renderArticle(approvedArticle());
+  assert.ok(html.includes('href="https://wa.me/5562999320675?text='));
+  assert.ok(html.includes('target="_blank" rel="noopener noreferrer">Falar com a equipe pelo WhatsApp'));
+  assert.ok(!html.includes('href="/?blog_cta='));
 });
 
 test('produção exige revisão exata, hash do conteúdo, autoria e data', () => {
@@ -301,14 +346,14 @@ test('A→B→A preserva entrada editorial e acumula assists sem duplicar artigo
   const session = new MemoryStorage();
   runBlogClient({slug:'artigo-a',search:'?utm_source=google&utm_medium=organic',referrer:'https://www.google.com/',local,session});
   runBlogClient({slug:'artigo-b',referrer:'https://tratamentodomauhalito.com.br/blog/artigo-a/',local,session});
-  const third = runBlogClient({slug:'artigo-a',referrer:'https://tratamentodomauhalito.com.br/blog/artigo-b/',local,session});
+  const third = runBlogClient({slug:'artigo-a',referrer:'https://tratamentodomauhalito.com.br/blog/artigo-b/',local,session,preview:'0'});
   third.click();
   const context = JSON.parse(session.getItem('dacora_editorial_context_v1')!);
   assert.equal(context.entryArticleSlug,'artigo-a');
   assert.equal(context.lastArticleSlug,'artigo-a');
   assert.deepEqual(context.articleAssists.map((x:any)=>x.slug),['artigo-b','artigo-a']);
-  assert.equal(context.ctaId,'avaliacao_inicial');
-  assert.equal(context.ctaDestination,'home_filter');
+  assert.equal(context.ctaId,'contato_whatsapp');
+  assert.equal(context.ctaDestination,'whatsapp');
 });
 
 test('nova sessão com consentimento preserva entrada editorial anterior', () => {
@@ -417,8 +462,13 @@ test('consulta realizada preserva matching Google separado sem enviar conversõe
 });
 
 test('eventos editoriais não carregam PII clínica ou de contato', () => {
-  const source = fs.readFileSync('public/blog-client.js','utf8').toLowerCase();
-  for (const forbidden of ['email','phone','whatsapp','nomecompleto','comportamentohalito','usoantibiotico']) {
-    assert.equal(source.includes(forbidden), false, `PII proibida no blog-client: ${forbidden}`);
+  const result = runBlogClient({slug:'artigo-a',preview:'0'});
+  result.click();
+  for (const [command, eventName, params] of result.gtagCalls) {
+    assert.equal(command,'event');
+    const allowed = eventName === 'page_view'
+      ? ['page_location','page_title','content_type','article_id','source_id','article_slug']
+      : ['send_to','article_id','article_slug','cta_id','cta_destination'];
+    assert.ok(Object.keys(params).every(key=>allowed.includes(key)));
   }
 });

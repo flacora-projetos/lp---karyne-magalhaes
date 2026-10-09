@@ -1,3 +1,5 @@
+import {recordBlogContact} from './utils/blogContact';
+
 (() => {
   const FIRST_SESSION = 'dacora_first_acquisition_v1';
   const FIRST_PERSISTED = 'dacora_first_acquisition_persisted_v1';
@@ -94,22 +96,30 @@
     window.gtag('event','page_view',event);
   }
 
-  document.querySelectorAll('a.cta').forEach((el) => el.addEventListener('click',(event) => {
+  let contactTracked = false;
+  const contactClick = (event) => {
+    if (preview) { event?.preventDefault(); return; }
+    if (event?.type === 'auxclick' && event.button !== 1) return;
     try {
       const latest = parse(sessionStorage.getItem(EDITORIAL_SESSION)) || editorial || {};
-      const withCta = {...latest,ctaId:'avaliacao_inicial',ctaDestination:'home_filter'};
+      const withCta = {...latest,ctaId:'contato_whatsapp',ctaDestination:'whatsapp'};
       sessionStorage.setItem(EDITORIAL_SESSION,JSON.stringify(withCta));
       persist(EDITORIAL_PERSISTED,'context',withCta);
-      if (!preview && event?.button === 0 && !event.metaKey && !event.ctrlKey && !event.shiftKey && !event.altKey) {
-        sessionStorage.setItem('dacora_editorial_cta_pending_v1',JSON.stringify({articleId,slug,at:Date.now()}));
-      }
     } catch {}
-    if (!preview && typeof window.gtag === 'function') {
-      const params = {send_to:'G-3783BP5DSB',article_id:articleId,article_slug:slug,cta_id:'avaliacao_inicial',cta_destination:'home_filter'};
-      // Clique que navega é emitido na chegada; a página de origem permanece nas abas novas.
-      if (event?.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) {
-        window.gtag('event','blog_cta_click',params);
-      }
+    if (contactTracked) return;
+    contactTracked = true;
+    if (typeof window.gtag === 'function') {
+      window.gtag('event','blog_cta_click',{
+        send_to:'G-3783BP5DSB',article_id:articleId,article_slug:slug,
+        cta_id:'contato_whatsapp',cta_destination:'whatsapp',
+      });
     }
-  }));
+    recordBlogContact({id:articleId,sourceId,slug}).then((saved) => {
+      if (!saved) contactTracked = false;
+    }).catch(() => { contactTracked = false; });
+  };
+  document.querySelectorAll('a.cta').forEach((el) => {
+    el.addEventListener('click',contactClick);
+    el.addEventListener('auxclick',contactClick);
+  });
 })();
