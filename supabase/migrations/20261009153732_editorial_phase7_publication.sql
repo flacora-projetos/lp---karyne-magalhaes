@@ -72,7 +72,7 @@ alter table public.editorial_automation_control
   add column if not exists active_operation_id uuid references public.editorial_publication_operations(id) on delete set null;
 
 insert into public.editorial_automation_control(automation_key, operator_paused, pause_reason)
-values ('publication', true, 'Fase 7 instalada localmente; ativação exige GO separado')
+values ('publication', true, 'Publicação automática instalada e ainda não ativada')
 on conflict (automation_key) do nothing;
 
 alter table public.editorial_publication_intents enable row level security;
@@ -158,7 +158,15 @@ begin
   ) values (
     p_article_id,v_version.id,v_operation_key,p_trigger_kind,v_version.content_sha256,v_version.presentation_sha256,
     p_release_sha256,v_snapshot,p_actor
-  ) on conflict(article_version_id,release_sha256) do update set updated_at=editorial_publication_operations.updated_at
+  ) on conflict(article_version_id,release_sha256) do update set
+    -- Operação cancelada antes da reserva (correção pedida ou intenção trocada) volta à fila se a mesma versão for aprovada de novo.
+    status=case when editorial_publication_operations.status='cancelled' then 'queued' else editorial_publication_operations.status end,
+    trigger_kind=case when editorial_publication_operations.status='cancelled' then excluded.trigger_kind else editorial_publication_operations.trigger_kind end,
+    created_by_user_id=case when editorial_publication_operations.status='cancelled' then excluded.created_by_user_id else editorial_publication_operations.created_by_user_id end,
+    last_error_code=case when editorial_publication_operations.status='cancelled' then null else editorial_publication_operations.last_error_code end,
+    last_error_detail=case when editorial_publication_operations.status='cancelled' then null else editorial_publication_operations.last_error_detail end,
+    finished_at=case when editorial_publication_operations.status='cancelled' then null else editorial_publication_operations.finished_at end,
+    updated_at=case when editorial_publication_operations.status='cancelled' then clock_timestamp() else editorial_publication_operations.updated_at end
   returning * into v_operation;
   return v_operation.id;
 end $$;
@@ -477,6 +485,8 @@ begin
   if v_status not in ('preparing','publishing','verifying','blocked','failed','uncertain') then raise exception 'status de publicacao invalido'; end if;
   select * into v_op from public.editorial_publication_operations where id=v_id for update;
   if v_op.id is null or v_op.lease_token is distinct from v_token then raise exception 'lease de publicacao invalido'; end if;
+  -- Execução atrasada não pode reabrir uma publicação já confirmada ou cancelada.
+  if v_op.status in ('published','cancelled') then raise exception 'operacao de publicacao ja encerrada'; end if;
   update public.editorial_publication_operations set status=v_status,
     lease_until=case when v_status in ('preparing','publishing','verifying') then v_now+interval '15 minutes' else lease_until end,
     github_base_sha=coalesce(nullif(p_input->>'githubBaseSha',''),github_base_sha),
