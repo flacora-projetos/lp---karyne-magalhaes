@@ -98,4 +98,9 @@ test('validador do rascunho bloqueia fonte, referência e link inventados', () =
   assert.throws(() => validateDraft(badRef, {source, briefing, references}), /referência não fornecida/);
   const badLink = structuredClone(valid); badLink.internalLinks[0].url = '/blog/link-nao-autorizado/';
   assert.throws(() => validateDraft(badLink, {source, briefing, references}), /link interno não autorizado/);
+  const aliased = structuredClone(valid); aliased.body[0].type = 'paragraph'; aliased.body[1].type = 'Heading';
+  const normalized = validateDraft(aliased, {source, briefing, references});
+  assert.deepEqual([normalized.body[0].type, normalized.body[1].type], ['p', 'h2']);
+  const unknown = structuredClone(valid); unknown.body[0].type = 'callout';
+  assert.throws(() => validateDraft(unknown, {source, briefing, references}), /opção inválida/);
 });

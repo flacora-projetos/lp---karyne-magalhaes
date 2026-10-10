@@ -48,3 +48,33 @@ test('resposta truncada, JSON inválido e falha dos dois fornecedores não viram
   await assert.rejects(completeEditorialJson({prompt:'x',schema:{},env,fetchImpl:async () => {calls++;return new Response('',{status:429});}}), /http_429/);
   assert.equal(calls,2);
 });
+
+const anthropicEnv = {...env, ANTHROPIC_API_KEY:'test-anthropic', ANTHROPIC_MODEL:'claude-haiku-5-5'};
+const anthropicSuccess = () => new Response(JSON.stringify({id:'msg_fake', model:'claude-haiku-5-5', stop_reason:'end_turn', content:[{type:'text', text:'{"sourceId":"1"}'}], usage:{input_tokens:3, output_tokens:2}}), {status:200});
+
+test('Claude entra primeiro quando configurado, com schema estruturado sem limites de lista', async () => {
+  const calls:any[] = [];
+  const schema = {type:'object', properties:{body:{type:'array', minItems:6, items:{type:'string'}}}};
+  const result = await completeEditorialJson({prompt:'corpus', schema, env:anthropicEnv, fetchImpl:async (url:any, request:any) => {calls.push({url, headers:request.headers, body:JSON.parse(request.body)}); return anthropicSuccess();}});
+  assert.equal(calls.length, 1);
+  assert.equal(calls[0].url, 'https://api.anthropic.com/v1/messages');
+  assert.equal(calls[0].headers['x-api-key'], 'test-anthropic');
+  assert.equal(calls[0].body.model, 'claude-haiku-5-5');
+  assert.equal(calls[0].body.temperature, undefined);
+  assert.equal(calls[0].body.output_config.format.type, 'json_schema');
+  assert.equal(calls[0].body.output_config.format.schema.properties.body.minItems, undefined);
+  assert.equal(schema.properties.body.minItems, 6);
+  assert.equal(result.generator.provider, 'anthropic');
+  assert.deepEqual(result.draft, {sourceId:'1'});
+});
+
+test('Claude indisponível cai para o DeepSeek; recusa e corte não viram rascunho', async () => {
+  const calls:string[] = [];
+  const result = await completeEditorialJson({prompt:'x', schema:{}, env:anthropicEnv, fetchImpl:async (url:any) => {calls.push(url); return calls.length === 1 ? new Response('', {status:529}) : success();}});
+  assert.equal(result.generator.provider, 'deepseek');
+  assert.equal(calls.length, 2);
+  for (const [stop, code] of [['refusal', 'refused_output'], ['max_tokens', 'incomplete_output']]) {
+    await assert.rejects(completeEditorialJson({prompt:'x', schema:{}, env:anthropicEnv, fetchImpl:async () => new Response(JSON.stringify({stop_reason:stop, content:[]}), {status:200})}), new RegExp(code));
+  }
+  await assert.rejects(completeEditorialJson({prompt:'x', schema:{}, env:anthropicEnv, fetchImpl:async () => new Response('', {status:401})}), /http_401/);
+});
