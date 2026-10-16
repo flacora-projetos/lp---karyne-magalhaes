@@ -128,6 +128,8 @@
       t.src=v;s=b.getElementsByTagName(e)[0];
       s.parentNode.insertBefore(t,s)}(window, document,'script',
       'https://connect.facebook.net/en_US/fbevents.js');
+      // Sem coleta automática de textos de botão e metadados da página.
+      fbq('set', 'autoConfig', false, '2060052434914188');
       fbq('init', '2060052434914188');
       fbq('track', 'PageView');
     </script>

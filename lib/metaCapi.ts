@@ -28,6 +28,29 @@ const hashString = (data?: string | null) => {
   return crypto.createHash('sha256').update(normalized).digest('hex');
 };
 
+/**
+ * O Meta classifica a LP como saúde e bloqueia eventos personalizados. Cada
+ * etapa que importa sai também como evento padrão, com o mesmo event_id do
+ * personalizado (a deduplicação é por nome + id, então os dois não colidem).
+ * Manter em sincronia com STANDARD_META_EVENTS em src/utils/metaPixel.ts.
+ */
+export const STANDARD_META_EVENTS: Record<string, string> = {
+  FiltroCompleto: 'Lead',
+  CliqueSaida: 'Contact',
+  ConsultaRealizada: 'Schedule',
+};
+
+/** Só origem + caminho: parâmetros da URL não precisam chegar ao Meta. */
+export function sanitizeEventSourceUrl(url?: string): string | undefined {
+  if (!url) return undefined;
+  try {
+    const parsed = new URL(url);
+    return `${parsed.origin}${parsed.pathname}`;
+  } catch {
+    return undefined;
+  }
+}
+
 const VALID_FBC = /^fb\.\d+\.\d+\..+$/;
 
 /**
@@ -111,7 +134,7 @@ export async function sendMetaEvent(input: MetaEventInput): Promise<MetaEventRes
     event_time: Math.floor(Date.now() / 1000),
     event_id: input.eventId,
     action_source: input.actionSource || 'website',
-    event_source_url: input.pageUrl,
+    event_source_url: sanitizeEventSourceUrl(input.pageUrl),
     user_data: userData,
     custom_data: {
       source: 'lp_filtro',
@@ -119,8 +142,14 @@ export async function sendMetaEvent(input: MetaEventInput): Promise<MetaEventRes
     },
   };
 
+  const events: Record<string, unknown>[] = [eventPayload];
+  const standardName = STANDARD_META_EVENTS[input.eventName];
+  if (standardName) {
+    events.push({ ...eventPayload, event_name: standardName, custom_data: {} });
+  }
+
   const payload: Record<string, unknown> = {
-    data: [eventPayload],
+    data: events,
   };
 
   if (process.env.META_TEST_EVENT_CODE) {
