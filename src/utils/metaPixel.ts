@@ -21,9 +21,20 @@ export const trackEvent = (eventName: string, data = {}, eventData = {}) => {
   }
 };
 
+// O Meta bloqueia eventos personalizados da LP (classificada como saúde); as
+// etapas que importam saem também como evento padrão, com o mesmo eventID.
+// Manter em sincronia com STANDARD_META_EVENTS em lib/metaCapi.ts.
+export const STANDARD_META_EVENTS: Record<string, string> = {
+  FiltroCompleto: "Lead",
+  CliqueSaida: "Contact",
+  ConsultaRealizada: "Schedule",
+};
+
 export const trackCustomEvent = (eventName: string, data = {}, eventData = {}) => {
   if (typeof window !== "undefined" && window.fbq) {
     window.fbq("trackCustom", eventName, data, eventData);
+    const standardName = STANDARD_META_EVENTS[eventName];
+    if (standardName) window.fbq("track", standardName, {}, eventData);
   }
 };
 
