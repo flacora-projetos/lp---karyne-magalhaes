@@ -36,6 +36,10 @@ const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbypbOG2r2Zka8
 const isLocalPreview = () => ['127.0.0.1', 'localhost'].includes(window.location.hostname);
 
 const TOTAL_STEPS = 7;
+const WHATSAPP_PHONE = '5562999320675';
+
+/** Triagem aberta pelo link da mensagem automática: a pessoa já está conversando no WhatsApp. */
+export const TRIAGEM_WHATSAPP = 'triagem_whatsapp';
 
 export const getTrackingData = () => {
   const params = new URLSearchParams(window.location.search);
@@ -74,7 +78,10 @@ export const getTrackingData = () => {
 };
 
 export const QualificationModal: React.FC<QualificationModalProps> = ({ isOpen, onClose, ctaLocation = '' }) => {
+  const isTriagem = ctaLocation === TRIAGEM_WHATSAPP;
+  const fluxo = isTriagem ? TRIAGEM_WHATSAPP : 'filtro';
   const [step, setStep] = useState(1);
+  const [triagemEnviada, setTriagemEnviada] = useState(false);
   const [leadId, setLeadId] = useState<string>('');
   const eventIds = useRef({
     eventIdFilterOpen: '',
@@ -113,7 +120,7 @@ export const QualificationModal: React.FC<QualificationModalProps> = ({ isOpen, 
       // Fire 'Filtro aberto' event when modal opens, if we are at step 1
       if (step === 1 && !eventIds.current.eventIdFilterOpen) {
         eventIds.current.eventIdFilterOpen = generateEventId();
-        pushDataLayerEvent("filtro_aberto", { fluxo: "filtro", cta_location: ctaLocation });
+        pushDataLayerEvent("filtro_aberto", { fluxo, cta_location: ctaLocation });
         trackCustomEvent("FiltroAberto", { lp_event: "FiltroAberto" }, { eventID: eventIds.current.eventIdFilterOpen });
         const payload = {
           leadId: currentLeadId,
@@ -161,8 +168,8 @@ export const QualificationModal: React.FC<QualificationModalProps> = ({ isOpen, 
       wasOpen.current = true;
       return;
     }
-    if (wasOpen.current && eventIds.current.eventIdFilterOpen && !eventIds.current.eventIdContact) {
-      pushDataLayerEvent("filtro_fechado", { step, fluxo: "filtro" });
+    if (wasOpen.current && eventIds.current.eventIdFilterOpen && !eventIds.current.eventIdContact && !triagemEnviada) {
+      pushDataLayerEvent("filtro_fechado", { step, fluxo });
     }
     wasOpen.current = false;
   }, [isOpen]);
@@ -242,10 +249,14 @@ export const QualificationModal: React.FC<QualificationModalProps> = ({ isOpen, 
       eventIds.current.eventIdContactCaptured = eventID;
       trackCustomEvent("FormularioIniciado", { lp_event: "FormularioIniciado" }, { eventID });
       sendMetaCapiEvent({ eventName: "FormularioIniciado", eventId: eventID, ...capiPayloadBase });
-      pushDataLayerEvent("formulario_iniciado", { fluxo: "filtro" });
+      pushDataLayerEvent("formulario_iniciado", { fluxo });
     } else if (nextS > 1 && nextS < TOTAL_STEPS) {
       trackCustomEvent("EtapaRespondida", { lp_event: "EtapaRespondida", step: nextS }, { eventID });
       pushDataLayerEvent("etapa_respondida", { step });
+    } else if (nextS === TOTAL_STEPS && isTriagem) {
+      // Quem já está no WhatsApp não é lead novo do site: nada vai para Meta, Google Ads
+      // nem para o evento-chave filtro_completo do GA4.
+      pushDataLayerEvent("etapa_respondida", { step, fluxo });
     } else if (nextS === TOTAL_STEPS && !eventIds.current.eventIdLead) {
       eventIds.current.eventIdLead = eventID;
       trackCustomEvent("FiltroCompleto", { lp_event: "FiltroCompleto" }, { eventID });
@@ -277,6 +288,11 @@ export const QualificationModal: React.FC<QualificationModalProps> = ({ isOpen, 
     setData((prev) => ({ ...prev, [field]: value }));
   };
 
+  const handleTriagemSubmit = () => {
+    sendDataToSheets('Filtro concluído(Concluiu o filtro)', TOTAL_STEPS);
+    setTriagemEnviada(true);
+  };
+
   const handleWhatsApp = () => {
     if (!eventIds.current.eventIdContact) {
       eventIds.current.eventIdContact = generateEventId();
@@ -300,7 +316,7 @@ export const QualificationModal: React.FC<QualificationModalProps> = ({ isOpen, 
       sendMetaCapiEvent({ eventName: "CliqueSaida", eventId: eventIds.current.eventIdContact, ...capiPayloadBase });
     }
     sendDataToSheets('WhatsApp aberto(clicou para WhatsApp)', TOTAL_STEPS);
-    const phone = '5562999320675';
+    const phone = WHATSAPP_PHONE;
     const linhas = [
       `Nome: ${data.nome}`,
       `WhatsApp: ${data.whatsapp}`,
@@ -335,7 +351,7 @@ Gostaria de receber orientação e verificar os horários disponíveis para a co
         {/* Header */}
         <div className="flex-none flex items-center justify-between p-6 border-b border-[#E4DFD9] bg-[#F6F0E9] z-10">
           <div className="flex items-center gap-3">
-            {step > 1 && (
+            {step > 1 && !triagemEnviada && (
               <button onClick={prevStep} className="p-2 -ml-2 rounded-full hover:bg-black/5 transition-colors text-[#2B1B0A]">
                 <ArrowLeft size={20} />
               </button>
@@ -360,8 +376,10 @@ Gostaria de receber orientação e verificar os horários disponíveis para a co
           
           {step === 1 && (
             <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-              <h2 className="text-2xl md:text-3xl font-medium font-serif leading-tight mb-3">Para começar, qual é o seu WhatsApp?</h2>
-              <p className="text-[#2B1B0A]/70 text-sm mb-8">Assim, mesmo que você feche essa janela no meio do caminho, a equipe consegue continuar por lá. As próximas perguntas são sobre o seu caso.</p>
+              <h2 className="text-2xl md:text-3xl font-medium font-serif leading-tight mb-3">{isTriagem ? 'Para começar, confirme o seu WhatsApp' : 'Para começar, qual é o seu WhatsApp?'}</h2>
+              <p className="text-[#2B1B0A]/70 text-sm mb-8">{isTriagem
+                ? 'Use o mesmo número com que você está falando com a gente. Assim suas respostas chegam junto da sua conversa.'
+                : 'Assim, mesmo que você feche essa janela no meio do caminho, a equipe consegue continuar por lá. As próximas perguntas são sobre o seu caso.'}</p>
 
               <div className="space-y-5">
                 <div>
@@ -692,7 +710,25 @@ Gostaria de receber orientação e verificar os horários disponíveis para a co
             </div>
           )}
 
-          {step === 7 && (
+          {triagemEnviada && (
+            <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 text-center py-6">
+              <div className="w-14 h-14 rounded-full bg-[#128C7E]/10 text-[#128C7E] grid place-items-center mx-auto mb-6">
+                <Check size={28} />
+              </div>
+              <h2 className="text-2xl md:text-3xl font-medium font-serif leading-tight mb-3">Pronto! Recebemos suas respostas</h2>
+              <p className="text-[#2B1B0A]/70 text-[15px] mb-10 text-pretty">
+                A equipe da Dra.&nbsp;Karyne já tem as informações do seu caso. Pode voltar para a nossa conversa no WhatsApp que seguimos por lá.
+              </p>
+              <a
+                href={`https://wa.me/${WHATSAPP_PHONE}`}
+                className="block w-full bg-[#128C7E] hover:bg-[#128C7E]/90 transition-colors text-white py-4 rounded-xl font-medium text-[15px]"
+              >
+                Voltar para o WhatsApp
+              </a>
+            </div>
+          )}
+
+          {step === 7 && !triagemEnviada && (
             <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
               <h2 className="text-2xl md:text-3xl font-medium font-serif leading-tight mb-8">Revise suas informações</h2>
               
@@ -740,16 +776,18 @@ Gostaria de receber orientação e verificar os horários disponíveis para a co
                 <p className="text-[13px] text-[#2B1B0A]/70 mb-2">
                   Suas respostas serão enviadas para a equipe, para que o atendimento continue com mais contexto e sem precisar começar do zero.
                 </p>
-                <p className="text-[13px] text-[#2B1B0A]/70">
-                  Ao continuar, o WhatsApp será aberto com suas respostas organizadas para facilitar o atendimento.
-                </p>
+                {!isTriagem && (
+                  <p className="text-[13px] text-[#2B1B0A]/70">
+                    Ao continuar, o WhatsApp será aberto com suas respostas organizadas para facilitar o atendimento.
+                  </p>
+                )}
               </div>
 
-              <button 
-                onClick={handleWhatsApp}
+              <button
+                onClick={isTriagem ? handleTriagemSubmit : handleWhatsApp}
                 className="w-full bg-[#128C7E] hover:bg-[#128C7E]/90 transition-colors text-white py-4 rounded-xl font-medium text-[15px] flex justify-center items-center gap-2"
               >
-                Continuar pelo WhatsApp
+                {isTriagem ? 'Enviar respostas' : 'Continuar pelo WhatsApp'}
               </button>
             </div>
           )}

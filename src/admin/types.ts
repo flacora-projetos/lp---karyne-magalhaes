@@ -71,6 +71,7 @@ export function columnForStatus(status: StatusComercial): KanbanColumn & { accen
 export const ORIGEM_STYLE: Record<string, string> = {
   'Meta Ads': 'bg-[#A95B21]/15 text-[#A95B21]',
   'Google Ads': 'bg-[#565E48]/20 text-[#565E48]',
+  WhatsApp: 'bg-[#128C7E]/15 text-[#0E6F63]',
   Direto: 'bg-[#E4DFD9] text-[#2B1B0A]/70',
 };
 
@@ -78,6 +79,7 @@ export const ORIGEM_STYLE: Record<string, string> = {
 export const ORIGEM_AVATAR: Record<string, string> = {
   'Meta Ads': '#A95B21',
   'Google Ads': '#565E48',
+  WhatsApp: '#128C7E',
   Direto: '#8A94A6',
 };
 

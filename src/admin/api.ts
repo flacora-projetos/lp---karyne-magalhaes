@@ -65,6 +65,31 @@ export async function updateLead(
   return json.lead as Lead;
 }
 
+export class DuplicateLeadError extends Error {
+  constructor(public duplicado: { lead_id: string; nome: string | null; origem: string | null }) {
+    super('duplicado');
+  }
+}
+
+/** Cadastro de quem chamou direto no WhatsApp; com vincularA, só registra a origem no lead existente. */
+export async function createManualLead(input: {
+  nome: string;
+  whatsapp: string;
+  anuncio: string;
+  vincularA?: string;
+}): Promise<Lead> {
+  const res = await fetch('/api/leads', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...(await authHeader()) },
+    body: JSON.stringify({ acao: 'cadastro_manual', ...input }),
+  });
+  if (res.status === 401) throw new Error('unauthorized');
+  const json = await res.json().catch(() => ({}));
+  if (res.status === 409 && json.duplicado) throw new DuplicateLeadError(json.duplicado);
+  if (!res.ok || !json.success) throw new Error(json.error || 'Falha ao cadastrar');
+  return json.lead as Lead;
+}
+
 async function parsePrivateResponse(res: Response, fallback: string) {
   if (res.status === 401) throw new Error('unauthorized');
   const json = await res.json().catch(() => ({}));

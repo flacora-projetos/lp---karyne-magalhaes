@@ -100,6 +100,8 @@ export function classifyAcquisition(raw: Partial<RawAcquisition>): {channel:stri
   const ref = referrerKind(raw.referrer || '');
 
   if (raw.gclid) return {channel:'Paid Search',provider:'Google Ads'};
+  // Triagem enviada pela mensagem automática do WhatsApp (link ?triagem=whatsapp).
+  if (source === 'whatsapp') return {channel:'Messaging',provider:'WhatsApp'};
   if (paidMedium.test(medium)) {
     if (provider === 'Google Ads' || provider === 'Microsoft Ads') return {channel:'Paid Search',provider};
     if (provider) return {channel:'Paid Social',provider};

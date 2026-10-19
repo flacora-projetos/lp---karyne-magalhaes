@@ -6,6 +6,7 @@ import { requireAuth } from '../lib/requireAuth.js';
 import { resolveMetaFbc, sendMetaEvent } from '../lib/metaCapi.js';
 import { sendGoogleEcEvent } from '../lib/googleEc.js';
 import { sendGa4ServerEvent } from '../lib/ga4MeasurementProtocol.js';
+import { isValidAnuncio, manualAcquisition, phoneKey } from '../lib/whatsappLeads.js';
 
 /**
  * /api/leads
@@ -13,6 +14,8 @@ import { sendGa4ServerEvent } from '../lib/ga4MeasurementProtocol.js';
  * POST  — ingestão vinda da LP (público, sem auth). Faz upsert por lead_id no
  *         Postgres, em paralelo ao Apps Script/planilha (que continua intacto).
  *         Fire-and-forget: sempre responde 200 para não quebrar o fluxo da LP.
+ *         Com { acao: 'cadastro_manual' } vira o cadastro de contato que chegou
+ *         direto no WhatsApp, feito pelo painel — esse caminho exige JWT.
  *
  * GET   — listagem para o painel /admin. Exige JWT do Supabase Auth (Bearer).
  *
@@ -121,9 +124,15 @@ async function handlePost(req: VercelRequest, res: VercelResponse) {
       }
     }
 
+    if (payload && typeof payload === 'object' && payload.acao === 'cadastro_manual') {
+      return handleManualCreate(req, res, payload as Record<string, unknown>);
+    }
+
     if (!payload || typeof payload !== 'object' || !payload.leadId) {
       return res.status(200).json({ success: false, error: 'leadId ausente' });
     }
+
+    payload = await attachTriagemToManualLead(payload);
 
     const createdAtMs = payload.createdAt ? Date.parse(payload.createdAt) : NaN;
     const normalizedFbc = resolveMetaFbc(
@@ -150,6 +159,111 @@ async function handlePost(req: VercelRequest, res: VercelResponse) {
   } catch (error) {
     console.error('[api/leads POST] Erro interno');
     return res.status(200).json({ success: false, error: 'Internal server error' });
+  }
+}
+
+const ACQUISITION_KEYS = [
+  'utmSource', 'utmMedium', 'utmCampaign', 'utmContent', 'utmTerm', 'fbclid', 'gclid', 'referrer',
+  'currentAcquisitionAvailable', 'currentEntryUrl', 'currentReferrer', 'currentAcquiredAt',
+  'currentChannelDerived', 'currentProviderDerived',
+  'firstUtmSource', 'firstUtmMedium', 'firstUtmCampaign', 'firstUtmContent', 'firstUtmTerm',
+  'firstGclid', 'firstFbclid', 'firstEntryUrl', 'firstReferrer', 'firstAcquiredAt', 'firstChannelDerived',
+];
+
+async function findLeadsByPhone(whatsapp: unknown, onlyManual = false) {
+  const key = phoneKey(whatsapp);
+  if (!key) return [];
+  let query = getSupabaseAdmin()
+    .from('leads')
+    .select('lead_id, nome, whatsapp, origem, utm_content, criado_em')
+    .ilike('whatsapp', `%${key.slice(-4)}%`)
+    .order('criado_em', { ascending: false })
+    .limit(200);
+  if (onlyManual) query = query.like('lead_id', 'manual-%');
+  const { data, error } = await query;
+  if (error) throw new Error(error.message);
+  return (data ?? []).filter((lead) => phoneKey(lead.whatsapp) === key);
+}
+
+/**
+ * Quem foi cadastrado à mão (veio do anúncio de WhatsApp) e depois responde a
+ * triagem cai no mesmo card, e o anúncio de origem não é sobrescrito.
+ */
+async function attachTriagemToManualLead(payload: SheetsPayload): Promise<SheetsPayload> {
+  const isTriagem = String(payload.utmSource || '').toLowerCase() === 'whatsapp'
+    && String(payload.utmMedium || '').toLowerCase() === 'triagem';
+  if (!isTriagem || !payload.whatsapp) return payload;
+  try {
+    const desde = Date.now() - 60 * 24 * 60 * 60 * 1000;
+    const [manual] = (await findLeadsByPhone(payload.whatsapp, true))
+      .filter((lead) => Date.parse(lead.criado_em) >= desde);
+    if (!manual) return payload;
+    const merged: SheetsPayload = { ...payload, leadId: manual.lead_id };
+    for (const key of ACQUISITION_KEYS) delete merged[key];
+    return merged;
+  } catch {
+    return payload; // sem a busca, grava como lead da triagem
+  }
+}
+
+async function handleManualCreate(req: VercelRequest, res: VercelResponse, body: Record<string, unknown>) {
+  const user = await requireAuth(req, res);
+  if (!user) return;
+
+  const nome = String(body.nome ?? '').trim().slice(0, 120);
+  const whatsapp = String(body.whatsapp ?? '').trim().slice(0, 40);
+  const anuncio = String(body.anuncio ?? '').trim();
+  const vincularA = typeof body.vincularA === 'string' ? body.vincularA.trim() : '';
+
+  if (!phoneKey(whatsapp)) return res.status(400).json({ success: false, error: 'WhatsApp inválido' });
+  if (!isValidAnuncio(anuncio)) return res.status(400).json({ success: false, error: 'Selecione de onde a pessoa veio' });
+
+  try {
+    const supabase = getSupabaseAdmin();
+    const acquisition = manualAcquisition(anuncio);
+
+    // Contato já existia (ex.: respondeu a triagem antes): só registra o anúncio nele.
+    if (vincularA) {
+      const { data, error } = await supabase
+        .from('leads')
+        .update({ ...acquisition, ...(nome ? { nome } : {}) })
+        .eq('lead_id', vincularA)
+        .select('*')
+        .single();
+      if (error) return res.status(404).json({ success: false, error: 'Lead não encontrado' });
+      return res.status(200).json({ success: true, lead: data });
+    }
+
+    if (!nome) return res.status(400).json({ success: false, error: 'Informe o nome' });
+
+    const [existente] = await findLeadsByPhone(whatsapp);
+    if (existente) {
+      return res.status(409).json({
+        success: false,
+        error: 'Esse WhatsApp já está no painel',
+        duplicado: { lead_id: existente.lead_id, nome: existente.nome, origem: existente.origem },
+      });
+    }
+
+    const { data, error } = await supabase
+      .from('leads')
+      .insert({
+        lead_id: `manual-${crypto.randomUUID()}`,
+        etapa_funil: 'Cadastro manual (WhatsApp)',
+        nome,
+        whatsapp,
+        ...acquisition,
+      })
+      .select('*')
+      .single();
+    if (error) {
+      console.error('[api/leads manual] Erro:', error.message);
+      return res.status(500).json({ success: false, error: 'Falha ao cadastrar' });
+    }
+    return res.status(200).json({ success: true, lead: data });
+  } catch {
+    console.error('[api/leads manual] Erro interno');
+    return res.status(500).json({ success: false, error: 'Internal server error' });
   }
 }
 

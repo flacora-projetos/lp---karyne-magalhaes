@@ -20,7 +20,7 @@ import { FAQ } from './components/FAQ';
 import { CTAFinal } from './components/CTAFinal';
 import { Footer } from './components/Footer';
 import { FloatingWhatsApp } from './components/FloatingWhatsApp';
-import { QualificationModal } from './components/QualificationModal';
+import { QualificationModal, TRIAGEM_WHATSAPP } from './components/QualificationModal';
 import { PrivacyPolicy } from './components/PrivacyPolicy';
 import { preserveFbclid } from './utils/metaPixel';
 import { createGadsDirectHandler } from './utils/gadsDirect';
@@ -45,6 +45,17 @@ export default function App() {
   const isGads = normalizedPath === '/gads';
 
   useEffect(() => {
+    // Link da mensagem automática do WhatsApp: marca a origem antes de capturar a aquisição.
+    const triagem = new URLSearchParams(window.location.search).get('triagem') === 'whatsapp'
+      && window.location.pathname === '/';
+    if (triagem) {
+      const url = new URL(window.location.href);
+      if (!url.searchParams.has('utm_source')) {
+        url.searchParams.set('utm_source', 'whatsapp');
+        url.searchParams.set('utm_medium', 'triagem');
+        window.history.replaceState({}, '', url);
+      }
+    }
     preserveFbclid();
     captureFirstAcquisition();
     const openGadsWhatsApp = createGadsDirectHandler();
@@ -69,6 +80,10 @@ export default function App() {
     if (params.get('blog_cta') === '1' && window.location.pathname === '/') {
       trackEditorialCtaArrival();
       setCtaLocation('blog_legado');
+      setIsModalOpen(true);
+    }
+    if (triagem) {
+      setCtaLocation(TRIAGEM_WHATSAPP);
       setIsModalOpen(true);
     }
 

@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { Session } from '@supabase/supabase-js';
-import { RefreshCw, LogOut, LayoutGrid, List, BarChart3, X, Download, BookOpen } from 'lucide-react';
+import { RefreshCw, LogOut, LayoutGrid, List, BarChart3, X, Download, BookOpen, UserPlus } from 'lucide-react';
 import { supabase } from './supabaseClient';
 import { fetchLeads, updateLead, type LeadFilters } from './api';
 import type { Lead, StatusComercial } from './types';
@@ -9,6 +9,7 @@ import { dateOnly } from './format';
 import { Filters } from './Filters';
 import { LeadsTable } from './LeadsTable';
 import { LeadDetailModal } from './LeadDetailModal';
+import { NewLeadModal } from './NewLeadModal';
 import { Dashboard } from './Dashboard';
 import { KanbanBoard } from './KanbanBoard';
 import { downloadLeadsCsv } from './exportCsv';
@@ -20,7 +21,7 @@ interface PanelProps {
   session: Session;
 }
 
-const KNOWN_PLATFORMS = ['Google Ads', 'Meta Ads', 'Direto'];
+const KNOWN_PLATFORMS = ['Google Ads', 'Meta Ads', 'WhatsApp', 'Direto'];
 type Tab = 'kanban' | 'leads' | 'dashboard' | 'blog';
 const TABS: { id: Tab; label: string; icon: React.ComponentType<{ size?: number }> }[] = [
   { id: 'kanban', label: 'Kanban', icon: LayoutGrid },
@@ -39,6 +40,7 @@ export const Panel: React.FC<PanelProps> = ({ session }) => {
     return TABS.some(item => item.id === value) ? value as Tab : 'kanban';
   });
   const [selected, setSelected] = useState<Lead | null>(null);
+  const [showNewLead, setShowNewLead] = useState(false);
   // Valores distintos reais para popular os filtros (calculados de um fetch base
   // não-filtrado, uma vez — não mudam ao aplicar filtros).
   const [facets, setFacets] = useState<{ plataformas: string[]; criativos: string[]; termos: string[] }>({
@@ -216,6 +218,13 @@ export const Panel: React.FC<PanelProps> = ({ session }) => {
           </div>
           <div className="flex items-center gap-2">
             {tab !== 'blog' && <button
+              onClick={() => setShowNewLead(true)}
+              className="flex items-center gap-1.5 text-sm px-3 py-2 rounded-xl bg-[#222D19] text-white hover:bg-[#222D19]/90 transition-colors"
+              title="Cadastrar quem chamou direto no WhatsApp"
+            >
+              <UserPlus size={15} /> Novo
+            </button>}
+            {tab !== 'blog' && <button
               onClick={() => load(filters)}
               className="p-2 rounded-xl border border-[#E4DFD9] bg-[#FEFEFE] hover:bg-[#F0E9E0] transition-colors"
               title="Atualizar leads"
@@ -321,6 +330,21 @@ export const Panel: React.FC<PanelProps> = ({ session }) => {
         {tab === 'dashboard' && <Dashboard leads={leads} onOpenBlog={() => changeTab('blog')} />}
         {tab === 'blog' && <BlogHub />}
       </main>
+
+      {showNewLead && (
+        <NewLeadModal
+          onClose={() => setShowNewLead(false)}
+          onCreated={(lead) => {
+            setLeads((cur) => [lead, ...cur.filter((l) => l.lead_id !== lead.lead_id)]);
+            setShowNewLead(false);
+          }}
+          onOpenExisting={(leadId) => {
+            const existing = leads.find((l) => l.lead_id === leadId);
+            setShowNewLead(false);
+            if (existing) setSelected(existing);
+          }}
+        />
+      )}
 
       {selected && (
         <LeadDetailModal lead={selected} onClose={() => setSelected(null)} onSaved={handleSaved} />
