@@ -132,8 +132,6 @@ async function handlePost(req: VercelRequest, res: VercelResponse) {
       return res.status(200).json({ success: false, error: 'leadId ausente' });
     }
 
-    payload = await attachTriagemToManualLead(payload);
-
     const createdAtMs = payload.createdAt ? Date.parse(payload.createdAt) : NaN;
     const normalizedFbc = resolveMetaFbc(
       typeof payload.metaFbc === 'string' ? payload.metaFbc : undefined,
@@ -162,48 +160,17 @@ async function handlePost(req: VercelRequest, res: VercelResponse) {
   }
 }
 
-const ACQUISITION_KEYS = [
-  'utmSource', 'utmMedium', 'utmCampaign', 'utmContent', 'utmTerm', 'fbclid', 'gclid', 'referrer',
-  'currentAcquisitionAvailable', 'currentEntryUrl', 'currentReferrer', 'currentAcquiredAt',
-  'currentChannelDerived', 'currentProviderDerived',
-  'firstUtmSource', 'firstUtmMedium', 'firstUtmCampaign', 'firstUtmContent', 'firstUtmTerm',
-  'firstGclid', 'firstFbclid', 'firstEntryUrl', 'firstReferrer', 'firstAcquiredAt', 'firstChannelDerived',
-];
-
-async function findLeadsByPhone(whatsapp: unknown, onlyManual = false) {
+async function findLeadsByPhone(whatsapp: unknown) {
   const key = phoneKey(whatsapp);
   if (!key) return [];
-  let query = getSupabaseAdmin()
+  const { data, error } = await getSupabaseAdmin()
     .from('leads')
     .select('lead_id, nome, whatsapp, origem, utm_content, criado_em')
     .ilike('whatsapp', `%${key.slice(-4)}%`)
     .order('criado_em', { ascending: false })
     .limit(200);
-  if (onlyManual) query = query.like('lead_id', 'manual-%');
-  const { data, error } = await query;
   if (error) throw new Error(error.message);
   return (data ?? []).filter((lead) => phoneKey(lead.whatsapp) === key);
-}
-
-/**
- * Quem foi cadastrado à mão (veio do anúncio de WhatsApp) e depois responde a
- * triagem cai no mesmo card, e o anúncio de origem não é sobrescrito.
- */
-async function attachTriagemToManualLead(payload: SheetsPayload): Promise<SheetsPayload> {
-  const isTriagem = String(payload.utmSource || '').toLowerCase() === 'whatsapp'
-    && String(payload.utmMedium || '').toLowerCase() === 'triagem';
-  if (!isTriagem || !payload.whatsapp) return payload;
-  try {
-    const desde = Date.now() - 60 * 24 * 60 * 60 * 1000;
-    const [manual] = (await findLeadsByPhone(payload.whatsapp, true))
-      .filter((lead) => Date.parse(lead.criado_em) >= desde);
-    if (!manual) return payload;
-    const merged: SheetsPayload = { ...payload, leadId: manual.lead_id };
-    for (const key of ACQUISITION_KEYS) delete merged[key];
-    return merged;
-  } catch {
-    return payload; // sem a busca, grava como lead da triagem
-  }
 }
 
 async function handleManualCreate(req: VercelRequest, res: VercelResponse, body: Record<string, unknown>) {

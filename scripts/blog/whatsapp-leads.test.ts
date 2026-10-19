@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {derivarCanal, derivarOrigem, mapPayloadToRow} from '../../lib/mapLead';
+import {derivarCanal, derivarOrigem} from '../../lib/mapLead';
 import {classifyAcquisition} from '../../src/utils/acquisition';
 import {isValidAnuncio, manualAcquisition, phoneKey, WHATSAPP_CAMPAIGN} from '../../lib/whatsappLeads';
 
@@ -32,11 +32,4 @@ test('triagem pelo link do WhatsApp tem origem própria nos dois lados', () => {
   // gclid continua vencendo, e o resto da classificação não muda.
   assert.equal(derivarOrigem({utmSource:'whatsapp', gclid:'x'}), 'Google Ads');
   assert.equal(derivarOrigem({utmSource:'instagram', utmMedium:'paid_social'}), 'Meta Ads');
-});
-
-test('triagem anexada a um cadastro manual não carrega aquisição', () => {
-  const row = mapPayloadToRow({leadId:'manual-1', nomeCompleto:'Pessoa', whatsapp:'62999991234', status:'Filtro concluído(Concluiu o filtro)'});
-  assert.equal(row.origem, null);
-  assert.equal(row.utm_source, null);
-  assert.equal(row.current_acquisition_available, false);
 });
