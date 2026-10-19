@@ -77,6 +77,7 @@ export function derivarCanal(p: SheetsPayload): string {
   const provider = sourceProvider(source);
   const ref = referrerKind(clean(p.currentReferrer) || clean(p.referrer) || '');
   if (clean(p.gclid)) return 'Paid Search';
+  if (source === 'whatsapp') return 'Messaging';
   if (paidMedium(medium)) {
     if (provider === 'Google Ads' || provider === 'Microsoft Ads') return 'Paid Search';
     if (provider) return 'Paid Social';
@@ -96,6 +97,7 @@ export function derivarOrigem(p: SheetsPayload): string {
   const provider = sourceProvider(source);
   const ref = referrerKind(clean(p.currentReferrer) || clean(p.referrer) || '');
   if (clean(p.gclid)) return 'Google Ads';
+  if (source === 'whatsapp') return 'WhatsApp';
   if (paidMedium(medium)) return provider || 'Mídia paga';
   if (medium === 'organic' || ref.kind === 'search') return 'Busca orgânica';
   if (ref.kind === 'social') return 'Social orgânico';
