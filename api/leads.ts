@@ -7,6 +7,7 @@ import { resolveMetaFbc, sendMetaEvent } from '../lib/metaCapi.js';
 import { sendGoogleEcEvent } from '../lib/googleEc.js';
 import { sendGa4ServerEvent } from '../lib/ga4MeasurementProtocol.js';
 import { isValidAnuncio, manualAcquisition, phoneKey } from '../lib/whatsappLeads.js';
+import { enviarContatoFluxo, enviarEtapaFluxo } from '../lib/crmFluxo.js';
 
 /**
  * /api/leads
@@ -153,6 +154,12 @@ async function handlePost(req: VercelRequest, res: VercelResponse) {
       return res.status(200).json({ success: false, error: 'Falha ao gravar lead' });
     }
 
+    // Espelho no Dácora Fluxo: só depois que a pessoa deixou o WhatsApp.
+    if (phoneKey(row.whatsapp)) {
+      const { data: salvo } = await supabase.from('leads').select('*').eq('lead_id', row.lead_id).single();
+      if (salvo) await enviarContatoFluxo(salvo);
+    }
+
     return res.status(200).json({ success: true });
   } catch (error) {
     console.error('[api/leads POST] Erro interno');
@@ -198,6 +205,7 @@ async function handleManualCreate(req: VercelRequest, res: VercelResponse, body:
         .select('*')
         .single();
       if (error) return res.status(404).json({ success: false, error: 'Lead não encontrado' });
+      await enviarContatoFluxo(data);
       return res.status(200).json({ success: true, lead: data });
     }
 
@@ -227,6 +235,7 @@ async function handleManualCreate(req: VercelRequest, res: VercelResponse, body:
       console.error('[api/leads manual] Erro:', error.message);
       return res.status(500).json({ success: false, error: 'Falha ao cadastrar' });
     }
+    await enviarContatoFluxo(data);
     return res.status(200).json({ success: true, lead: data });
   } catch {
     console.error('[api/leads manual] Erro interno');
@@ -388,16 +397,17 @@ async function handlePatch(req: VercelRequest, res: VercelResponse) {
 
     // Só dispara o evento de conversão quando o status está de fato MUDANDO
     // para consulta_realizada — evita disparo redundante em toda edição de
-    // um card que já está fechado.
-    let veioDeOutroStatus = false;
-    if (update.status_comercial === 'consulta_realizada') {
+    // um card que já está fechado. O status anterior também decide o aviso ao Fluxo.
+    let statusAnterior: string | null = null;
+    if (update.status_comercial) {
       const { data: atual } = await supabase
         .from('leads')
         .select('status_comercial')
         .eq('lead_id', leadId)
         .single();
-      veioDeOutroStatus = atual?.status_comercial !== 'consulta_realizada';
+      statusAnterior = atual?.status_comercial ?? null;
     }
+    const veioDeOutroStatus = update.status_comercial === 'consulta_realizada' && statusAnterior !== 'consulta_realizada';
 
     const { data, error } = await supabase
       .from('leads')
@@ -414,8 +424,12 @@ async function handlePatch(req: VercelRequest, res: VercelResponse) {
       return res.status(500).json({ success: false, error: 'Falha ao atualizar lead' });
     }
 
-    if (update.status_comercial === 'consulta_realizada' && veioDeOutroStatus) {
+    if (veioDeOutroStatus) {
       await dispatchConsultaRealizada(data);
+    }
+
+    if (update.status_comercial && update.status_comercial !== statusAnterior) {
+      await enviarEtapaFluxo(data, String(update.status_comercial));
     }
 
     return res.status(200).json({ success: true, lead: data });
