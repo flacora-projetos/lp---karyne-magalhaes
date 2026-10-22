@@ -27,6 +27,12 @@ test('lead com WhatsApp vira contato com as respostas, sem dados clínicos', () 
   assert.doesNotMatch(c.observacoes, /clínico|antibiótico|Sim$/i);
 });
 
+test('e-mail mal digitado não vai, o contato vai', () => {
+  const c = fluxoContato({ ...lead, email: 'ana.gmail.com' })!;
+  assert.equal(c.email, undefined);
+  assert.equal(c.ref, 'lead-abc');
+});
+
 test('sem WhatsApp válido não manda nada', () => {
   assert.equal(fluxoContato({ ...lead, whatsapp: '' }), null);
   assert.equal(fluxoContato({ ...lead, whatsapp: '9999-1234' }), null);
