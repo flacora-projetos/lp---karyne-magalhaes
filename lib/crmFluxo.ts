@@ -72,8 +72,9 @@ export function fluxoContato(lead: Lead) {
     telefone,
     ref,
     nome: str(lead.nome) || undefined,
-    email: str(lead.email) || undefined,
+    email: str(lead.email).includes('@') ? str(lead.email) : undefined,  // e-mail mal digitado não pode barrar o contato
     observacoes: linhas.join('\n'),
+    chegou_em: Number.isNaN(Date.parse(str(lead.criado_em))) ? undefined : new Date(str(lead.criado_em)).toISOString(),
     origem: {
       tipo: 'site',
       titulo: t,

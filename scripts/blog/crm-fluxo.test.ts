@@ -16,6 +16,7 @@ test('lead com WhatsApp vira contato com as respostas, sem dados clínicos', () 
   assert.equal(c.telefone, '(62) 99999-1234');
   assert.equal(c.ref, 'lead-abc');
   assert.equal(c.nome, 'Ana Souza');
+  assert.equal(c.chegou_em, '2026-10-22T13:05:00.000Z');
   assert.deepEqual(c.origem, {
     tipo: 'site', titulo: 'Formulário do site · Meta Ads', url: lead.page_url, canal: 'Paid Social',
     atribuicao: { utm_campaign: 'OUT/26', utm_content: 'Boca seca' },
@@ -24,6 +25,12 @@ test('lead com WhatsApp vira contato com as respostas, sem dados clínicos', () 
   assert.match(c.observacoes, /Anúncio: Boca seca/);
   assert.match(c.observacoes, /Cidade: Goiânia\/GO/);
   assert.doesNotMatch(c.observacoes, /clínico|antibiótico|Sim$/i);
+});
+
+test('e-mail mal digitado não vai, o contato vai', () => {
+  const c = fluxoContato({ ...lead, email: 'ana.gmail.com' })!;
+  assert.equal(c.email, undefined);
+  assert.equal(c.ref, 'lead-abc');
 });
 
 test('sem WhatsApp válido não manda nada', () => {
