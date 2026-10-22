@@ -74,6 +74,7 @@ export function fluxoContato(lead: Lead) {
     nome: str(lead.nome) || undefined,
     email: str(lead.email) || undefined,
     observacoes: linhas.join('\n'),
+    chegou_em: Number.isNaN(Date.parse(str(lead.criado_em))) ? undefined : new Date(str(lead.criado_em)).toISOString(),
     origem: {
       tipo: 'site',
       titulo: t,
