@@ -16,8 +16,11 @@ test('lead com WhatsApp vira contato com as respostas, sem dados clínicos', () 
   assert.equal(c.telefone, '(62) 99999-1234');
   assert.equal(c.ref, 'lead-abc');
   assert.equal(c.nome, 'Ana Souza');
-  assert.deepEqual(c.origem, { tipo: 'site', titulo: 'Formulário do site', url: lead.page_url });
-  assert.match(c.observacoes, /^Formulário do site — 22\/10\/2026, 10:05/);
+  assert.deepEqual(c.origem, {
+    tipo: 'site', titulo: 'Formulário do site · Meta Ads', url: lead.page_url, canal: 'Paid Social',
+    atribuicao: { utm_campaign: 'OUT/26', utm_content: 'Boca seca' },
+  });
+  assert.match(c.observacoes, /^Formulário do site · Meta Ads — 22\/10\/2026, 10:05/);
   assert.match(c.observacoes, /Anúncio: Boca seca/);
   assert.match(c.observacoes, /Cidade: Goiânia\/GO/);
   assert.doesNotMatch(c.observacoes, /clínico|antibiótico|Sim$/i);
@@ -73,4 +76,27 @@ test('Fluxo fora do ar não derruba quem chamou', async () => {
     console.error = erro;
     delete process.env.FLUXO_URL; delete process.env.FLUXO_CHAVE;
   }
+});
+
+test('lead do Google leva o clique e os ids do GA4 de forma organizada', () => {
+  const c = fluxoContato({
+    lead_id: 'g1', whatsapp: '62999991234', origem: 'Google Ads', channel_derived: 'Paid Search',
+    utm_source: 'google', utm_medium: 'cpc', utm_campaign: 'Halitose', utm_term: 'mau halito',
+    gclid: '', google_match_gclid: 'Cj0KCQ', ga_client_id: '123.456', ga_session_id: '789',
+    first_channel_derived: 'Organic Search', first_gclid: '', first_entry_url: 'https://tratamentodomauhalito.com.br/blog/x',
+    referrer: '', comportamento_halito: 'clínico',
+  })!;
+  assert.equal(c.origem.titulo, 'Formulário do site · Google Ads');
+  assert.equal(c.origem.canal, 'Paid Search');
+  assert.deepEqual(c.origem.atribuicao, {
+    utm_source: 'google', utm_medium: 'cpc', utm_campaign: 'Halitose', utm_term: 'mau halito',
+    gclid: 'Cj0KCQ', ga_client_id: '123.456', ga_session_id: '789',
+    primeiro_canal: 'Organic Search', entrada_url: 'https://tratamentodomauhalito.com.br/blog/x',
+  });
+  assert.doesNotMatch(JSON.stringify(c), /clínico/);
+});
+
+test('sem origem conhecida não inventa canal nem atribuição', () => {
+  const c = fluxoContato({ lead_id: 'd1', whatsapp: '62999991234' })!;
+  assert.deepEqual(c.origem, { tipo: 'site', titulo: 'Formulário do site', url: undefined, canal: undefined, atribuicao: undefined });
 });

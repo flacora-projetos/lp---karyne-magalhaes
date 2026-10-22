@@ -27,7 +27,23 @@ function dataBrasilia(iso: string): string {
 function titulo(lead: Lead): string {
   if (str(lead.utm_medium) === 'manual' || str(lead.etapa_funil).startsWith('Cadastro manual')) return 'Cadastro manual no painel do site';
   if (str(lead.utm_source) === 'whatsapp' && str(lead.utm_medium) === 'triagem') return 'Triagem do WhatsApp (site)';
-  return 'Formulário do site';
+  // De onde a pessoa chegou ao site (Google Ads, Google, Direto...), para aparecer no cartão do Fluxo.
+  return str(lead.origem) ? `Formulário do site · ${str(lead.origem)}` : 'Formulário do site';
+}
+
+/** Atribuição do clique, nos nomes que a porta de contatos do Fluxo aceita (vazios saem). */
+function atribuicao(lead: Lead): Record<string, string> | undefined {
+  const a: Record<string, string> = {
+    utm_source: str(lead.utm_source), utm_medium: str(lead.utm_medium), utm_campaign: str(lead.utm_campaign),
+    utm_content: str(lead.utm_content), utm_term: str(lead.utm_term),
+    gclid: str(lead.gclid) || str(lead.google_match_gclid), fbclid: str(lead.fbclid),
+    ga_client_id: str(lead.ga_client_id), ga_session_id: str(lead.ga_session_id),
+    primeiro_canal: str(lead.first_channel_derived), primeira_origem: str(lead.first_utm_source),
+    primeira_campanha: str(lead.first_utm_campaign), primeiro_gclid: str(lead.first_gclid),
+    entrada_url: str(lead.first_entry_url), referrer: str(lead.referrer),
+  };
+  for (const k of Object.keys(a)) if (!a[k]) delete a[k];
+  return Object.keys(a).length ? a : undefined;
 }
 
 /** Corpo para a porta de contatos do Fluxo; null quando não há WhatsApp válido. */
@@ -58,7 +74,13 @@ export function fluxoContato(lead: Lead) {
     nome: str(lead.nome) || undefined,
     email: str(lead.email) || undefined,
     observacoes: linhas.join('\n'),
-    origem: { tipo: 'site', titulo: t, url: /^https?:\/\//i.test(url) ? url.slice(0, 300) : undefined },
+    origem: {
+      tipo: 'site',
+      titulo: t,
+      url: /^https?:\/\//i.test(url) ? url.slice(0, 300) : undefined,
+      canal: str(lead.channel_derived) || undefined,
+      atribuicao: atribuicao(lead),
+    },
   };
 }
 
