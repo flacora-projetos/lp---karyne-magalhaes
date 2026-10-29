@@ -85,6 +85,33 @@ export function fluxoContato(lead: Lead) {
   };
 }
 
+/**
+ * Corpo do clique no botão de WhatsApp da página do Google, que não pede
+ * telefone: o código vai na mensagem pronta e o Fluxo liga a conversa ao
+ * clique (com o gclid) quando ela chegar. null quando o código não serve.
+ */
+export function fluxoClique(lead: Lead, codigo: unknown) {
+  const c = str(codigo).toUpperCase();
+  if (!/^[A-Z0-9]{4,8}$/.test(c)) return null;
+  const url = str(lead.page_url);
+  return {
+    clique_whatsapp: {
+      codigo: c,
+      clicado_em: Number.isNaN(Date.parse(str(lead.criado_em))) ? undefined : new Date(str(lead.criado_em)).toISOString(),
+      titulo: str(lead.origem) ? `Botão do WhatsApp do site · ${str(lead.origem)}` : 'Botão do WhatsApp do site',
+      url: /^https?:\/\//i.test(url) ? url.slice(0, 300) : undefined,
+      canal: str(lead.channel_derived) || undefined,
+      atribuicao: atribuicao(lead),
+    },
+  };
+}
+
+/** Avisa o Fluxo do clique no botão de WhatsApp com código. */
+export async function enviarCliqueFluxo(lead: Lead, codigo: unknown, fetchImpl: typeof fetch = fetch): Promise<void> {
+  const corpo = fluxoClique(lead, codigo);
+  if (corpo) await chamar('contato-externo', corpo, fetchImpl);
+}
+
 /** Corpo para a porta de resultados do Fluxo (mudança de status no painel do site). */
 export function fluxoEtapa(lead: Lead, status: string, agora = new Date()) {
   const telefone = str(lead.whatsapp);

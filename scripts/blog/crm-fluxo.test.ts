@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { enviarContatoFluxo, enviarEtapaFluxo, fluxoContato, fluxoEtapa } from '../../lib/crmFluxo';
+import { enviarCliqueFluxo, enviarContatoFluxo, enviarEtapaFluxo, fluxoClique, fluxoContato, fluxoEtapa } from '../../lib/crmFluxo';
+import { mensagemWhatsappGoogle, novoCodigoWhatsapp } from '../../src/utils/gadsDirect';
 
 const lead = {
   lead_id: 'lead-abc', nome: 'Ana Souza', whatsapp: '(62) 99999-1234', email: 'ana@exemplo.com',
@@ -106,4 +107,49 @@ test('lead do Google leva o clique e os ids do GA4 de forma organizada', () => {
 test('sem origem conhecida não inventa canal nem atribuição', () => {
   const c = fluxoContato({ lead_id: 'd1', whatsapp: '62999991234' })!;
   assert.deepEqual(c.origem, { tipo: 'site', titulo: 'Formulário do site', url: undefined, canal: undefined, atribuicao: undefined });
+});
+
+const cliqueGoogle = {
+  lead_id: 'lead-gads', criado_em: '2026-10-29T13:00:00Z', origem: 'Google Ads', channel_derived: 'Paid Search',
+  utm_source: 'google', utm_campaign: '1735488448', gclid: 'GCLID-1', whatsapp: null,
+  page_url: 'https://tratamentodomauhalito.com.br/gads?gclid=GCLID-1', etapa_funil: 'WhatsApp aberto(clicou para WhatsApp)',
+};
+
+test('clique do botão do Google vai ao Fluxo com o código e o gclid, sem telefone', () => {
+  assert.deepEqual(fluxoClique(cliqueGoogle, 'k7p2q'), {
+    clique_whatsapp: {
+      codigo: 'K7P2Q', clicado_em: '2026-10-29T13:00:00.000Z', titulo: 'Botão do WhatsApp do site · Google Ads',
+      url: cliqueGoogle.page_url, canal: 'Paid Search',
+      atribuicao: { utm_source: 'google', utm_campaign: '1735488448', gclid: 'GCLID-1' },
+    },
+  });
+  assert.equal(fluxoClique(cliqueGoogle, ''), null);
+  assert.equal(fluxoClique(cliqueGoogle, 'a b'), null);
+});
+
+test('clique chama a porta de contatos do Fluxo', async () => {
+  process.env.FLUXO_URL = 'https://fluxo.exemplo/functions/v1/';
+  process.env.FLUXO_CHAVE = 'chave-teste';
+  const chamadas: { url: string; corpo: any }[] = [];
+  const falso = (async (url: string, init: RequestInit) => {
+    chamadas.push({ url, corpo: JSON.parse(String(init.body)) });
+    return new Response('{"ok":true}', { status: 200 });
+  }) as typeof fetch;
+  await enviarCliqueFluxo(cliqueGoogle, 'K7P2Q', falso);
+  assert.equal(chamadas.length, 1);
+  assert.equal(chamadas[0].url, 'https://fluxo.exemplo/functions/v1/contato-externo');
+  assert.equal(chamadas[0].corpo.clique_whatsapp.codigo, 'K7P2Q');
+  delete process.env.FLUXO_URL;
+  delete process.env.FLUXO_CHAVE;
+});
+
+test('mensagem pronta do Google leva um código que o Fluxo reconhece', () => {
+  for (let i = 0; i < 50; i++) {
+    const codigo = novoCodigoWhatsapp();
+    assert.match(codigo, /^[A-HJ-NP-Z2-9]{5}$/);
+    const texto = mensagemWhatsappGoogle(codigo);
+    assert.match(texto, /^Olá! Vim pelo Google/);
+    // mesma leitura do banco do Fluxo (privado.codigo_whatsapp)
+    assert.equal(texto.match(/c[oó]d(?:igo)?\.?:?\s*([a-z0-9]{4,8})\b/i)?.[1]?.toUpperCase(), codigo);
+  }
 });
