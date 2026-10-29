@@ -7,7 +7,7 @@ import { resolveMetaFbc, sendMetaEvent } from '../lib/metaCapi.js';
 import { sendGoogleEcEvent } from '../lib/googleEc.js';
 import { sendGa4ServerEvent } from '../lib/ga4MeasurementProtocol.js';
 import { isValidAnuncio, manualAcquisition, phoneKey } from '../lib/whatsappLeads.js';
-import { enviarContatoFluxo, enviarEtapaFluxo } from '../lib/crmFluxo.js';
+import { enviarCliqueFluxo, enviarContatoFluxo, enviarEtapaFluxo } from '../lib/crmFluxo.js';
 
 /**
  * /api/leads
@@ -158,6 +158,10 @@ async function handlePost(req: VercelRequest, res: VercelResponse) {
     if (phoneKey(row.whatsapp)) {
       const { data: salvo } = await supabase.from('leads').select('*').eq('lead_id', row.lead_id).single();
       if (salvo) await enviarContatoFluxo(salvo);
+    } else if (payload.codigoWhatsapp) {
+      // Botão da página do Google: sem telefone, o código da mensagem pronta liga a conversa ao clique.
+      const { data: salvo } = await supabase.from('leads').select('*').eq('lead_id', row.lead_id).single();
+      if (salvo) await enviarCliqueFluxo(salvo, payload.codigoWhatsapp);
     }
 
     return res.status(200).json({ success: true });
