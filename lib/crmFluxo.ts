@@ -127,29 +127,38 @@ export function fluxoEtapa(lead: Lead, status: string, agora = new Date()) {
   };
 }
 
-async function chamar(porta: 'contato-externo' | 'resultado-externo', corpo: object, fetchImpl: typeof fetch): Promise<boolean> {
+async function chamar(
+  porta: 'contato-externo' | 'resultado-externo',
+  corpo: object,
+  fetchImpl: typeof fetch,
+  tentativas = 1,
+): Promise<void> {
   const base = process.env.FLUXO_URL?.replace(/\/+$/, '');
   const chave = process.env.FLUXO_CHAVE;
-  if (!base || !chave) return false;
-  try {
-    const r = await fetchImpl(`${base}/${porta}`, {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${chave}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify(corpo),
-      signal: AbortSignal.timeout(3000),
-    });
-    if (!r.ok) console.error(`[crmFluxo] ${porta} respondeu ${r.status}`);
-    return r.ok;
-  } catch {
-    console.error(`[crmFluxo] ${porta} sem resposta`);
-    return false;
+  if (!base || !chave) return;
+  for (let tentativa = 1; tentativa <= tentativas; tentativa++) {
+    try {
+      const r = await fetchImpl(`${base}/${porta}`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${chave}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify(corpo),
+        signal: AbortSignal.timeout(3000),
+      });
+      if (r.ok) return;
+      if (tentativa < tentativas && r.status >= 500) continue;
+      console.error(`[crmFluxo] ${porta} respondeu ${r.status}`);
+      return;
+    } catch {
+      if (tentativa === tentativas) console.error(`[crmFluxo] ${porta} sem resposta`);
+    }
   }
 }
 
 /** Manda o lead como contato ao Fluxo (se tiver WhatsApp). */
 export async function enviarContatoFluxo(lead: Lead, fetchImpl: typeof fetch = fetch): Promise<void> {
   const corpo = fluxoContato(lead);
-  if (corpo) await chamar('contato-externo', corpo, fetchImpl);
+  // A mesma ref é idempotente mesmo quando a resposta da primeira gravação se perde.
+  if (corpo) await chamar('contato-externo', corpo, fetchImpl, 2);
 }
 
 /** Garante o contato no Fluxo e avisa a nova etapa. */

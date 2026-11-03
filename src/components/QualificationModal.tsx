@@ -89,6 +89,7 @@ export const QualificationModal: React.FC<QualificationModalProps> = ({ isOpen, 
     eventIdLead: '',
     eventIdContact: ''
   });
+  const sentMetaConversions = useRef(new Set<string>());
   const [data, setData] = useState<LeadData>({
     nome: '',
     whatsapp: '',
@@ -202,8 +203,6 @@ export const QualificationModal: React.FC<QualificationModalProps> = ({ isOpen, 
       ...tracking
     };
 
-    console.log("Enviando lead para Sheets:", payload);
-
     if (!isLocalPreview()) fetch(GOOGLE_SCRIPT_URL, {
       method: "POST",
       mode: "no-cors",
@@ -212,12 +211,40 @@ export const QualificationModal: React.FC<QualificationModalProps> = ({ isOpen, 
       },
       body: JSON.stringify(payload)
     })
-    .then(() => console.log("Fetch para Sheets enviado (no-cors). status:", statusOverride))
     .catch(e => console.error("Error sending lead to sheets:", e));
 
-    // Espelha o mesmo payload no mini CRM (Postgres), sem afetar o envio acima.
     void sendLeadToCrm(payload).then((result) => {
-      if (!result.success) console.warn('[CRM] persistência não confirmada:', result.error);
+      if (!result.success) {
+        console.warn('[CRM] persistência não confirmada:', result.error);
+        return;
+      }
+
+      // Uma gravação de etapa anterior em trânsito não pode confirmar um evento posterior.
+      const conversions = [
+        ["FiltroCompleto", payload.eventIdLead],
+        ["CliqueSaida", payload.eventIdContact],
+      ] as const;
+      for (const [eventName, eventId] of conversions) {
+        if (!eventId || sentMetaConversions.current.has(eventId)) continue;
+        sentMetaConversions.current.add(eventId);
+        trackCustomEvent(eventName, { lp_event: eventName }, { eventID: eventId });
+        void sendMetaCapiEvent({
+          eventName,
+          eventId,
+          email: payload.email,
+          phone: payload.whatsapp,
+          firstName: payload.nomeCompleto.split(" ")[0],
+          lastName: payload.nomeCompleto.split(" ").slice(1).join(" "),
+          city: payload.cidade,
+          state: payload.estado,
+          fbp: payload.metaFbp,
+          fbc: payload.metaFbc,
+          fbclid: payload.fbclid,
+          externalId: payload.leadId,
+          pageUrl: payload.pageUrl,
+          userAgent: payload.userAgent,
+        });
+      }
     });
   };
 
@@ -259,8 +286,6 @@ export const QualificationModal: React.FC<QualificationModalProps> = ({ isOpen, 
       pushDataLayerEvent("etapa_respondida", { step, fluxo });
     } else if (nextS === TOTAL_STEPS && !eventIds.current.eventIdLead) {
       eventIds.current.eventIdLead = eventID;
-      trackCustomEvent("FiltroCompleto", { lp_event: "FiltroCompleto" }, { eventID });
-      sendMetaCapiEvent({ eventName: "FiltroCompleto", eventId: eventID, ...capiPayloadBase });
       sendGoogleEcEvent({
         eventName: "FiltroCompleto",
         eventId: eventID, // mesmo id do Meta (dedupe)
@@ -297,23 +322,6 @@ export const QualificationModal: React.FC<QualificationModalProps> = ({ isOpen, 
     if (!eventIds.current.eventIdContact) {
       eventIds.current.eventIdContact = generateEventId();
       pushDataLayerEvent("clique_saida", { fluxo: "filtro", modalidade: modalidadeLabel(data.modalidade) });
-      trackCustomEvent("CliqueSaida", { lp_event: "CliqueSaida" }, { eventID: eventIds.current.eventIdContact });
-      const capiPayloadBase = {
-        email: data.email,
-        phone: data.whatsapp,
-        firstName: data.nome?.split(" ")[0] || "",
-        lastName: data.nome?.split(" ").slice(1).join(" ") || "",
-        city: data.cidade,
-        state: data.estado,
-        fbp: getFbpCookie(),
-        fbc: getFbcCookie(),
-        fbclid: sessionStorage.getItem('fbclid') || undefined,
-        externalId: leadId,
-        pageUrl: window.location.href,
-        referrer: document.referrer,
-        userAgent: navigator.userAgent
-      };
-      sendMetaCapiEvent({ eventName: "CliqueSaida", eventId: eventIds.current.eventIdContact, ...capiPayloadBase });
     }
     sendDataToSheets('WhatsApp aberto(clicou para WhatsApp)', TOTAL_STEPS);
     const phone = WHATSAPP_PHONE;
@@ -339,7 +347,7 @@ Gostaria de receber orientação e verificar os horários disponíveis para a co
     if (!isLocalPreview()) window.open(`https://wa.me/${phone}?text=${encodedText}`, '_blank');
   };
 
-  const isStep1Valid = !!data.whatsapp;
+  const isStep1Valid = data.whatsapp.replace(/\D/g, '').length >= 10;
   const isStep5Valid = !!data.nome;
 
   return (
