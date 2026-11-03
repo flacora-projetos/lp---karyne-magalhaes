@@ -153,3 +153,24 @@ test('mensagem pronta do Google leva um código que o Fluxo reconhece', () => {
     assert.equal(texto.match(/c[oó]d(?:igo)?\.?:?\s*([a-z0-9]{4,8})\b/i)?.[1]?.toUpperCase(), codigo);
   }
 });
+
+test('repete falha transitória do espelho com a mesma referência de contato', async () => {
+  process.env.FLUXO_URL = 'https://fluxo.exemplo/functions/v1';
+  process.env.FLUXO_CHAVE = 'chave-teste';
+  const corpos: string[] = [];
+  const temporario = (async (_url, init) => {
+    corpos.push(String(init?.body));
+    return corpos.length === 1
+      ? new Response(null, { status: 503 })
+      : new Response('{"ok":true}');
+  }) as typeof fetch;
+  try {
+    await enviarContatoFluxo(lead, temporario);
+    assert.equal(corpos.length, 2);
+    assert.equal(corpos[1], corpos[0]);
+    assert.equal(JSON.parse(corpos[1]).ref, lead.lead_id);
+  } finally {
+    delete process.env.FLUXO_URL;
+    delete process.env.FLUXO_CHAVE;
+  }
+});

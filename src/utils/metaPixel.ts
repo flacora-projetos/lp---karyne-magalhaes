@@ -80,6 +80,7 @@ export const sendMetaCapiEvent = async (payload: {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify(payload),
+      keepalive: true,
     }).catch(e => console.error("[CAPI API Error]:", e));
   } catch (e) {
     console.error("[CAPI Sync Error]:", e);
