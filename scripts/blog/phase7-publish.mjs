@@ -4,6 +4,7 @@ import crypto from 'node:crypto';
 import {fileURLToPath} from 'node:url';
 import {readArticles} from './core.mjs';
 import {buildSnapshotRelease} from './phase6-release.mjs';
+import {canonicalContentPayload} from '../../lib/editorialContent.mjs';
 
 const PRIVATE_KEYS=new Set(['reviews','reviewer_name','recorded_by_user_id','reviewed_at','evidence_json','set_by_user_id','lease_token','snapshot_json']);
 function sha256(value){return crypto.createHash('sha256').update(value).digest('hex');}
@@ -22,7 +23,7 @@ export function assertNoPrivateFields(value,pathName='snapshot'){
 export function normalizedPublicationSnapshot(snapshot){
   if(!snapshot||snapshot.kind!=='karyne-blog-publication-snapshot'||snapshot.schemaVersion!==1)throw new Error('Snapshot da Fase 7 inválido');
   assertNoPrivateFields(snapshot);
-  return {...snapshot,kind:'karyne-blog-approved-snapshot'};
+  return {...snapshot,kind:'karyne-blog-approved-snapshot',article:canonicalContentPayload(snapshot.article)};
 }
 
 export function materializePublicationSnapshot(snapshot,inputDir){
