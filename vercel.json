@@ -14,6 +14,14 @@
     {
       "source": "/gads/",
       "headers": [{"key": "X-Robots-Tag", "value": "noindex, follow"}]
+    },
+    {
+      "source": "/admin",
+      "headers": [{"key": "X-Robots-Tag", "value": "noindex, nofollow"}]
+    },
+    {
+      "source": "/admin/:path*",
+      "headers": [{"key": "X-Robots-Tag", "value": "noindex, nofollow"}]
     }
   ],
   "redirects": [
@@ -25,6 +33,9 @@
     {"source": "/politica-de-privacidade", "destination": "/politica-de-privacidade/index.html"},
     {"source": "/blog/", "destination": "/blog/index.html"},
     {"source": "/blog/:slug/", "destination": "/blog/:slug/index.html"},
-    {"source": "/((?!blog(?:/|$)).*)", "destination": "/index.html"}
+    {"source": "/gads", "destination": "/index.html"},
+    {"source": "/gads/", "destination": "/index.html"},
+    {"source": "/admin", "destination": "/index.html"},
+    {"source": "/admin/:path*", "destination": "/index.html"}
   ]
 }
