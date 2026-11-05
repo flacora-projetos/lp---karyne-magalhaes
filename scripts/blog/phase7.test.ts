@@ -222,6 +222,7 @@ test('reconciliação seleciona somente PR que conserva o HEAD persistido',()=>{
 
 test('workflow liga as proteções comportamentais ao caminho real de merge e falha',()=>{
   const yml=fs.readFileSync('.github/workflows/blog-auto-publish.yml','utf8');
+  assert.match(yml,/\['ls-files','--others','--exclude-standard','-z'\]/);
   assert.match(yml,/Capture exact prepared base/);assert.match(yml,/main_advanced_during_prepare/);assert.match(yml,/statusCheckRollup/);assert.match(yml,/--required/);
   assert.match(yml,/--match-head-commit "\$HEAD_SHA"/);assert.match(yml,/EXTERNAL_EFFECT_STARTED=true/);assert.match(yml,/failure_terminal_state_unconfirmed/);
   assert.match(yml,/hosted_worker_result_uncertain/);assert.doesNotMatch(yml,/SAFE_FAILURE_FILE/);assert.doesNotMatch(yml,/gh pr close/);assert.doesNotMatch(yml,/--admin/);
