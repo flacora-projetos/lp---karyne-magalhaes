@@ -2,7 +2,7 @@
 import os from 'node:os';
 import path from 'node:path';
 import {build} from 'esbuild';
-import {assertUniqueSlugs, buildSitemap, isProductionEligible, PREVIEW_DRAFT_DIR, readArticles, renderArticle, renderIndex, resetGeneratedBlogDir} from './core.mjs';
+import {assertUniqueSlugs, buildSitemap, isProductionEligible, PREVIEW_DRAFT_DIR, readArticles, renderArticle, renderIndex, resetGeneratedBlogDir, SITE_URL} from './core.mjs';
 import {isPresentationReady} from './editorial.mjs';
 
 const args = new Set(process.argv.slice(2));
@@ -48,7 +48,15 @@ for (const article of articles) {
   const relatedArticles = (article.internalLinks || []).filter(link => link.slug).map(link => articles.find(candidate => candidate.slug === link.slug)).filter(Boolean);
   fs.writeFileSync(path.join(dir, 'index.html'), renderArticle(article, {preview, availableSlugs, relatedArticles}), 'utf8');
 }
-if (!preview) fs.writeFileSync(path.join(outDir, 'sitemap.xml'), buildSitemap(articles), 'utf8');
+if (!preview) {
+  fs.writeFileSync(path.join(outDir, 'sitemap.xml'), buildSitemap(articles), 'utf8');
+  const template = fs.readFileSync('public/llms.txt', 'utf8');
+  const links = articles.map(article => {
+    const title = article.title.replace(/[[\]\\]/g, '\\$&');
+    return `- [${title}](${SITE_URL}/blog/${article.slug}/)`;
+  }).join('\n');
+  fs.writeFileSync(path.join(outDir, 'llms.txt'), template.replace(/^## Artigos$/m, heading => `${heading}\n\n${links}`), 'utf8');
+}
 
 const manifest = {mode: preview ? 'preview' : 'production', generatedAt: new Date().toISOString(), count: articles.length, slugs: articles.map((a) => a.slug)};
 fs.writeFileSync(path.join(blogDir, 'manifest.json'), JSON.stringify(manifest,null,2)+'\n','utf8');

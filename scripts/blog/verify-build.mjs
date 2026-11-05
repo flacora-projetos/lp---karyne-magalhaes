@@ -6,6 +6,7 @@ assert.ok(articles.every(isProductionEligible), 'Há artigo sem aprovação vál
 const home = fs.readFileSync('dist/index.html','utf8');
 const privacy = fs.readFileSync('dist/politica-de-privacidade/index.html','utf8');
 const sitemap = fs.readFileSync('dist/sitemap.xml','utf8');
+const llms = fs.readFileSync('dist/llms.txt','utf8');
 const blog = fs.readFileSync('dist/blog/index.html','utf8');
 const dirs = fs.readdirSync('dist/blog',{withFileTypes:true}).filter(e => e.isDirectory()).map(e => e.name).sort();
 assert.equal((home.match(/"@type":"Question"/g) || []).length, 8);
@@ -16,6 +17,8 @@ assert.ok(privacy.includes('>Política de Privacidade</h1>'));
 assert.ok(!privacy.includes('FAQPage') && !/"@type":\s*"(?:Dentist|Physician)"/.test(privacy));
 assert.deepEqual(dirs, articles.map(a => a.slug).sort(), 'Build contém rascunho ou perdeu artigo');
 assert.equal(sitemap, buildSitemap(articles));
+const llmsArticleUrls = [...llms.matchAll(/\]\((https:\/\/[^)]+\/blog\/[^/)]+\/)\)/g)].map(match => match[1]);
+assert.deepEqual(llmsArticleUrls.sort(), articles.map(a => `${SITE_URL}/blog/${a.slug}/`).sort(), 'llms.txt deve listar todos os artigos publicados, uma vez cada');
 assert.equal(blog.includes('noindex, follow'), articles.length === 0);
 assert.ok(blog.includes('data-blog-page="index"'));
 for (const article of articles) {

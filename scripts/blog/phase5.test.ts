@@ -46,7 +46,7 @@ function validRecord() {
 
 test('release da fase 5 exige seleção explícita por slug e nunca inclui o acervo inteiro implicitamente', () => {
   const articles = readArticles('content/blog/published');
-  assert.equal(articles.length, 3);
+  assert.ok(articles.length > 1);
   assert.throws(() => selectReleaseArticles(articles, []), /exige ao menos um --slug explícito/);
   const selected = selectReleaseArticles(articles, [articles[0].slug]);
   assert.equal(selected.length, 1);

@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import {contentFingerprint, escapeHtml, isProductionEligible, readArticles, renderArticle, renderIndex, SITE_URL} from './core.mjs';
+import {articleImage} from './editorial.mjs';
 
 const articles = readArticles('content/blog/published');
 const availableSlugs = new Set(articles.map(article => article.slug));
@@ -21,7 +22,8 @@ test('visual editorial preserva cada texto e referência aprovados e usa imagens
     assert.ok(html.includes('<time datetime="'));
     assert.ok(!html.includes(`>Publicado em ${article.datePublished}`));
     const structured = JSON.parse(html.match(/<script type="application\/ld\+json">([^<]+)<\/script>/)![1]);
-    assert.ok(structured.image.startsWith(SITE_URL+'/images/'));
+    const image = articleImage(article);
+    assert.equal(structured.image, image ? SITE_URL+'/images/'+image.file : undefined);
     assert.equal(structured.author.url, SITE_URL+'/');
     const ids = [...html.matchAll(/<h2 id="(secao-\d+)"/g)].map(match=>match[1]);
     assert.equal(ids.length,article.body.filter(block=>block.type==='h2').length);

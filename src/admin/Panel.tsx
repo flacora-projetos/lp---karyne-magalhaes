@@ -22,23 +22,26 @@ interface PanelProps {
 }
 
 const KNOWN_PLATFORMS = ['Google Ads', 'Meta Ads', 'WhatsApp', 'Direto'];
+const FLUXO_URL = 'https://crm.dacora.com.br/';
 type Tab = 'kanban' | 'leads' | 'dashboard' | 'blog';
 const TABS: { id: Tab; label: string; icon: React.ComponentType<{ size?: number }> }[] = [
+  { id: 'blog', label: 'Blog', icon: BookOpen },
   { id: 'kanban', label: 'Kanban', icon: LayoutGrid },
   { id: 'leads', label: 'Leads', icon: List },
   { id: 'dashboard', label: 'Dashboard', icon: BarChart3 },
-  { id: 'blog', label: 'Blog', icon: BookOpen },
 ];
+
+function tabFromLocation(): Tab {
+  const value = new URLSearchParams(window.location.search).get('tab');
+  return TABS.find(item => item.id === value)?.id ?? 'blog';
+}
 
 export const Panel: React.FC<PanelProps> = ({ session }) => {
   const [filters, setFilters] = useState<LeadFilters>({});
   const [leads, setLeads] = useState<Lead[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [tab, setTab] = useState<Tab>(() => {
-    const value = new URLSearchParams(window.location.search).get('tab');
-    return TABS.some(item => item.id === value) ? value as Tab : 'kanban';
-  });
+  const [tab, setTab] = useState<Tab>(tabFromLocation);
   const [selected, setSelected] = useState<Lead | null>(null);
   const [showNewLead, setShowNewLead] = useState(false);
   // Valores distintos reais para popular os filtros (calculados de um fetch base
@@ -60,10 +63,7 @@ export const Panel: React.FC<PanelProps> = ({ session }) => {
   }, []);
 
   useEffect(() => {
-    const onPopState = () => {
-      const value = new URLSearchParams(window.location.search).get('tab');
-      setTab(TABS.some(item => item.id === value) ? value as Tab : 'kanban');
-    };
+    const onPopState = () => setTab(tabFromLocation());
     window.addEventListener('popstate', onPopState);
     return () => window.removeEventListener('popstate', onPopState);
   }, []);
@@ -242,13 +242,14 @@ export const Panel: React.FC<PanelProps> = ({ session }) => {
         </div>
         {/* Tabs — segmented pills */}
         <div className="max-w-7xl mx-auto px-4 md:px-6 pb-3">
-          <div className="inline-flex gap-1 p-1 rounded-2xl bg-[#E7DED3] border border-[#E4DFD9]">
+          <div className="inline-flex max-w-full flex-wrap gap-1 p-1 rounded-2xl bg-[#E7DED3] border border-[#E4DFD9]">
             {TABS.map((t) => {
               const Icon = t.icon;
               return (
                 <button
                   key={t.id}
                   onClick={() => changeTab(t.id)}
+                  aria-pressed={tab === t.id}
                   className={`inline-flex items-center gap-2 px-3.5 md:px-4 py-2 rounded-xl text-sm font-medium transition-all ${
                     tab === t.id
                       ? 'bg-[#FEFEFE] text-[#222D19] shadow-sm'
@@ -256,6 +257,9 @@ export const Panel: React.FC<PanelProps> = ({ session }) => {
                   }`}
                 >
                   <Icon size={16} /> {t.label}
+                  {t.id !== 'blog' && (
+                    <span className="rounded-full bg-[#565E48]/10 px-2 py-0.5 text-[11px] text-[#565E48]">Legado</span>
+                  )}
                 </button>
               );
             })}
@@ -270,6 +274,22 @@ export const Panel: React.FC<PanelProps> = ({ session }) => {
             : 'max-w-7xl mx-auto px-4 md:px-6 py-5 space-y-5'
         }
       >
+        {tab !== 'blog' && (
+          <aside className="flex flex-none flex-wrap items-center justify-between gap-3 rounded-xl border border-[#565E48]/20 bg-[#565E48]/5 px-4 py-3">
+            <p className="text-sm">
+              <strong>O Dácora Fluxo é o CRM oficial da Karyne.</strong>{' '}
+              Acompanhe os novos leads e atualize os atendimentos por lá.
+            </p>
+            <a
+              href={FLUXO_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="rounded-xl bg-[#222D19] px-3 py-2 text-sm font-medium text-white transition-colors hover:bg-[#222D19]/90"
+            >
+              Abrir Dácora Fluxo
+            </a>
+          </aside>
+        )}
         {/* Filtros comerciais não pertencem à operação editorial do Blog. */}
         {tab !== 'blog' && <div className={isKanban ? 'flex-none space-y-4' : 'space-y-5'}>
         <Filters
