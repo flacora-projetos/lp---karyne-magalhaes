@@ -4,7 +4,8 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import crypto from 'node:crypto';
-import {contentFingerprint,presentationFingerprint,readArticles} from './core.mjs';
+import {contentFingerprint,isProductionEligible,presentationFingerprint,readArticles} from './core.mjs';
+import {buildSnapshotRelease} from './phase6-release.mjs';
 import {assertContentOnlyPaths,assertNoPrivateFields,materializePublicationSnapshot,normalizedPublicationSnapshot} from './phase7-publish.mjs';
 import integrationHandler from '../../api/blog-publish-integration.ts';
 import {dispatchPublicationOperation,publicationUiState,selectPublicationPullRequest,validIntegrationSecret,vercelDeployment} from '../../lib/blogPublisher.ts';
@@ -52,6 +53,28 @@ test('snapshot da Fase 7 não admite campos privados',()=>{
   const snapshot=fixture();assert.doesNotThrow(()=>assertNoPrivateFields(snapshot));
   assert.throws(()=>assertNoPrivateFields({...snapshot,reviews:[{reviewer_name:'Pessoa'}]}),/Campo privado/);
   assert.equal(normalizedPublicationSnapshot(snapshot).kind,'karyne-blog-approved-snapshot');
+});
+
+test('publicação do acervo mantém autorização da cliente separada da revisão clínica', () => {
+  const snapshot = fixture();
+  const article = snapshot.article;
+  article.version = 1;
+  article.sourceId = '1643';
+  const contentHash = contentFingerprint(article);
+  const presentationHash = presentationFingerprint(article);
+  const releaseHash = sha(JSON.stringify({contentHash,presentationHash}));
+  article.approval = {version:1, editorial:true, clinical:false, contentHash, presentationHash, releaseHash};
+  assert.equal(isProductionEligible(article), false);
+
+  article.approval.clinicalAuthorization = 'karyne-legacy-2026-11-05';
+  const authorized = {...snapshot,content_sha256:contentHash,presentation_sha256:presentationHash,release_sha256:releaseHash};
+  const {manifest} = buildSnapshotRelease(normalizedPublicationSnapshot(authorized), readArticles('content/blog/published'));
+  assert.equal(manifest.releases[0].payload.approval.clinical, false);
+  assert.equal(manifest.releases[0].payload.approval.clinicalAuthorization, 'karyne-legacy-2026-11-05');
+  assert.equal(isProductionEligible({...article,title:'Texto alterado após a autorização'}), false);
+  assert.equal(isProductionEligible({...article,version:2}), false);
+  assert.equal(isProductionEligible({...article,sourceId:null}), false);
+  assert.equal(isProductionEligible({...article,approval:{...article.approval,editorial:false}}), false);
 });
 
 test('materialização é determinística pelo slug e remove somente o legado do mesmo artigo',()=>{
@@ -199,6 +222,7 @@ test('reconciliação seleciona somente PR que conserva o HEAD persistido',()=>{
 
 test('workflow liga as proteções comportamentais ao caminho real de merge e falha',()=>{
   const yml=fs.readFileSync('.github/workflows/blog-auto-publish.yml','utf8');
+  assert.match(yml,/\['ls-files','--others','--exclude-standard','-z'\]/);
   assert.match(yml,/Capture exact prepared base/);assert.match(yml,/main_advanced_during_prepare/);assert.match(yml,/statusCheckRollup/);assert.match(yml,/--required/);
   assert.match(yml,/--match-head-commit "\$HEAD_SHA"/);assert.match(yml,/EXTERNAL_EFFECT_STARTED=true/);assert.match(yml,/failure_terminal_state_unconfirmed/);
   assert.match(yml,/hosted_worker_result_uncertain/);assert.doesNotMatch(yml,/SAFE_FAILURE_FILE/);assert.doesNotMatch(yml,/gh pr close/);assert.doesNotMatch(yml,/--admin/);

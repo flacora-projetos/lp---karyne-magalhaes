@@ -3,7 +3,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { assertPrivateOutput } from './private-output.mjs';
-import { contentFingerprint, presentationFingerprint, readArticles, releaseFingerprint, renderArticle, validateArticle } from './core.mjs';
+import { contentFingerprint, hasLegacyClientAuthorization, presentationFingerprint, readArticles, releaseFingerprint, renderArticle, validateArticle } from './core.mjs';
 import { buildReleaseManifest } from './phase4-release.mjs';
 import { isPresentationReady } from './editorial.mjs';
 
@@ -12,7 +12,8 @@ function sha256(value) { return crypto.createHash('sha256').update(value).digest
 export function validateApprovedSnapshot(snapshot) {
   if (!snapshot || snapshot.kind !== 'karyne-blog-approved-snapshot' || snapshot.schemaVersion !== 1) throw new Error('Snapshot da Fase 6 inválido');
   const article = validateArticle(snapshot.article, 'snapshot.article');
-  if (article.status !== 'approved' || article.approval?.editorial !== true || article.approval?.clinical !== true) throw new Error('Snapshot não contém versão aprovada');
+  if (article.status !== 'approved' || article.approval?.editorial !== true ||
+    (article.approval?.clinical !== true && !hasLegacyClientAuthorization(article))) throw new Error('Snapshot não contém versão aprovada');
   if (!isPresentationReady(article)) throw new Error('Snapshot sem apresentação revisada');
   const contentHash = contentFingerprint(article);
   const presentationHash = presentationFingerprint(article);

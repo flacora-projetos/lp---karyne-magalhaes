@@ -82,7 +82,9 @@ jobs:
           node --input-type=module - <<'NODE'
           import {execFileSync} from 'node:child_process';
           import {assertContentOnlyPaths} from './scripts/blog/phase7-publish.mjs';
-          const files=execFileSync('git',['diff','--name-only'],{encoding:'utf8'}).trim().split(/\r?\n/).filter(Boolean);
+          const changed=execFileSync('git',['diff','--name-only','-z'],{encoding:'utf8'});
+          const added=execFileSync('git',['ls-files','--others','--exclude-standard','-z'],{encoding:'utf8'});
+          const files=(changed+added).split('\0').filter(Boolean);
           assertContentOnlyPaths(files,process.env.ARTICLE_SLUG,process.env.LEGACY_SOURCE||'');
           NODE
           npm run lint

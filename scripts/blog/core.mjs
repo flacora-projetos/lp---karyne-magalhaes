@@ -99,13 +99,19 @@ export function releaseFingerprint(article) {
   })).digest('hex');
 }
 
+export function hasLegacyClientAuthorization(article) {
+  return article?.approval?.clinical === false &&
+    article.approval.clinicalAuthorization === 'karyne-legacy-2026-11-05' &&
+    article.version === 1 && typeof article.sourceId === 'string' && /^\d+$/.test(article.sourceId);
+}
+
 export function isProductionEligible(article) {
   return Boolean(
     article &&
     article.status === 'approved' &&
     article.approval?.version === article.version &&
     article.approval?.editorial === true &&
-    article.approval?.clinical === true &&
+    (article.approval?.clinical === true || hasLegacyClientAuthorization(article)) &&
     article.approval?.contentHash === contentFingerprint(article) &&
     article.author &&
     article.datePublished &&
