@@ -233,12 +233,12 @@ jobs:
           CURRENT_MAIN=$(git rev-parse origin/main)
           if [ "$CURRENT_MAIN" != "$BASE_SHA" ]; then
             node --input-type=module - <<'NODE'
-            import fs from 'node:fs';
-            import {isConfirmedProgressResponse} from './scripts/blog/phase7-workflow.mjs';
-            const body={action:'progress',operationId:process.env.OPERATION_ID,leaseToken:process.env.LEASE_TOKEN,status:'blocked',errorCode:'main_advanced',errorDetail:'main avançou após a preparação; é necessário preparar novamente sobre a nova base'};
-            const r=await fetch(process.env.INTEGRATION_URL,{method:'POST',headers:{Authorization:`Bearer ${process.env.INTEGRATION_SECRET}`,'Content-Type':'application/json'},body:JSON.stringify(body)});const j=await r.json().catch(()=>({}));
-            if(isConfirmedProgressResponse(r.ok,j,'blocked'))fs.appendFileSync(process.env.GITHUB_ENV,'TERMINAL_RECORDED=true\n');else throw new Error('main_advanced_terminal_state_unconfirmed');
-            NODE
+          import fs from 'node:fs';
+          import {isConfirmedProgressResponse} from './scripts/blog/phase7-workflow.mjs';
+          const body={action:'progress',operationId:process.env.OPERATION_ID,leaseToken:process.env.LEASE_TOKEN,status:'blocked',errorCode:'main_advanced',errorDetail:'main avançou após a preparação; é necessário preparar novamente sobre a nova base'};
+          const r=await fetch(process.env.INTEGRATION_URL,{method:'POST',headers:{Authorization:`Bearer ${process.env.INTEGRATION_SECRET}`,'Content-Type':'application/json'},body:JSON.stringify(body)});const j=await r.json().catch(()=>({}));
+          if(isConfirmedProgressResponse(r.ok,j,'blocked'))fs.appendFileSync(process.env.GITHUB_ENV,'TERMINAL_RECORDED=true\n');else throw new Error('main_advanced_terminal_state_unconfirmed');
+          NODE
             exit 0
           fi
           gh pr view "$PR_NUMBER" --repo "$REPO" --json headRefOid,baseRefOid,state,isDraft,mergeable,mergeStateStatus,statusCheckRollup,files > "$PR_BEFORE_MERGE_FILE"
