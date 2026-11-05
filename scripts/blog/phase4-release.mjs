@@ -56,7 +56,8 @@ export function publicPayload(article) {
     approval:{
       version:article.approval.version,
       editorial:true,
-      clinical:true,
+      clinical:article.approval.clinical,
+      ...(article.approval.clinical === false ? {clinicalAuthorization:article.approval.clinicalAuthorization} : {}),
       contentHash,
       presentationHash,
       releaseHash,

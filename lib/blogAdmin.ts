@@ -199,9 +199,35 @@ export async function getArticleDetail(articleId:string) {
   const sources=sourceIds.length?await db().from('editorial_sources').select('id,external_id,source_url,source_slug,source_title,normalized_excerpt,normalized_body_text,published_at_source,modified_at_source').in('id',sourceIds):{data:[],error:null};
   if(sources.error) throw new Error('Falha ao carregar fontes');
   const latest=versions.data?.[0];
-  const approvalState=latest?exactApprovalState(latest,reviews.data||[]):{editorial:false,clinical:false};
-  const publicationState=latest?await getPublicationStateForArticle(articleId,latest.id):{intent:null,operations:[],latestOperation:null};
-  return {article:{...a.data,origin:articleOrigin(a.data)},versions:versions.data||[],reviews:reviews.data||[],publications:publications.data||[],approvals:{editorial:Boolean(approvalState.editorial),clinical:Boolean(approvalState.clinical)},publication:{...publicationState,infrastructure_enabled:process.env.BLOG_PUBLICATION_AUTOMATION_ENABLED==='true',state:publicationUiState(publicationState.latestOperation,Boolean(approvalState.editorial&&approvalState.clinical),publicationState.intent?.intent)},sources:(sources.data||[]).map((s:any)=>({...s,has_text:Boolean(String(s.normalized_body_text||'').trim()),normalized_body_text:undefined,body_excerpt:String(s.normalized_body_text||'').slice(0,1200)}))};
+  const approvalState=latest?exactApprovalState(latest,reviews.data||[]):{editorial:false,clinical:false,latest:null};
+  const [publicationState, authorization] = await Promise.all([
+    latest ? getPublicationStateForArticle(articleId,latest.id) : {intent:null,operations:[],latestOperation:null},
+    latest?.version_number === 1 && a.data.source_id && latest.content_sha256 && latest.presentation_sha256
+      ? db().from('editorial_legacy_client_authorizations').select('notes,recorded_at')
+        .eq('article_version_id',latest.id).eq('content_sha256',latest.content_sha256)
+        .eq('presentation_sha256',latest.presentation_sha256).maybeSingle()
+      : {data:null,error:null},
+  ]);
+  if (authorization.error) throw new Error('Falha ao carregar autorização da cliente');
+  const clientAuthorization = authorization.data;
+  const canPublishWithAuthorization = Boolean(clientAuthorization?.recorded_at && approvalState.latest?.clinical?.status !== 'changes_requested');
+  return {article:{...a.data,origin:articleOrigin(a.data)},versions:versions.data||[],reviews:reviews.data||[],publications:publications.data||[],approvals:{editorial:Boolean(approvalState.editorial),clinical:Boolean(approvalState.clinical)},clientAuthorization,canPublishWithAuthorization,publication:{...publicationState,infrastructure_enabled:process.env.BLOG_PUBLICATION_AUTOMATION_ENABLED==='true',state:publicationUiState(publicationState.latestOperation,Boolean(approvalState.editorial&&(approvalState.clinical||canPublishWithAuthorization)),publicationState.intent?.intent)},sources:(sources.data||[]).map((s:any)=>({...s,has_text:Boolean(String(s.normalized_body_text||'').trim()),normalized_body_text:undefined,body_excerpt:String(s.normalized_body_text||'').slice(0,1200)}))};
+}
+
+export async function recordLegacyClientAuthorization(input:any,actorUserId:string) {
+  if (!isUuid(actorUserId) || !isUuid(input.versionId) || !isSha(input.contentSha256) || !isSha(input.presentationSha256)) {
+    throw new Error('Dados da revisão inválidos');
+  }
+  const result = await db().rpc('editorial_record_legacy_client_authorization', {
+    p_version_id:input.versionId, p_content_sha256:input.contentSha256,
+    p_presentation_sha256:input.presentationSha256, p_actor:actorUserId,
+  });
+  if (result.error) {
+    if (result.error.message.includes('superada')) throw new Error('A revisão ficou desatualizada; recarregue a fila');
+    if (result.error.message.includes('fora da autorizacao')) throw new Error('Esta versão está fora da autorização da cliente');
+    throw new Error('Falha ao registrar autorização da cliente');
+  }
+  return {recordedAt:result.data};
 }
 
 export async function listDrafts(params:any={}) {

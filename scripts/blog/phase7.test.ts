@@ -4,7 +4,8 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import crypto from 'node:crypto';
-import {contentFingerprint,presentationFingerprint,readArticles} from './core.mjs';
+import {contentFingerprint,isProductionEligible,presentationFingerprint,readArticles} from './core.mjs';
+import {buildSnapshotRelease} from './phase6-release.mjs';
 import {assertContentOnlyPaths,assertNoPrivateFields,materializePublicationSnapshot,normalizedPublicationSnapshot} from './phase7-publish.mjs';
 import integrationHandler from '../../api/blog-publish-integration.ts';
 import {dispatchPublicationOperation,publicationUiState,selectPublicationPullRequest,validIntegrationSecret,vercelDeployment} from '../../lib/blogPublisher.ts';
@@ -52,6 +53,28 @@ test('snapshot da Fase 7 não admite campos privados',()=>{
   const snapshot=fixture();assert.doesNotThrow(()=>assertNoPrivateFields(snapshot));
   assert.throws(()=>assertNoPrivateFields({...snapshot,reviews:[{reviewer_name:'Pessoa'}]}),/Campo privado/);
   assert.equal(normalizedPublicationSnapshot(snapshot).kind,'karyne-blog-approved-snapshot');
+});
+
+test('publicação do acervo mantém autorização da cliente separada da revisão clínica', () => {
+  const snapshot = fixture();
+  const article = snapshot.article;
+  article.version = 1;
+  article.sourceId = '1643';
+  const contentHash = contentFingerprint(article);
+  const presentationHash = presentationFingerprint(article);
+  const releaseHash = sha(JSON.stringify({contentHash,presentationHash}));
+  article.approval = {version:1, editorial:true, clinical:false, contentHash, presentationHash, releaseHash};
+  assert.equal(isProductionEligible(article), false);
+
+  article.approval.clinicalAuthorization = 'karyne-legacy-2026-11-05';
+  const authorized = {...snapshot,content_sha256:contentHash,presentation_sha256:presentationHash,release_sha256:releaseHash};
+  const {manifest} = buildSnapshotRelease(normalizedPublicationSnapshot(authorized), readArticles('content/blog/published'));
+  assert.equal(manifest.releases[0].payload.approval.clinical, false);
+  assert.equal(manifest.releases[0].payload.approval.clinicalAuthorization, 'karyne-legacy-2026-11-05');
+  assert.equal(isProductionEligible({...article,title:'Texto alterado após a autorização'}), false);
+  assert.equal(isProductionEligible({...article,version:2}), false);
+  assert.equal(isProductionEligible({...article,sourceId:null}), false);
+  assert.equal(isProductionEligible({...article,approval:{...article.approval,editorial:false}}), false);
 });
 
 test('materialização é determinística pelo slug e remove somente o legado do mesmo artigo',()=>{
