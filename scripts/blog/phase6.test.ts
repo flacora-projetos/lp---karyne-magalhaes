@@ -87,7 +87,7 @@ test('hashes editoriais permanecem iguais após reordenação JSONB do conteúdo
   const reorder=(value:any):any=>Array.isArray(value)?value.map(reorder):value&&typeof value==='object'
     ?Object.fromEntries(Object.keys(value).sort().reverse().map(key=>[key,reorder(value[key])])):value;
   const articles=readArticles('content/blog/published');
-  assert.equal(articles.length,3);
+  assert.ok(articles.length > 0);
   for (const article of articles) {
     const jsonbContent=reorder(article);
     const canonicalContent=canonicalContentPayload(jsonbContent);

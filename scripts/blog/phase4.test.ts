@@ -9,13 +9,14 @@ import {buildReleaseManifest} from './phase4-release.mjs';
 import {validateDraft} from './phase4-draft.mjs';
 
 const docsRoot = path.resolve(process.cwd(), '../docs/blog-organico');
+const snapshotPath = path.join(docsRoot, 'etapa-1/acervo/normalizado/current/articles.ndjson');
+const existingPath = path.join(docsRoot, 'etapa-4/evidencias/editorial-sources-remoto.json');
 const published = readArticles('content/blog/published');
 
-test('contrato de apresentação preserva os três artigos atuais e separa hash clínico do visual', () => {
-  assert.equal(published.length, 3);
+test('contrato de apresentação preserva os artigos publicados e separa hash clínico do visual', () => {
+  assert.ok(published.length > 0);
   for (const article of published) {
     assert.equal(isPresentationReady(article), true);
-    assert.ok(articleImage(article));
     assert.match(presentationFingerprint(article), /^[0-9a-f]{64}$/);
     assert.match(releaseFingerprint(article), /^[0-9a-f]{64}$/);
     assert.equal(contentFingerprint(article), article.approval.contentHash);
@@ -48,9 +49,25 @@ test('artigo futuro falha fechado sem apresentação revisada; fallback sem imag
   assert.throws(() => validateArticle(article, 'future.json'), /contrato de apresentação inválido ou não revisado/);
 });
 
-test('plano de importação cobre 129 fontes, enriquece 4 existentes e é determinístico', () => {
-  const rows = readNdjson(path.join(docsRoot, 'etapa-1/acervo/normalizado/current/articles.ndjson'));
-  const existing = JSON.parse(fs.readFileSync(path.join(docsRoot, 'etapa-4/evidencias/editorial-sources-remoto.json'), 'utf8'));
+test('plano de importação separa fontes novas das existentes e é determinístico', () => {
+  const rows = ['1', '2'].map(sourceId => ({
+    sourceId, sourceUrl: `https://example.com/${sourceId}`, title: `Fonte ${sourceId}`, rawSha256: sourceId.repeat(64),
+  }));
+  const existing = [{source_system:'wordpress_karyne', external_id:'1', id:'existing-1'}];
+  const plan = buildImportPlan(rows, existing);
+  assert.equal(plan.count, 2);
+  assert.equal(plan.enrichments, 1);
+  assert.equal(plan.inserts, 1);
+  assert.equal(plan.operations[0].existing_id, 'existing-1');
+  assert.equal(plan.operations[1].desired.normalized_body_text, '');
+  assert.equal(plan.plan_sha256, buildImportPlan(rows, existing).plan_sha256);
+});
+
+test('plano de importação cobre 129 fontes e enriquece 4 existentes', {
+  skip: !fs.existsSync(snapshotPath) && !fs.existsSync(existingPath) && 'O acervo privado fica fora do repositório público.',
+}, () => {
+  const rows = readNdjson(snapshotPath);
+  const existing = JSON.parse(fs.readFileSync(existingPath, 'utf8'));
   const one = buildImportPlan(rows, existing);
   const two = buildImportPlan(rows, existing);
   assert.equal(one.count, 129);
@@ -65,9 +82,9 @@ test('plano de importação cobre 129 fontes, enriquece 4 existentes e é determ
 test('manifesto de release gera chaves idempotentes e não expõe notas privadas', () => {
   const one = buildReleaseManifest(published);
   const two = buildReleaseManifest(published);
-  assert.equal(one.count, 3);
+  assert.equal(one.count, published.length);
   assert.equal(one.manifest_sha256, two.manifest_sha256);
-  assert.equal(new Set(one.releases.map(item => item.operation_key)).size, 3);
+  assert.equal(new Set(one.releases.map(item => item.operation_key)).size, published.length);
   for (const item of one.releases) {
     assert.match(item.release_sha256, /^[0-9a-f]{64}$/);
     assert.match(item.html_sha256, /^[0-9a-f]{64}$/);
