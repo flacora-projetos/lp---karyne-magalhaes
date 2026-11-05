@@ -55,6 +55,21 @@ test('snapshot da Fase 7 não admite campos privados',()=>{
   assert.equal(normalizedPublicationSnapshot(snapshot).kind,'karyne-blog-approved-snapshot');
 });
 
+test('publicação recupera a ordem aprovada quando o banco reordena as chaves do conteúdo', () => {
+  const snapshot = fixture();
+  const reorder = (value:any):any => Array.isArray(value) ? value.map(reorder)
+    : value && typeof value === 'object'
+      ? Object.fromEntries(Object.keys(value).sort().reverse().map(key => [key, reorder(value[key])]))
+      : value;
+  const fromDatabase = reorder(snapshot);
+  assert.notEqual(contentFingerprint(fromDatabase.article), snapshot.content_sha256);
+  const normalized = normalizedPublicationSnapshot(fromDatabase);
+  assert.equal(contentFingerprint(normalized.article), snapshot.content_sha256);
+  assert.doesNotThrow(() => buildSnapshotRelease(normalized, readArticles('content/blog/published')));
+  fromDatabase.article.body[0].text = 'Texto diferente';
+  assert.throws(() => buildSnapshotRelease(normalizedPublicationSnapshot(fromDatabase), readArticles('content/blog/published')), /Hash de conteúdo.*divergente/);
+});
+
 test('publicação do acervo mantém autorização da cliente separada da revisão clínica', () => {
   const snapshot = fixture();
   const article = snapshot.article;

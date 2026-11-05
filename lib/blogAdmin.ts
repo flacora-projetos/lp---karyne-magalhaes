@@ -1,5 +1,6 @@
 import crypto from 'crypto';
 import { getSupabaseAdmin } from './supabaseAdmin.js';
+import { canonicalContentPayload } from './editorialContent.mjs';
 import { dispatchPublicationOperation, getPublicationControl, getPublicationStateForArticle, listPublicationOperations, publicationUiState, setPublicationControl } from './blogPublisher.js';
 
 export const BLOG_ADMIN_PAGE_SIZE = 20;
@@ -87,14 +88,7 @@ export function validateEditableArticle(input: any) {
   return {title,description,slug:String(input.slug),body,references,internalLinks,presentation,ctaLabel:cleanText(input.ctaLabel||'Conhecer a avaliação inicial',120,true)};
 }
 
-export function canonicalContentPayload(article:any) {
-  // JSONB reordena chaves; o pacote precisa recuperar a ordem usada pelo renderer e pelas aprovações.
-  return {...article,
-    body:article?.body?.map((b:any)=>['ul','ol'].includes(b.type)?{type:b.type,items:b.items}:{type:b.type,text:b.text}),
-    internalLinks:article?.internalLinks?.map((l:any)=>l.slug?{label:l.label,slug:l.slug}:{label:l.label,url:l.url}),
-    references:article?.references?.map((r:any)=>({title:r.title,url:r.url,...(r.supports?{supports:r.supports}:{}),...(r.verifiedAt?{verifiedAt:r.verifiedAt}:{})})),
-  };
-}
+export { canonicalContentPayload };
 
 export function canonicalPresentation(p:any) {
   if(!p) return p;
