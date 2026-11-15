@@ -121,7 +121,7 @@ export default function App() {
   }
 
   return (
-    <div className="font-sans text-primary-brown !scroll-smooth">
+    <div className="font-sans text-primary-brown motion-safe:scroll-smooth">
       <Header directToWhatsapp={isGads} />
       <main>
         <Hero directToWhatsapp={isGads} />

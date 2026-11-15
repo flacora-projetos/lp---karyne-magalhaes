@@ -8,7 +8,7 @@ export const PrivacyPolicy = () => {
   }, []);
 
   return (
-    <div className="font-sans text-primary-brown !scroll-smooth min-h-screen flex flex-col bg-[#FDFBF7]">
+    <div className="font-sans text-primary-brown motion-safe:scroll-smooth min-h-screen flex flex-col bg-[#FDFBF7]">
       <Header />
       <main className="flex-grow max-w-4xl mx-auto px-6 py-16 md:py-24">
         <article className="prose prose-brown max-w-none">

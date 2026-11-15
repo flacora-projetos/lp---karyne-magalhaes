@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useLayoutEffect, useRef } from 'react';
 import { X, ArrowLeft, Check, ChevronDown, Star } from 'lucide-react';
 import { trackCustomEvent, generateEventId, getFbpCookie, getFbcCookie, sendMetaCapiEvent } from '../utils/metaPixel';
 import { sendGoogleEcEvent } from '../utils/googleAds';
@@ -83,6 +83,8 @@ export const QualificationModal: React.FC<QualificationModalProps> = ({ isOpen, 
   const [step, setStep] = useState(1);
   const [triagemEnviada, setTriagemEnviada] = useState(false);
   const [leadId, setLeadId] = useState<string>('');
+  const dialogRef = useRef<HTMLDialogElement>(null);
+  const contentRef = useRef<HTMLDivElement>(null);
   const eventIds = useRef({
     eventIdFilterOpen: '',
     eventIdContactCaptured: '',
@@ -103,7 +105,15 @@ export const QualificationModal: React.FC<QualificationModalProps> = ({ isOpen, 
     datasOpcional: ''
   });
 
-  // Handle escape key, tracking data, and generate leadId
+  useLayoutEffect(() => {
+    const dialog = dialogRef.current;
+    const content = contentRef.current;
+    if (!isOpen || !dialog || !content) return;
+    if (!dialog.open) dialog.showModal();
+    content.scrollTop = 0;
+    content.querySelector<HTMLElement>('h2')?.focus({ preventScroll: true });
+  }, [isOpen, step, triagemEnviada]);
+
   useEffect(() => {
     let currentLeadId = leadId;
     if (isOpen) {
@@ -146,21 +156,7 @@ export const QualificationModal: React.FC<QualificationModalProps> = ({ isOpen, 
         });
       }
     }
-    
-    const handleEsc = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose();
-    };
-    if (isOpen) {
-      window.addEventListener('keydown', handleEsc);
-      document.body.style.overflow = 'hidden';
-    } else {
-      document.body.style.overflow = 'unset';
-    }
-    return () => {
-      window.removeEventListener('keydown', handleEsc);
-      document.body.style.overflow = 'unset';
-    };
-  }, [isOpen, onClose]);
+  }, [isOpen, leadId, step, fluxo, ctaLocation]);
 
   // Fechar sem chamar no WhatsApp mostra em qual etapa a pessoa desistiu.
   const wasOpen = useRef(false);
@@ -174,8 +170,6 @@ export const QualificationModal: React.FC<QualificationModalProps> = ({ isOpen, 
     }
     wasOpen.current = false;
   }, [isOpen]);
-
-  if (!isOpen) return null;
 
   const sendDataToSheets = (statusOverride?: string, stepOverride?: number, source: LeadData = data) => {
     const tracking = getTrackingData();
@@ -253,16 +247,15 @@ export const QualificationModal: React.FC<QualificationModalProps> = ({ isOpen, 
     const current = { ...data, ...overrides };
     const nextS = Math.min(step + 1, TOTAL_STEPS);
     setStep(nextS);
-    window.scrollTo({ top: 0, behavior: 'auto' });
     
     const eventID = generateEventId();
     const capiPayloadBase = {
-      email: data.email,
-      phone: data.whatsapp,
-      firstName: data.nome?.split(" ")[0] || "",
-      lastName: data.nome?.split(" ").slice(1).join(" ") || "",
-      city: data.cidade,
-      state: data.estado,
+      email: current.email,
+      phone: current.whatsapp,
+      firstName: current.nome.split(" ")[0],
+      lastName: current.nome.split(" ").slice(1).join(" "),
+      city: current.cidade,
+      state: current.estado,
       fbp: getFbpCookie(),
       fbc: getFbcCookie(),
       fbclid: sessionStorage.getItem('fbclid') || undefined,
@@ -289,8 +282,8 @@ export const QualificationModal: React.FC<QualificationModalProps> = ({ isOpen, 
       sendGoogleEcEvent({
         eventName: "FiltroCompleto",
         eventId: eventID, // mesmo id do Meta (dedupe)
-        email: data.email,
-        phone: data.whatsapp,
+        email: current.email,
+        phone: current.whatsapp,
         gclid: sessionStorage.getItem('gclid') || undefined,
       });
       pushDataLayerEvent("filtro_completo", { fluxo: "filtro", modalidade: modalidadeLabel(current.modalidade) });
@@ -311,6 +304,20 @@ export const QualificationModal: React.FC<QualificationModalProps> = ({ isOpen, 
 
   const handleChange = (field: keyof LeadData, value: string) => {
     setData((prev) => ({ ...prev, [field]: value }));
+  };
+
+  const handleContactSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const fields = new FormData(event.currentTarget);
+    const value = (key: string) => String(fields.get(key) ?? '');
+    const contact = step === 1 ? { whatsapp: value('whatsapp') } : {
+      nome: value('nome').trim(),
+      email: value('email'),
+      cidade: value('cidade'),
+      estado: value('estado'),
+    };
+    setData((previous) => ({ ...previous, ...contact }));
+    nextStep(contact);
   };
 
   const handleTriagemSubmit = () => {
@@ -344,57 +351,64 @@ ${linhas}
 Gostaria de receber orientação e verificar os horários disponíveis para a consulta com a Dra. Karyne Magalhães.`;
 
     const encodedText = encodeURIComponent(text);
-    if (!isLocalPreview()) window.open(`https://wa.me/${phone}?text=${encodedText}`, '_blank');
+    if (!isLocalPreview()) window.open(`https://wa.me/${phone}?text=${encodedText}`, '_blank', 'noopener,noreferrer');
   };
 
-  const isStep1Valid = data.whatsapp.replace(/\D/g, '').length >= 10;
-  const isStep5Valid = !!data.nome;
+  if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-0 md:p-6 bg-black/40 backdrop-blur-sm transition-opacity">
-      <div 
-        className="bg-[#F6F0E9] w-full h-full md:h-auto md:max-h-[90vh] md:max-w-2xl md:rounded-3xl shadow-2xl flex flex-col overflow-hidden relative font-sans text-[#2B1B0A]"
-        onClick={(e) => e.stopPropagation()}
+      <dialog
+        ref={dialogRef}
+        onClose={onClose}
+        aria-labelledby="qualification-title"
+        className="qualification-dialog fixed inset-0 m-auto bg-[#F6F0E9] w-full h-full max-w-none max-h-none md:h-auto md:max-h-[90vh] md:max-w-2xl md:rounded-3xl shadow-2xl open:flex flex-col overflow-hidden font-sans text-[#2B1B0A]"
       >
         {/* Header */}
         <div className="flex-none flex items-center justify-between p-6 border-b border-[#E4DFD9] bg-[#F6F0E9] z-10">
           <div className="flex items-center gap-3">
             {step > 1 && !triagemEnviada && (
-              <button onClick={prevStep} className="p-2 -ml-2 rounded-full hover:bg-black/5 transition-colors text-[#2B1B0A]">
+              <button type="button" aria-label="Voltar etapa" onClick={prevStep} className="p-2 -ml-2 rounded-full hover:bg-black/5 transition-colors text-[#2B1B0A]">
                 <ArrowLeft size={20} />
               </button>
             )}
             <div className="text-sm font-medium text-[#A95B21]">Etapa {step} de {TOTAL_STEPS}</div>
           </div>
-          <button onClick={onClose} className="p-2 -mr-2 rounded-full hover:bg-black/5 transition-colors text-[#2B1B0A]">
-            <X size={20} />
-          </button>
+          <form method="dialog">
+            <button aria-label="Fechar filtro" className="p-2 -mr-2 rounded-full hover:bg-black/5 transition-colors text-[#2B1B0A]">
+              <X size={20} />
+            </button>
+          </form>
         </div>
 
         {/* Progress bar */}
         <div className="h-1 bg-[#E4DFD9] w-full">
           <div 
-            className="h-full bg-[#A95B21] transition-all duration-300 ease-out"
+            className="h-full bg-[#A95B21] motion-safe:transition-[width] duration-300 ease-out"
             style={{ width: `${(step / TOTAL_STEPS) * 100}%` }}
           />
         </div>
 
         {/* Content */}
-        <div className="flex-1 overflow-y-auto p-6 md:p-8">
+        <div ref={contentRef} className="flex-1 overflow-y-auto overscroll-contain p-6 md:p-8">
           
           {step === 1 && (
-            <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-              <h2 className="text-2xl md:text-3xl font-medium font-serif leading-tight mb-3">{isTriagem ? 'Para começar, confirme o seu WhatsApp' : 'Para começar, qual é o seu WhatsApp?'}</h2>
+            <form onSubmit={handleContactSubmit}>
+              <h2 id="qualification-title" tabIndex={-1} className="text-2xl md:text-3xl font-medium font-serif leading-tight mb-3">{isTriagem ? 'Para começar, confirme o seu WhatsApp' : 'Para começar, qual é o seu WhatsApp?'}</h2>
               <p className="text-[#2B1B0A]/70 text-sm mb-8">{isTriagem
                 ? 'Use o mesmo número com que você está falando com a gente. Assim suas respostas chegam junto da sua conversa.'
                 : 'Assim, mesmo que você feche essa janela no meio do caminho, a equipe consegue continuar por lá. As próximas perguntas são sobre o seu caso.'}</p>
 
               <div className="space-y-5">
                 <div>
-                  <label className="block text-sm font-medium mb-1.5 pl-1">WhatsApp</label>
+                  <label htmlFor="qualification-whatsapp" className="block text-sm font-medium mb-1.5 pl-1">WhatsApp com DDD</label>
                   <input
+                    id="qualification-whatsapp"
+                    name="whatsapp"
                     type="tel"
-                    value={data.whatsapp}
+                    autoComplete="tel"
+                    required
+                    pattern={String.raw`(?:\D*\d){10,}\D*`}
+                    defaultValue={data.whatsapp}
                     onChange={e => handleChange('whatsapp', e.target.value)}
                     className="w-full bg-[#FEFEFE] border border-[#E4DFD9] rounded-xl px-4 py-3.5 focus:outline-none focus:ring-2 focus:ring-[#A95B21]/40 focus:border-[#A95B21] transition-all"
                     placeholder="(00) 00000-0000"
@@ -406,21 +420,18 @@ Gostaria de receber orientação e verificar os horários disponíveis para a co
                   Ao continuar, você declara estar ciente da nossa <a href="/politica-de-privacidade" target="_blank" rel="noopener noreferrer" className="underline underline-offset-2 hover:text-[#222D19] transition-colors">Política de Privacidade</a>.
                 </p>
                 <button
-                  onClick={() => {
-                    nextStep();
-                  }}
-                  disabled={!isStep1Valid}
+                  type="submit"
                   className="w-full bg-[#222D19] hover:bg-[#222D19]/90 disabled:bg-[#E4DFD9] disabled:text-[#2B1B0A]/40 transition-colors text-white py-4 rounded-xl font-medium text-[15px]"
                 >
                   Continuar
                 </button>
               </div>
-            </div>
+            </form>
           )}
 
           {step === 2 && (
             <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-              <h2 className="text-2xl md:text-3xl font-medium font-serif leading-tight mb-8">Qual situação mais se aproxima do seu caso?</h2>
+              <h2 id="qualification-title" tabIndex={-1} className="text-2xl md:text-3xl font-medium font-serif leading-tight mb-8">Qual situação mais se aproxima do seu caso?</h2>
               
               <div className="space-y-3">
                 {[
@@ -435,7 +446,7 @@ Gostaria de receber orientação e verificar os horários disponíveis para a co
                     key={opcao}
                     onClick={() => {
                       handleChange('comportamentoHalito', opcao);
-                      setTimeout(nextStep, 200);
+                      nextStep({ comportamentoHalito: opcao });
                     }}
                     className={`w-full text-left p-4 md:p-5 rounded-xl border transition-all flex items-center justify-between group ${
                       data.comportamentoHalito === opcao 
@@ -457,13 +468,14 @@ Gostaria de receber orientação e verificar os horários disponíveis para a co
 
           {step === 3 && (
             <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-              <h2 className="text-2xl md:text-3xl font-medium font-serif leading-tight mb-2">Você utilizou antibióticos nos últimos 21 dias?</h2>
+              <h2 id="qualification-title" tabIndex={-1} className="text-2xl md:text-3xl font-medium font-serif leading-tight mb-2">Você utilizou antibióticos nos últimos 21 dias?</h2>
               <p className="text-[#2B1B0A]/70 text-sm mb-8">Isso ajuda a garantir que sua avaliação tenha resultado confiável.</p>
 
               <div className="space-y-3">
                 {([ 'Não', 'Sim', 'Não tenho certeza' ] as AntibioticStatus[]).map((opcao) => (
                   <button
                     key={opcao}
+                    aria-pressed={data.antibioticos === opcao}
                     onClick={() => {
                       handleChange('antibioticos', opcao);
                     }}
@@ -505,13 +517,14 @@ Gostaria de receber orientação e verificar os horários disponíveis para a co
 
           {step === 4 && (
             <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-              <h2 className="text-2xl md:text-3xl font-medium font-serif leading-tight mb-2">Qual período costuma ser melhor para você?</h2>
+              <h2 id="qualification-title" tabIndex={-1} className="text-2xl md:text-3xl font-medium font-serif leading-tight mb-2">Qual período costuma ser melhor para você?</h2>
               <p className="text-[#2B1B0A]/70 text-sm mb-8">Isso ajuda a equipe a te oferecer o melhor horário disponível.</p>
 
               <div className="space-y-3 mb-8">
                 {([ 'Manhã', 'Tarde', 'Posso me adaptar' ] as PeriodOption[]).map((opcao) => (
                   <button
                     key={opcao}
+                    aria-pressed={data.periodo === opcao}
                     onClick={() => {
                       handleChange('periodo', opcao);
                     }}
@@ -532,8 +545,10 @@ Gostaria de receber orientação e verificar os horários disponíveis para a co
               </div>
 
               <div>
-                <label className="block text-sm font-medium mb-1.5 pl-1">Datas, dias da semana ou horários de preferência <span className="text-[#2B1B0A]/40 font-normal">(opcional)</span></label>
+                <label htmlFor="qualification-dates" className="block text-sm font-medium mb-1.5 pl-1">Datas, dias da semana ou horários de preferência <span className="text-[#2B1B0A]/40 font-normal">(opcional)</span></label>
                 <textarea 
+                  id="qualification-dates"
+                  name="datasOpcional"
                   value={data.datasOpcional}
                   onChange={e => handleChange('datasOpcional', e.target.value)}
                   className="w-full bg-[#FEFEFE] border border-[#E4DFD9] rounded-xl px-4 py-3.5 focus:outline-none focus:ring-2 focus:ring-[#A95B21]/40 focus:border-[#A95B21] transition-all min-h-[100px] resize-y"
@@ -554,26 +569,34 @@ Gostaria de receber orientação e verificar os horários disponíveis para a co
           )}
 
           {step === 5 && (
-            <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-              <h2 className="text-2xl md:text-3xl font-medium font-serif leading-tight mb-3">Quase lá. Como podemos te chamar?</h2>
+            <form onSubmit={handleContactSubmit}>
+              <h2 id="qualification-title" tabIndex={-1} className="text-2xl md:text-3xl font-medium font-serif leading-tight mb-3">Quase lá. Como podemos te chamar?</h2>
               <p className="text-[#2B1B0A]/70 text-sm mb-8">Esses dados ajudam a equipe da clínica a te chamar pelo nome e organizar o atendimento.</p>
 
               <div className="space-y-5">
                 <div>
-                  <label className="block text-sm font-medium mb-1.5 pl-1">Nome completo</label>
+                  <label htmlFor="qualification-name" className="block text-sm font-medium mb-1.5 pl-1">Nome completo</label>
                   <input
+                    id="qualification-name"
+                    name="nome"
                     type="text"
-                    value={data.nome}
+                    autoComplete="name"
+                    required
+                    pattern={String.raw`.*\S.*`}
+                    defaultValue={data.nome}
                     onChange={e => handleChange('nome', e.target.value)}
                     className="w-full bg-[#FEFEFE] border border-[#E4DFD9] rounded-xl px-4 py-3.5 focus:outline-none focus:ring-2 focus:ring-[#A95B21]/40 focus:border-[#A95B21] transition-all"
                     placeholder="Seu nome completo"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium mb-1.5 pl-1">Melhor e-mail <span className="text-[#2B1B0A]/40 font-normal">(opcional)</span></label>
+                  <label htmlFor="qualification-email" className="block text-sm font-medium mb-1.5 pl-1">Melhor e-mail <span className="text-[#2B1B0A]/40 font-normal">(opcional)</span></label>
                   <input
+                    id="qualification-email"
+                    name="email"
                     type="email"
-                    value={data.email}
+                    autoComplete="email"
+                    defaultValue={data.email}
                     onChange={e => handleChange('email', e.target.value)}
                     className="w-full bg-[#FEFEFE] border border-[#E4DFD9] rounded-xl px-4 py-3.5 focus:outline-none focus:ring-2 focus:ring-[#A95B21]/40 focus:border-[#A95B21] transition-all"
                     placeholder="voce@exemplo.com.br"
@@ -581,20 +604,26 @@ Gostaria de receber orientação e verificar os horários disponíveis para a co
                 </div>
                 <div className="grid grid-cols-3 gap-4">
                   <div className="col-span-2">
-                    <label className="block text-sm font-medium mb-1.5 pl-1">Cidade <span className="text-[#2B1B0A]/40 font-normal">(opcional)</span></label>
+                    <label htmlFor="qualification-city" className="block text-sm font-medium mb-1.5 pl-1">Cidade <span className="text-[#2B1B0A]/40 font-normal">(opcional)</span></label>
                     <input
+                      id="qualification-city"
+                      name="cidade"
                       type="text"
-                      value={data.cidade}
+                      autoComplete="address-level2"
+                      defaultValue={data.cidade}
                       onChange={e => handleChange('cidade', e.target.value)}
                       className="w-full bg-[#FEFEFE] border border-[#E4DFD9] rounded-xl px-4 py-3.5 focus:outline-none focus:ring-2 focus:ring-[#A95B21]/40 focus:border-[#A95B21] transition-all"
                       placeholder="Sua cidade"
                     />
                   </div>
                   <div className="col-span-1">
-                    <label className="block text-sm font-medium mb-1.5 pl-1">Estado</label>
+                    <label htmlFor="qualification-state" className="block text-sm font-medium mb-1.5 pl-1">Estado</label>
                     <div className="relative">
                       <select
-                        value={data.estado}
+                        id="qualification-state"
+                        name="estado"
+                        autoComplete="address-level1"
+                        defaultValue={data.estado}
                         onChange={e => handleChange('estado', e.target.value)}
                         className="w-full appearance-none bg-[#FEFEFE] border border-[#E4DFD9] rounded-xl px-4 py-3.5 pr-10 focus:outline-none focus:ring-2 focus:ring-[#A95B21]/40 focus:border-[#A95B21] transition-all"
                       >
@@ -613,21 +642,18 @@ Gostaria de receber orientação e verificar os horários disponíveis para a co
                   Ao continuar, você declara estar ciente da nossa <a href="/politica-de-privacidade" target="_blank" rel="noopener noreferrer" className="underline underline-offset-2 hover:text-[#222D19] transition-colors">Política de Privacidade</a>.
                 </p>
                 <button
-                  onClick={() => {
-                    nextStep();
-                  }}
-                  disabled={!isStep5Valid}
+                  type="submit"
                   className="w-full bg-[#222D19] hover:bg-[#222D19]/90 disabled:bg-[#E4DFD9] disabled:text-[#2B1B0A]/40 transition-colors text-white py-4 rounded-xl font-medium text-[15px]"
                 >
                   Continuar
                 </button>
               </div>
-            </div>
+            </form>
           )}
 
           {step === 6 && (
             <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-              <h2 className="text-2xl md:text-3xl font-medium font-serif leading-tight mb-2">Conheça as opções de avaliação</h2>
+              <h2 id="qualification-title" tabIndex={-1} className="text-2xl md:text-3xl font-medium font-serif leading-tight mb-2">Conheça as opções de avaliação</h2>
               <p className="text-[#2B1B0A]/70 text-sm mb-6">Com base nas suas respostas, você pode escolher uma das opções abaixo. Se ainda tiver dúvida, a equipe pode orientar qual avaliação faz mais sentido antes do agendamento.</p>
 
               <div className="space-y-4 mb-8">
@@ -691,7 +717,7 @@ Gostaria de receber orientação e verificar os horários disponíveis para a co
                     key={opcao}
                     onClick={() => {
                       handleChange('modalidade', opcao);
-                      setTimeout(() => nextStep({ modalidade: opcao }), 200);
+                      nextStep({ modalidade: opcao });
                     }}
                     className={`w-full text-left p-4 rounded-xl border transition-[colors,box-shadow] duration-200 flex items-center justify-between group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#A95B21] focus-visible:ring-offset-2 ${
                       data.modalidade === opcao
@@ -723,7 +749,7 @@ Gostaria de receber orientação e verificar os horários disponíveis para a co
               <div className="w-14 h-14 rounded-full bg-[#128C7E]/10 text-[#128C7E] grid place-items-center mx-auto mb-6">
                 <Check size={28} />
               </div>
-              <h2 className="text-2xl md:text-3xl font-medium font-serif leading-tight mb-3">Pronto! Recebemos suas respostas</h2>
+              <h2 id="qualification-title" tabIndex={-1} className="text-2xl md:text-3xl font-medium font-serif leading-tight mb-3">Pronto! Recebemos suas respostas</h2>
               <p className="text-[#2B1B0A]/70 text-[15px] mb-10 text-pretty">
                 A equipe da Dra.&nbsp;Karyne já tem as informações do seu caso. Pode voltar para a nossa conversa no WhatsApp que seguimos por lá.
               </p>
@@ -737,8 +763,8 @@ Gostaria de receber orientação e verificar os horários disponíveis para a co
           )}
 
           {step === 7 && !triagemEnviada && (
-            <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-              <h2 className="text-2xl md:text-3xl font-medium font-serif leading-tight mb-8">Revise suas informações</h2>
+            <div className="[overflow-wrap:anywhere]">
+              <h2 id="qualification-title" tabIndex={-1} className="text-2xl md:text-3xl font-medium font-serif leading-tight mb-8">Revise suas informações</h2>
               
               <div className="bg-[#FEFEFE] border border-[#E4DFD9] rounded-2xl p-5 md:p-6 space-y-5 mb-8">
                 
@@ -801,7 +827,6 @@ Gostaria de receber orientação e verificar os horários disponíveis para a co
           )}
 
         </div>
-      </div>
-    </div>
+      </dialog>
   );
 };
