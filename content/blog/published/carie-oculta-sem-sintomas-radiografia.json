@@ -1,0 +1,153 @@
+{
+  "schemaVersion": 1,
+  "id": "585a18e7-4d80-48e0-b3d9-7d526c436059",
+  "sourceId": "1414",
+  "version": 1,
+  "slug": "carie-oculta-sem-sintomas-radiografia",
+  "title": "Cárie oculta: dá para ter cárie sem perceber?",
+  "description": "A cárie oculta não aparece como buraco nem mancha e pode passar despercebida. Entenda como ela é descoberta e por que as consultas de rotina fazem diferença.",
+  "status": "approved",
+  "body": [
+    {
+      "type": "p",
+      "text": "A cárie costuma ser imaginada como um buraco escuro no dente ou uma dor forte. Nem sempre é assim. Existem cáries que avançam sem sinal visível e sem dor, e só são descobertas quando o dentista examina com atenção ou pede uma radiografia."
+    },
+    {
+      "type": "p",
+      "text": "É a chamada cárie oculta. O nome não indica uma doença diferente, e sim o fato de o dente parecer saudável por fora enquanto a lesão se desenvolve por dentro ou em áreas difíceis de enxergar."
+    },
+    {
+      "type": "h2",
+      "text": "O que é a cárie oculta"
+    },
+    {
+      "type": "p",
+      "text": "Chama-se cárie oculta aquela que não dá sinais clínicos evidentes, como cavidade aberta ou mancha, mas que já existe no dente. Quem está com ela costuma ter a impressão de que a boca está em ordem, justamente porque nada incomoda."
+    },
+    {
+      "type": "p",
+      "text": "Em geral, ela é encontrada em exame de rotina, principalmente quando se faz radiografia dos dentes. A pessoa vai ao consultório sem queixa e sai sabendo que precisa tratar um dente."
+    },
+    {
+      "type": "p",
+      "text": "Esse silêncio explica por que tanta gente adia a ida ao dentista: sem dor, parece que não há motivo. O problema é que a cárie não costuma parar sozinha. Quanto mais tempo ela fica sem ser notada, maior tende a ser o dano ao dente e mais complexo o tratamento."
+    },
+    {
+      "type": "h2",
+      "text": "Por que a cárie aparece"
+    },
+    {
+      "type": "p",
+      "text": "A cárie é uma doença que pode atingir qualquer idade. Segundo o instituto americano de pesquisa odontológica, ela se forma quando bactérias da placa transformam açúcares dos alimentos em ácidos que, aos poucos, desmineralizam o esmalte. Por isso, três fatores pesam bastante:"
+    },
+    {
+      "type": "ul",
+      "items": [
+        "higiene bucal com falhas, que deixa placa sobre o dente;",
+        "consumo frequente de açúcar, alimento das bactérias;",
+        "desequilíbrio da flora bacteriana da boca."
+      ]
+    },
+    {
+      "type": "p",
+      "text": "A Organização Mundial da Saúde associa o consumo de açúcares livres à cárie, e a recomendação geral é reduzir a quantidade e a frequência. O flúor, presente no creme dental, ajuda a proteger o esmalte."
+    },
+    {
+      "type": "p",
+      "text": "Mesmo com boa escovação, há áreas em que a limpeza é mais difícil, como os sulcos dos dentes de trás e os espaços entre um dente e outro. É nesses pontos que a cárie costuma começar sem chamar atenção. Por isso a prevenção não se resume a escovar: inclui consultas periódicas e a orientação do dentista sobre a melhor rotina."
+    },
+    {
+      "type": "h2",
+      "text": "Como a cárie oculta é descoberta"
+    },
+    {
+      "type": "p",
+      "text": "O diagnóstico combina o exame clínico, em que o dentista olha e toca os dentes com instrumentos próprios, e exames de imagem, como a radiografia. A radiografia mostra regiões que o olho não alcança, como a parte entre dois dentes vizinhos e o interior da estrutura dental."
+    },
+    {
+      "type": "p",
+      "text": "Por isso as radiografias fazem parte de um acompanhamento odontológico bem feito. Quando a cárie é encontrada cedo, o tratamento costuma ser mais simples e preserva mais do dente."
+    },
+    {
+      "type": "p",
+      "text": "Outros recursos podem ser usados conforme o caso, como a avaliação cuidadosa da superfície com boa iluminação. O objetivo é sempre o mesmo: encontrar a lesão antes que ela cause dor ou destrua grande parte do dente."
+    },
+    {
+      "type": "h2",
+      "text": "O que acontece depois do diagnóstico"
+    },
+    {
+      "type": "p",
+      "text": "O tratamento depende do tamanho e da profundidade da lesão. Em muitos casos, o dentista remove a parte afetada e restaura o dente com material próprio, procurando recuperar a forma e a função de mastigar. Cada situação exige uma avaliação individual, e a decisão cabe ao profissional."
+    },
+    {
+      "type": "p",
+      "text": "Além de tratar o dente, vale conversar sobre a causa: o que na rotina de higiene e de alimentação contribuiu para a lesão. Sem essa conversa, a cárie pode voltar em outro ponto."
+    },
+    {
+      "type": "p",
+      "text": "Se a lesão ainda for muito inicial, o dentista pode optar por acompanhar o dente e reforçar medidas de prevenção, como o uso de flúor e o ajuste da higiene. Quando já houve perda de estrutura, a restauração costuma ser o caminho. A decisão entre acompanhar e tratar é clínica e individual."
+    },
+    {
+      "type": "h2",
+      "text": "Quando procurar avaliação"
+    },
+    {
+      "type": "p",
+      "text": "Como a cárie oculta não avisa, a principal forma de encontrá-la é manter consultas de rotina. Procure o dentista com mais urgência se houver sensibilidade ao frio, ao calor ou ao doce, dor ao mastigar, mancha nova no dente ou comida que fica presa sempre no mesmo lugar."
+    },
+    {
+      "type": "p",
+      "text": "Se faz muito tempo que você não passa por uma avaliação completa, vale marcar uma. A frequência ideal das consultas e dos exames de imagem varia conforme o risco de cada pessoa, e é o dentista quem define."
+    }
+  ],
+  "ctaLabel": "Conhecer a avaliação inicial",
+  "internalLinks": [
+    {
+      "label": "Página da consulta",
+      "url": "/"
+    }
+  ],
+  "references": [
+    {
+      "title": "Tooth Decay - NIDCR",
+      "url": "https://www.nidcr.nih.gov/health-info/tooth-decay",
+      "supports": "Como a cárie se forma, prevenção com flúor, dieta e higiene, e tratamento."
+    },
+    {
+      "title": "Dental cavities - MedlinePlus Medical Encyclopedia",
+      "url": "https://medlineplus.gov/ency/article/001055.htm",
+      "supports": "Causas, sinais e diagnóstico da cárie, inclusive por radiografia."
+    },
+    {
+      "title": "Sugars and dental caries - WHO",
+      "url": "https://www.who.int/news-room/fact-sheets/detail/sugars-and-dental-caries",
+      "supports": "Relação entre açúcares livres e cárie."
+    }
+  ],
+  "author": "Dra. Karyne Magalhães",
+  "datePublished": "2026-10-12T12:33:37.438Z",
+  "dateModified": "2026-10-12T12:33:37.438Z",
+  "presentation": {
+    "kind": "image",
+    "reviewStatus": "reviewed",
+    "subject": "Dra. Karyne com um modelo odontológico",
+    "image": {
+      "file": "avaliacao_paciente.jpg",
+      "width": 854,
+      "height": 1280,
+      "label": "Demonstração odontológica",
+      "alt": "Dra. Karyne demonstrando um modelo odontológico",
+      "caption": "Dra. Karyne demonstrando um modelo odontológico. A imagem não mostra atendimento a um paciente."
+    }
+  },
+  "approval": {
+    "version": 1,
+    "editorial": true,
+    "clinical": false,
+    "clinicalAuthorization": "karyne-legacy-2026-11-05",
+    "contentHash": "9183fbc53006abb692f32385ab4fbfcf3a4e682cb2636a570de65c1e93350cfb",
+    "presentationHash": "35040501c92651d4540836d84995ce0c3a3c4f80386d652a0cce7845bfc972c2",
+    "releaseHash": "59f96ac143e627919b7d827f8587b0a55db6247506029c89b45b15e77798392d"
+  }
+}
