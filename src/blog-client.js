@@ -128,6 +128,19 @@ import {recordBlogContact} from './utils/blogContact';
     el.addEventListener('click',contactClick);
     el.addEventListener('auxclick',contactClick);
   });
+  if (!preview && pageType === 'article' && slug) {
+    const preferredSourceClick = (event) => {
+      if (event.type === 'auxclick' && event.button !== 1) return;
+      if (typeof window.gtag === 'function') {
+        window.gtag('event','fonte_preferida_click',{send_to:'G-3783BP5DSB',article_slug:slug});
+      }
+    };
+    document.querySelectorAll('[data-preferred-source]').forEach((el) => {
+      el.addEventListener('click',preferredSourceClick);
+      el.addEventListener('auxclick',preferredSourceClick);
+    });
+  }
+
   document.querySelectorAll('[data-share]').forEach((button) => {
     button.addEventListener('click',async () => {
       const status = document.querySelector('.share-status');

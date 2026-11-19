@@ -90,6 +90,7 @@ a.card,a.feature-story{text-decoration:none}
 .closing{padding:30px;background:#ede6dc;border-radius:14px;margin-top:40px}
 .closing h2{font-size:28px;margin:0 0 12px}
 .closing p{font-size:16px;line-height:1.7;color:var(--soft);margin-bottom:22px}
+.closing .preferred-source{margin:18px 0 0;font-size:14px}
 .article-related{margin-top:72px;border-top:1px solid var(--line);padding-top:36px}
 .share{background:none;border:1px solid var(--line);padding:12px 16px;min-height:44px;border-radius:8px;color:var(--soft);font-size:12px}
 @media(max-width:900px){.wrap{padding:0 28px}

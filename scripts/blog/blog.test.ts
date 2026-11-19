@@ -44,25 +44,33 @@ const blogClientSource = buildSync({entryPoints:['src/blog-client.js'],bundle:tr
 function runBlogClient({slug='',pageType='article',search='',referrer='',preview='1',ctaHref='',local=new MemoryStorage(),session=new MemoryStorage()}={}) {
   const listeners = new Map<string,()=>void>();
   const cta = {getAttribute:()=>ctaHref,addEventListener:(name:string, fn:()=>void) => listeners.set(name,fn)};
+  const preferredSourceListeners = new Map<string,(event: {type:string;button:number})=>void>();
+  const preferredSource = {addEventListener:(name:string, fn:(event: {type:string;button:number})=>void) => preferredSourceListeners.set(name,fn)};
   const href = `https://tratamentodomauhalito.com.br/${pageType === 'index' ? 'blog/' : `blog/${slug}/`}${search}`;
   const navigations:string[] = [];
   const timers:Array<()=>void> = [];
   const location = {href,search,hostname:'tratamentodomauhalito.com.br',assign:(url:string)=>navigations.push(url)};
   const gtagCalls:any[] = [];
   const crmCalls:any[] = [];
+  const metaCalls:any[] = [];
   const document = {
     referrer,
     cookie:'',
     title:'Teste',
     currentScript:{dataset:{blogPage:pageType,blogArticle:slug,blogSlug:slug,blogSource:slug ? `source-${slug}` : '',blogPreview:preview}},
-    querySelectorAll:(selector:string) => selector === 'a.cta' ? [cta] : [],
+    querySelectorAll:(selector:string) => {
+      if (selector === 'a.cta') return [cta];
+      if (selector === '[data-preferred-source]') return [preferredSource];
+      return [];
+    },
   };
-  const window = {location,gtag:(...args:any[]) => gtagCalls.push(args)};
+  const window = {location,gtag:(...args:any[]) => gtagCalls.push(args),fbq:(...args:any[]) => metaCalls.push(args)};
   vm.runInNewContext(blogClientSource,{document,window,location,sessionStorage:session,localStorage:local,URLSearchParams,URL,Date,
     navigator:{userAgent:'blog-test'},crypto:{randomUUID:()=> 'test-blog-contact'},
     fetch:(url:string,init:any)=>{crmCalls.push({url,...init,payload:JSON.parse(init.body)});return Promise.resolve({ok:true,json:async()=>({success:true})});},
     setTimeout:(fn:()=>void)=>timers.push(fn)});
-  return {local,session,gtagCalls,crmCalls,navigations,timers,
+  return {local,session,gtagCalls,crmCalls,metaCalls,navigations,timers,
+    preferredSourceClick:(type='click',button=0)=>preferredSourceListeners.get(type)?.({type,button}),
     click:(event:unknown={type:'click',button:0})=>(listeners.get('click') as any)?.(event),
     auxclick:(button:number)=>(listeners.get('auxclick') as any)?.({type:'auxclick',button})};
 }
@@ -115,6 +123,45 @@ test('contato publicado vai direto ao número existente com contexto e sem depen
   assert.ok(html.includes('href="https://wa.me/5562999320675?text='));
   assert.ok(html.includes('target="_blank" rel="noopener noreferrer">Falar com a equipe pelo WhatsApp'));
   assert.ok(!html.includes('href="/?blog_cta='));
+});
+
+test('fonte preferida aparece uma vez após o WhatsApp final e somente em artigos', () => {
+  const article = approvedArticle();
+  const url = 'https://www.google.com/preferences/source?q=tratamentodomauhalito.com.br';
+  const link = `<a href="${url}" target="_blank" rel="noopener" data-preferred-source>Adicione este site como fonte preferida</a>`;
+  for (const preview of [false,true]) {
+    const html = renderArticle(article,{preview});
+    const closing = html.match(/<section class="closing"[^>]*>(.*?)<\/section>/)?.[1] || '';
+    assert.equal(html.split(url).length,2);
+    assert.match(closing,/<a class="contact cta"[^>]*>.*?<\/a><p class="preferred-source">/);
+    assert.ok(closing.includes(`Quer ver mais conteúdos da Dra. Karyne quando pesquisar no Google? ${link}.`));
+    assert.ok(!renderIndex([article],{preview}).includes(url));
+  }
+});
+
+test('clique na fonte preferida envia somente o evento editorial ao GA4', () => {
+  const published = runBlogClient({slug:'artigo-a',preview:'0'});
+  const originalAnalytics = published.gtagCalls.length;
+  published.preferredSourceClick('auxclick',2);
+  assert.equal(published.gtagCalls.length,originalAnalytics);
+  for (const [type,button] of [['click',0],['auxclick',1]] as const) {
+    published.preferredSourceClick(type,button);
+  }
+
+  const analytics = published.gtagCalls.slice(originalAnalytics);
+  assert.deepEqual(analytics.map(([command,event,params]) => [command,event,{...params}]),[
+    ['event','fonte_preferida_click',{send_to:'G-3783BP5DSB',article_slug:'artigo-a'}],
+    ['event','fonte_preferida_click',{send_to:'G-3783BP5DSB',article_slug:'artigo-a'}],
+  ]);
+  assert.deepEqual(published.crmCalls,[]);
+  assert.deepEqual(published.metaCalls,[]);
+
+  const preview = runBlogClient({slug:'artigo-a'});
+  preview.preferredSourceClick();
+  assert.deepEqual(preview.gtagCalls,[]);
+  const index = runBlogClient({pageType:'index',slug:'artigo-a',preview:'0'});
+  index.preferredSourceClick();
+  assert.deepEqual(index.gtagCalls.map(args=>args[1]),['page_view']);
 });
 
 test('produção exige revisão exata, hash do conteúdo, autoria e data', () => {
