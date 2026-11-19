@@ -1,0 +1,146 @@
+{
+  "schemaVersion": 1,
+  "id": "feef9fd2-af0a-41df-b8e1-773ff5ac4dfc",
+  "sourceId": "1380",
+  "version": 1,
+  "slug": "medo-de-dentista-acolhimento-consulta-odontologica",
+  "title": "Medo de dentista e acolhimento: o que esperar da consulta",
+  "description": "A consulta odontológica envolve um toque íntimo e pode gerar ansiedade. Veja o que esperar de um atendimento acolhedor e como conversar com o dentista.",
+  "status": "approved",
+  "body": [
+    {
+      "type": "p",
+      "text": "Quem ouve falar de cirurgião-dentista costuma pensar em técnica, aparelhos e materiais. Mas a consulta odontológica é também uma situação delicada. A pessoa fica deitada, de boca aberta, com alguém tocando uma região muito íntima do corpo, e isso pode despertar medo, ansiedade e vergonha."
+    },
+    {
+      "type": "p",
+      "text": "Por isso, além de executar bem o tratamento, o dentista precisa saber receber o paciente. Escutar, explicar o que vai fazer e respeitar o tempo de cada um são partes do cuidado, e não detalhes opcionais."
+    },
+    {
+      "type": "h2",
+      "text": "Por que a consulta pode ser tão difícil para algumas pessoas"
+    },
+    {
+      "type": "p",
+      "text": "O medo de dentista é comum e tem várias origens: experiências ruins no passado, medo de sentir dor, sensação de perda de controle, vergonha do estado da boca ou do mau hálito. A ansiedade pode ir de um incômodo leve até um medo intenso, com suor, coração acelerado e vontade de sair do consultório."
+    },
+    {
+      "type": "p",
+      "text": "Quando o medo é muito forte, muitas pessoas adiam consultas por anos, e isso costuma transformar problemas pequenos em problemas maiores. Entender que o desconforto é comum e tem manejo já ajuda a dar o primeiro passo."
+    },
+    {
+      "type": "h2",
+      "text": "O que é um atendimento acolhedor"
+    },
+    {
+      "type": "p",
+      "text": "Não existe uma regra única, mas alguns sinais mostram que o profissional está atento ao paciente:"
+    },
+    {
+      "type": "ul",
+      "items": [
+        "Ele ouve a queixa e o histórico antes de começar, sem pressa e sem julgar.",
+        "Explica o que vai fazer, em linguagem simples, e avisa antes de cada etapa.",
+        "Combina um sinal para interromper o procedimento quando o paciente precisar de uma pausa.",
+        "Respeita o limite do paciente e adapta o plano, dividindo o tratamento em consultas mais curtas, quando necessário.",
+        "Trata questões como mau hálito, estado dos dentes ou medo com naturalidade, sem constranger."
+      ]
+    },
+    {
+      "type": "p",
+      "text": "Uma relação de confiança, um toque cuidadoso e a clareza sobre o que será feito tornam a consulta mais fácil para quem tem receio. Esse vínculo também ajuda o paciente a voltar com regularidade, o que favorece a prevenção."
+    },
+    {
+      "type": "h2",
+      "text": "O que o dentista pode e não pode fazer"
+    },
+    {
+      "type": "p",
+      "text": "Acolher não significa assumir o papel de outro profissional. O dentista cuida da saúde da boca. Quando percebe que o paciente está muito abalado, com sinais de sofrimento emocional importante, ele pode ouvir, orientar e, se necessário, sugerir que a pessoa procure um médico ou um psicólogo. Em alguns momentos, o mais prudente também pode ser adiar o procedimento e reagendar para quando a pessoa se sentir em condições."
+    },
+    {
+      "type": "p",
+      "text": "A ansiedade diante do tratamento odontológico e as fobias específicas, como o medo intenso de procedimentos, têm abordagens próprias e podem ser acompanhadas por profissionais de saúde mental. Se o medo impede você de cuidar da boca, vale conversar sobre isso."
+    },
+    {
+      "type": "h2",
+      "text": "Como se preparar para a consulta"
+    },
+    {
+      "type": "ul",
+      "items": [
+        "Conte ao dentista que você tem medo e o que costuma causar mais desconforto.",
+        "Faça perguntas antes de começar e peça que expliquem cada etapa.",
+        "Combine um sinal de pausa, como levantar a mão.",
+        "Se possível, marque o horário em um momento do dia em que você esteja mais tranquilo.",
+        "Pratique respiração lenta durante a espera e durante o atendimento.",
+        "Leve um acompanhante, se isso ajudar."
+      ]
+    },
+    {
+      "type": "h2",
+      "text": "Quando procurar ajuda além do consultório"
+    },
+    {
+      "type": "p",
+      "text": "Procure um médico ou psicólogo se o medo de ir ao dentista for tão intenso que você evita qualquer consulta, se a ansiedade aparece em outras situações do dia a dia, ou se você percebe tristeza persistente, crises de pânico ou desânimo. O dentista pode ajudar com a parte bucal, mas a saúde emocional merece atenção própria."
+    },
+    {
+      "type": "p",
+      "text": "No atendimento da Dra. Karyne, voltado a pessoas com mau hálito e queixas de boca seca, a escuta faz parte da avaliação. Se esse é o seu caso e você se sente inseguro com o assunto, dizer isso logo no início já ajuda a conduzir a consulta com mais tranquilidade."
+    }
+  ],
+  "ctaLabel": "Conhecer a avaliação inicial",
+  "internalLinks": [
+    {
+      "label": "Como é a consulta com a Dra. Karyne",
+      "url": "/"
+    },
+    {
+      "label": "Como funciona a avaliação especializada do mau hálito",
+      "url": "/blog/como-funciona-avaliacao-especializada-mau-halito/"
+    }
+  ],
+  "references": [
+    {
+      "title": "Anxiety - MouthHealthy (ADA)",
+      "url": "https://www.mouthhealthy.org/all-topics-a-z/anxiety",
+      "supports": "Ansiedade e medo de dentista, e estratégias para tornar a consulta mais tranquila."
+    },
+    {
+      "title": "Phobias - MedlinePlus",
+      "url": "https://medlineplus.gov/phobias.html",
+      "supports": "Fobias como medo intenso e persistente com impacto na vida e tratamento disponível."
+    },
+    {
+      "title": "Dental Health - MedlinePlus",
+      "url": "https://medlineplus.gov/dentalhealth.html",
+      "supports": "Cuidados de rotina com a saúde bucal e importância das consultas regulares."
+    }
+  ],
+  "author": "Dra. Karyne Magalhães",
+  "datePublished": "2026-10-12T12:33:28.434Z",
+  "dateModified": "2026-10-12T12:33:28.434Z",
+  "presentation": {
+    "kind": "image",
+    "reviewStatus": "reviewed",
+    "subject": "Retrato da Dra. Karyne para tema de relação com o dentista",
+    "image": {
+      "file": "karyne_cta.jpg",
+      "width": 854,
+      "height": 1280,
+      "label": "Retrato da Dra. Karyne",
+      "alt": "Dra. Karyne Magalhães, cirurgiã-dentista em Goiânia",
+      "caption": "Dra. Karyne Magalhães, cirurgiã-dentista em Goiânia."
+    }
+  },
+  "approval": {
+    "version": 1,
+    "editorial": true,
+    "clinical": false,
+    "clinicalAuthorization": "karyne-legacy-2026-11-05",
+    "contentHash": "f73efd70a9b441639d86c2584c7eb06a001028c9d5a0a3fe4be1879db485288b",
+    "presentationHash": "fe1584b1e59c32e93faf4d3dff9c79360f0331463dda3a2071945d8d6b0cfea3",
+    "releaseHash": "42cb271b241f0fd042c6b9ac25c4ae6599a113a822521901445d81ef084bd718"
+  }
+}
