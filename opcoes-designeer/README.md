@@ -1,5 +1,7 @@
 # Opções da página de vendas tiradas do Designeer (24/11/2026)
 
+**Decisão do PO (24/11/2026): nenhuma das três ideias foi aprovada.** Guardado só como registro do teste; nada daqui entra no site. A pasta não altera a página publicada (build do site conferido idêntico com e sem ela).
+
 Pedido do PO: novas opções para a página de vendas, pelo método que deu certo na Nomilume (referências no Designeer, duas ideias saídas do mundo do produto, página completa, montador, páginas privadas). Nada foi ao ar: o site em produção, o código dele (`src/`) e a publicação na Vercel não mudaram. As prévias não enviam dados (cadastro, planilha, Meta e Google ficam desligados) e o WhatsApp mostra um aviso em vez de abrir.
 
 ## O que já existia e não mudou
