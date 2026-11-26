@@ -1,12 +1,17 @@
 import { getAttributionExtras } from './acquisition';
 import { getFbcCookie, getFbpCookie } from './metaPixel';
 
-export async function recordBlogContact(article: {id:string; sourceId:string; slug:string}) {
+export async function recordBlogContact(
+  article: {id:string; sourceId:string; slug:string; title:string},
+  leadId: string,
+  codigoWhatsapp: string,
+) {
   const attribution = getAttributionExtras();
   const params = new URLSearchParams(window.location.search);
   const now = new Date().toISOString();
   const payload = {
-    leadId: crypto.randomUUID(), createdAt: now, updatedAt: now,
+    leadId, createdAt: now, updatedAt: now,
+    ...(codigoWhatsapp ? {codigoWhatsapp, blogArticleTitle: article.title} : {}),
     status: 'Clique para WhatsApp (blog)',
     utmSource: attribution.currentUtmSource || params.get('utm_source') || '',
     utmMedium: attribution.currentUtmMedium || params.get('utm_medium') || '',

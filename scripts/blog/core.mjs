@@ -206,7 +206,7 @@ function baseStyles() {
 
 function blogClientTag({preview, article, pageType}) {
   const articleAttrs = article
-    ? ` data-blog-article="${escapeHtml(article.id)}" data-blog-source="${escapeHtml(article.sourceId || '')}" data-blog-slug="${escapeHtml(article.slug)}"`
+    ? ` data-blog-article="${escapeHtml(article.id)}" data-blog-source="${escapeHtml(article.sourceId || '')}" data-blog-slug="${escapeHtml(article.slug)}" data-blog-title="${escapeHtml(article.title)}"`
     : '';
   return `<script src="/blog-client.js" defer data-blog-page="${escapeHtml(pageType)}"${articleAttrs} data-blog-preview="${preview ? '1' : '0'}"></script>`;
 }

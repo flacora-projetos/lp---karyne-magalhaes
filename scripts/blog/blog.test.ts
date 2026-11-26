@@ -43,7 +43,10 @@ function setBrowser({search='',href='https://tratamentodomauhalito.com.br/',refe
 const blogClientSource = buildSync({entryPoints:['src/blog-client.js'],bundle:true,format:'iife',write:false}).outputFiles[0].text;
 function runBlogClient({slug='',pageType='article',search='',referrer='',preview='1',ctaHref='',local=new MemoryStorage(),session=new MemoryStorage()}={}) {
   const listeners = new Map<string,()=>void>();
-  const cta = {getAttribute:()=>ctaHref,addEventListener:(name:string, fn:()=>void) => listeners.set(name,fn)};
+  const cta = {
+    href:ctaHref || 'https://wa.me/5562999320675?text=Ol%C3%A1',
+    addEventListener:(name:string, fn:()=>void) => listeners.set(name,fn),
+  };
   const preferredSourceListeners = new Map<string,(event: {type:string;button:number})=>void>();
   const preferredSource = {addEventListener:(name:string, fn:(event: {type:string;button:number})=>void) => preferredSourceListeners.set(name,fn)};
   const href = `https://tratamentodomauhalito.com.br/${pageType === 'index' ? 'blog/' : `blog/${slug}/`}${search}`;
@@ -57,7 +60,7 @@ function runBlogClient({slug='',pageType='article',search='',referrer='',preview
     referrer,
     cookie:'',
     title:'Teste',
-    currentScript:{dataset:{blogPage:pageType,blogArticle:slug,blogSlug:slug,blogSource:slug ? `source-${slug}` : '',blogPreview:preview}},
+    currentScript:{dataset:{blogPage:pageType,blogArticle:slug,blogSlug:slug,blogTitle:slug ? 'Título do artigo' : '',blogSource:slug ? `source-${slug}` : '',blogPreview:preview}},
     querySelectorAll:(selector:string) => {
       if (selector === 'a.cta') return [cta];
       if (selector === '[data-preferred-source]') return [preferredSource];
@@ -69,10 +72,10 @@ function runBlogClient({slug='',pageType='article',search='',referrer='',preview
     navigator:{userAgent:'blog-test'},crypto:{randomUUID:()=> 'test-blog-contact'},
     fetch:(url:string,init:any)=>{crmCalls.push({url,...init,payload:JSON.parse(init.body)});return Promise.resolve({ok:true,json:async()=>({success:true})});},
     setTimeout:(fn:()=>void)=>timers.push(fn)});
-  return {local,session,gtagCalls,crmCalls,metaCalls,navigations,timers,
+  return {local,session,gtagCalls,crmCalls,metaCalls,navigations,timers,cta,
     preferredSourceClick:(type='click',button=0)=>preferredSourceListeners.get(type)?.({type,button}),
-    click:(event:unknown={type:'click',button:0})=>(listeners.get('click') as any)?.(event),
-    auxclick:(button:number)=>(listeners.get('auxclick') as any)?.({type:'auxclick',button})};
+    click:(event:object={type:'click',button:0})=>(listeners.get('click') as any)?.({currentTarget:cta,...event}),
+    auxclick:(button:number)=>(listeners.get('auxclick') as any)?.({type:'auxclick',button,currentTarget:cta})};
 }
 
 test('WhatsApp editorial registra intenção uma vez sem disparar qualificação ou conversão paga', () => {
@@ -87,6 +90,12 @@ test('WhatsApp editorial registra intenção uma vez sem disparar qualificação
   assert.equal(result.crmCalls.length,1);
   assert.equal(result.crmCalls[0].url,'/api/leads');
   assert.equal(result.crmCalls[0].keepalive,true);
+  const payload = result.crmCalls[0].payload;
+  assert.match(payload.codigoWhatsapp,/^[A-Z2-9]{8}$/);
+  assert.equal(payload.blogArticleTitle,'Título do artigo');
+  const message = new URL(result.cta.href).searchParams.get('text') ?? '';
+  assert.equal(message, 'Olá (cód. ' + payload.codigoWhatsapp + ')');
+
   const row = mapPayloadToRow(result.crmCalls[0].payload);
   assert.equal(row.channel_derived,'Organic Search');
   assert.equal(row.entry_article_slug,'artigo-a');

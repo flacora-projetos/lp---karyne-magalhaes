@@ -106,10 +106,35 @@ export function fluxoClique(lead: Lead, codigo: unknown) {
   };
 }
 
+export function fluxoCliqueBlog(lead: Lead, codigo: unknown, tituloArtigo: unknown) {
+  const artigo = str(tituloArtigo);
+  const slug = str(lead.last_article_slug);
+  if (!artigo || !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug) || slug.length > 200) return null;
+
+  const url = new URL('https://tratamentodomauhalito.com.br/blog/' + slug + '/');
+  if (url.href.length > 300) return null;
+  const clique = fluxoClique(lead, codigo)?.clique_whatsapp;
+  if (!clique) return null;
+  return {
+    clique_whatsapp: {
+      codigo: clique.codigo,
+      clicado_em: clique.clicado_em,
+      titulo: ('Blog: ' + artigo).slice(0, 200),
+      canal: 'Blog',
+      url: url.href,
+    },
+  };
+}
+
 /** Avisa o Fluxo do clique no botão de WhatsApp com código. */
 export async function enviarCliqueFluxo(lead: Lead, codigo: unknown, fetchImpl: typeof fetch = fetch): Promise<void> {
   const corpo = fluxoClique(lead, codigo);
   if (corpo) await chamar('contato-externo', corpo, fetchImpl);
+}
+
+export async function enviarCliqueBlogFluxo(lead: Lead, codigo: unknown, tituloArtigo: unknown, fetchImpl: typeof fetch = fetch): Promise<boolean> {
+  const corpo = fluxoCliqueBlog(lead, codigo, tituloArtigo);
+  return corpo ? chamar('contato-externo', corpo, fetchImpl, 2) : false;
 }
 
 /** Corpo para a porta de resultados do Fluxo (mudança de status no painel do site). */
@@ -132,10 +157,10 @@ async function chamar(
   corpo: object,
   fetchImpl: typeof fetch,
   tentativas = 1,
-): Promise<void> {
+): Promise<boolean> {
   const base = process.env.FLUXO_URL?.replace(/\/+$/, '');
   const chave = process.env.FLUXO_CHAVE;
-  if (!base || !chave) return;
+  if (!base || !chave) return false;
   for (let tentativa = 1; tentativa <= tentativas; tentativa++) {
     try {
       const r = await fetchImpl(`${base}/${porta}`, {
@@ -144,14 +169,15 @@ async function chamar(
         body: JSON.stringify(corpo),
         signal: AbortSignal.timeout(3000),
       });
-      if (r.ok) return;
+      if (r.ok) return true;
       if (tentativa < tentativas && r.status >= 500) continue;
       console.error(`[crmFluxo] ${porta} respondeu ${r.status}`);
-      return;
+      return false;
     } catch {
       if (tentativa === tentativas) console.error(`[crmFluxo] ${porta} sem resposta`);
     }
   }
+  return false;
 }
 
 /** Manda o lead como contato ao Fluxo (se tiver WhatsApp). */

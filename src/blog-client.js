@@ -1,4 +1,5 @@
 import {recordBlogContact} from './utils/blogContact';
+import {novoCodigoWhatsapp} from './utils/whatsappCode';
 
 (() => {
   const FIRST_SESSION = 'dacora_first_acquisition_v1';
@@ -102,10 +103,25 @@ import {recordBlogContact} from './utils/blogContact';
     window.gtag('event','page_view',event);
   }
 
+  const articleTitle = script?.dataset.blogTitle || '';
+  let codigoWhatsapp = '';
+  let contactLeadId = '';
   let contactTracked = false;
   const contactClick = (event) => {
     if (preview) { event?.preventDefault(); return; }
     if (event?.type === 'auxclick' && event.button !== 1) return;
+    if (pageType === 'article' && slug && articleTitle && event?.currentTarget?.href) {
+      const url = new URL(event.currentTarget.href);
+      const text = url.searchParams.get('text');
+      if (url.origin === 'https://wa.me' && text) {
+        codigoWhatsapp ||= novoCodigoWhatsapp(8);
+        const suffix = ` (cód. ${codigoWhatsapp})`;
+        if (!text.endsWith(suffix)) {
+          url.searchParams.set('text', text + suffix);
+          event.currentTarget.href = url.href;
+        }
+      }
+    }
     try {
       const latest = parse(sessionStorage.getItem(EDITORIAL_SESSION)) || editorial || {};
       const withCta = {...latest,ctaId:'contato_whatsapp',ctaDestination:'whatsapp'};
@@ -120,7 +136,8 @@ import {recordBlogContact} from './utils/blogContact';
         cta_id:'contato_whatsapp',cta_destination:'whatsapp',
       });
     }
-    recordBlogContact({id:articleId,sourceId,slug}).then((saved) => {
+    contactLeadId ||= crypto.randomUUID();
+    recordBlogContact({id:articleId,sourceId,slug,title:articleTitle}, contactLeadId, codigoWhatsapp).then((saved) => {
       if (!saved) contactTracked = false;
     }).catch(() => { contactTracked = false; });
   };
