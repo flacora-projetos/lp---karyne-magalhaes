@@ -8,6 +8,8 @@ import {
 } from './metaPixel';
 import { sendGoogleEcEvent } from './googleAds';
 import { getAttributionExtras } from './acquisition';
+import { novoCodigoWhatsapp } from './whatsappCode';
+export { novoCodigoWhatsapp } from './whatsappCode';
 
 const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbypbOG2r2Zka810XL8er9zUUSGHjsscOQw_db95uh9azXYh7adlTNhAn1_u0VxzLn4/exec';
 const WHATSAPP_NUMBER = '5562999320675';
@@ -27,20 +29,6 @@ const newId = (prefix: string): string => {
   } catch {
     return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 11)}`;
   }
-};
-
-// Código curto na mensagem pronta: a página não pede telefone, então é por ele
-// que o Dácora Fluxo liga a conversa ao clique do anúncio (e ao gclid).
-// Sem 0/O/1/I para não confundir quem lê.
-const ALFABETO_CODIGO = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-export const novoCodigoWhatsapp = (): string => {
-  const bytes = new Uint8Array(5);
-  try {
-    crypto.getRandomValues(bytes);
-  } catch {
-    for (let i = 0; i < bytes.length; i++) bytes[i] = Math.floor(Math.random() * 256);
-  }
-  return Array.from(bytes, (b) => ALFABETO_CODIGO[b % ALFABETO_CODIGO.length]).join('');
 };
 
 export const mensagemWhatsappGoogle = (codigo: string): string =>

@@ -27,6 +27,8 @@ for (const article of articles) {
   assert.ok(!html.includes('noindex') && html.includes('BlogPosting'));
   assert.ok(html.includes('CRO-GO 7954'));
   assert.ok(html.includes('href="https://wa.me/5562999320675?text='));
+  assert.ok(html.includes('data-blog-title="') && html.includes('data-blog-slug="'+article.slug+'"'));
+  assert.equal((html.match(/href="https:\/\/wa\.me\/5562999320675\?text=/g) || []).length, 3);
   assert.ok(!html.includes('href="/?blog_cta='));
   assert.ok(!/este rascunho|antes da publicação|antes de publicar|revisão deste texto|precisam ser confirmados/i.test(html));
 }
